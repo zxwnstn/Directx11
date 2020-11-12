@@ -12,17 +12,18 @@
     <ClInclude Include="src\Renderer\InputLayout.h" />
     <ClInclude Include="vendor\stb_image\stb_image.h" />
     <ClInclude Include="src\Renderer\CBuffer.h" />
-    <ClInclude Include="src\File\FbxLoader2.h" />
     <ClInclude Include="src\File\FileCommon.h" />
     <ClInclude Include="src\Renderer\ModelBuffer.h" />
     <ClInclude Include="src\Model\Model.h" />
     <ClInclude Include="src\Model\3D\Skeleton.h" />
     <ClInclude Include="src\Model\3D\SkeletalAnimation.h" />
     <ClInclude Include="src\Common\Camera.h" />
-    <ClInclude Include="src\Model\Texture.h" />
     <ClInclude Include="src\Model\2D\Sprite.h" />
     <ClInclude Include="src\Model\2D\SpriteAnimation.h" />
     <ClInclude Include="src\Common\Transform.h" />
+    <ClInclude Include="src\Renderer\Texture.h" />
+    <ClInclude Include="src\Model\3D\ModelBuilder.h" />
+    <ClInclude Include="src\File\FbxLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\App.cpp" />
@@ -37,16 +38,17 @@
     <ClCompile Include="src\Renderer\InputLayout.cpp" />
     <ClCompile Include="vendor\stb_image\stb_image.cpp" />
     <ClCompile Include="src\Renderer\CBuffer.cpp" />
-    <ClCompile Include="src\File\FbxLoader2.cpp" />
     <ClCompile Include="src\File\FileCommon.cpp" />
     <ClCompile Include="src\Renderer\ModelBuffer.cpp" />
     <ClCompile Include="src\Model\Model.cpp" />
     <ClCompile Include="src\Model\3D\SkeletalAnimation.cpp" />
     <ClCompile Include="src\Model\3D\Skeleton.cpp" />
     <ClCompile Include="src\Common\Camera.cpp" />
-    <ClCompile Include="src\Model\Texture.cpp" />
     <ClCompile Include="src\Model\2D\Sprite.cpp" />
     <ClCompile Include="src\Model\2D\SpriteAnimation.cpp" />
     <ClCompile Include="src\Common\Transform.cpp" />
+    <ClCompile Include="src\Renderer\Texture.cpp" />
+    <ClCompile Include="src\Model\3D\Modelbuilder.cpp" />
+    <ClCompile Include="src\File\FbxLoader.cpp" />
   </ItemGroup>
 </Project>

@@ -1,18 +1,13 @@
 #pragma once
 
-#include "Skeleton.h"
-#include "File/FbxLoader.h"
-
 struct AnimationInform
 {
-	//this key uint is will be enum
-	std::unordered_map<uint32_t, std::string> Animations;
 	float Elapsedtime;
 	std::string CurAnim;
 	std::string TranslatedAnim;
-	bool AnimTranslated;
+	bool AnimTranslated = false;
 
-	std::vector<DirectX::XMFLOAT4X4> MySkinnedTransforms;
+	DirectX::XMFLOAT4X4 MySkinnedTransforms[100];
 };
 
 struct KeyFrame
@@ -40,10 +35,12 @@ struct SkeletalAnimtion
 	std::vector<KeyFramePair> GetKeyFrames(float elapsedTime);
 };
 
+
+
 class SkeletalAnimationArchive
 {
 public:
-	static void Add(const std::string& skeltonName, const std::string& animName);
+	static void Add(const std::string& skeltonName, const std::string& animName, SkeletalAnimtion* animation);
 	static bool Has(const std::string& skeltonName, const std::string& animName);
 	static bool Has(const std::string& fullName);
 
@@ -53,7 +50,7 @@ private:
 
 	//Save as full name which combine SkeletonName + AnimationName
 	//Eg. skeleton name is 'human' and animation name is 'idle' then animtion name is human/idle
-	static std::unordered_map<std::string, SkeletalAnimtion> s_Animations;
+	static std::unordered_map<std::string, SkeletalAnimtion*> s_Animations;
 
 	friend class SkeletalAnimationPlayer;
 };

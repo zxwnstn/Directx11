@@ -11,14 +11,6 @@ void CBuffer::Light::Copy(const Light & other)
 	Power = other.Power;
 }
 
-void CBuffer::Bone::Upload(const Skeleton & other)
-{
-	for (int i = 0 ; i < other.FinalMat.size(); ++i)
-	{
-		FinalTransform[i] = other.FinalMat[i];
-	}
-}
-
 void CBuffer::Transform::Upload(const ::Transform & other)
 {
 	Translate = other.GetTranslate();
@@ -38,4 +30,9 @@ void CBuffer::Camera::Copy(const Camera & other)
 	World = DirectX::XMMatrixIdentity();
 	View = other.View;
 	Projection = other.Projection;
+}
+
+void CBuffer::Bone::Upload(DirectX::XMFLOAT4X4* other, uint32_t size)
+{
+	memcpy(SkinnedTransform, other, size);
 }

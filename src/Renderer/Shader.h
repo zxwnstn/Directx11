@@ -1,9 +1,7 @@
 #pragma once
 
 #include "ModelBuffer.h"
-#include "CBuffer.h"
-#include "Resource/Transform.h"
-#include "Resource/Camera.h"
+#include "Common/Camera.h"
 
 class Shader
 {
@@ -50,7 +48,7 @@ public:
 		Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &find->second);
 	}
 	void SetCameraParam(const CBuffer::Camera& data);
-	void SetBoneParam(const struct Skeleton& data);
+	void SetBoneParam(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t count);
 	void SetTransformParam(const Transform& data);
 	void SetCamParam(const Camera& data);
 

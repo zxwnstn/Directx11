@@ -2,9 +2,8 @@
 
 #include "Core/App.h"
 
-#include "Resource/Camera.h"
-#include "Resource/Animation.h"
-#include "Resource/Transform.h"
+#include "Common/Camera.h"
+#include "Common/Transform.h"
 
 class SandBox : public Layer
 {
@@ -13,16 +12,14 @@ public:
 	void OnAttach() override;
 	void OnDettach() override;
 
-	std::shared_ptr<class Buffer> buffer;
-	std::shared_ptr<class Buffer> buffer2;
+	std::shared_ptr<class ModelBuffer> buffer;
+	std::shared_ptr<class ModelBuffer> buffer2;
 
 	Transform transform;
 
-	std::shared_ptr<class Buffer> TextureBuffer;
+	std::shared_ptr<class ModelBuffer> TextureBuffer;
 	std::shared_ptr<class Texture> texture;
 
 	std::shared_ptr<Camera> ortho;
 	std::shared_ptr<Camera> perspective;
-
-	Skeleton skeleton;
 };

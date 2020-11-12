@@ -1,141 +1,92 @@
 #pragma once
-#include "Resource/Animation.h"
 
-struct vec2
+struct vec2 { float m[2]{0, }; };
+struct vec3 { float m[3]{0, }; };
+struct vec4 { float m[4]{0, }; };
+struct mat4 { float m[4][4]{0, }; };
+
+struct uvec2 { uint32_t m[2]{0, }; };
+struct uvec3 { uint32_t m[3]{0, }; };
+struct uvec4 { uint32_t m[4]{0, }; };
+struct umat4 { uint32_t m[4][4]{ 0, }; };
+
+struct Vertex
 {
-	union {
-		struct {
-			float x, y;
-		};
-		float m[2]{ 0.0f, };
-	};
-};
+	vec3 Position;
+	vec2 UV;
+	vec3 Normal;
+	vec3 BiNormal;
+	vec3 BiTangent;
 
-struct vec3
-{
-	union {
-		struct {
-			float x, y, z;
-		};
-		float m[3]{ 0.0f, };
-	};
-};
-
-struct vec4
-{
-	vec4()
-	{}
-
-	union {
-		struct {
-			float x, y, z, w;
-		};
-		float m[4]{ 0.0f, };
-	};
-};
-
-struct mat4
-{
-	mat4()
-	{}
-
-	union {
-		struct {
-			vec4 r1, r2, r3, r4;
-		};
-		float m[4][4];
-	};
-};
-
-struct BoneWeight
-{
-	unsigned int BoneIndex = 0;
-	double Weight = 0;
+	vec4 BoneWeight;
+	uvec4 BoneIndex;
 };
 
 struct ControlPoint
 {
-	vec4 pos;
-	std::vector<BoneWeight> BoneWeights;
-	std::string boneName;
+	vec3 Position;
+	vec4 BoneWeight;
+	uvec4 BoneIndex;
+
+	uint8_t i = 0;
+	void push(float weight, uint32_t index);
 };
 
-struct Vertex
+struct FbxData
 {
-	vec4 pos;
-	vec2 uvs;
-	float Weight[4];
-	uint32_t BoneIndex[4];
-	//vec4 color{ 1.0f, 0.0f, 1.0f, 1.0f };
-	//vec2 uv;
-	//vec3 normal;
-	//vec3 binoral;
-	//vec3 bitangent;
+	ControlPoint* ControlPoints = nullptr;
+	uint32_t ControlPointCount;
 
-	bool operator==(const Vertex& other) const
-	{
-		if (pos.x != other.pos.x || pos.y != other.pos.y || pos.z != other.pos.z)
-			return false;
+	Vertex* Vertices = nullptr;
+	uint32_t* Indices = nullptr;
+	uint32_t VerticesCount;
 
-		if (uvs.x != other.uvs.x || uvs.y != other.uvs.y)
-			return false;
-
-		return true;
-	}
+	struct SkeletalAnimtion* Animation = nullptr;
+	struct Skeleton* skeleton;
 };
 
-struct HashFunction
-{
-	size_t operator()(const Vertex& pos) const
-	{
-		size_t res = 17;
-		res = res * 31 + std::hash<float>()(pos.pos.x);
-		res = res * 31 + std::hash<float>()(pos.pos.y);
-		res = res * 31 + std::hash<float>()(pos.pos.z);
-		res = res * 31 + std::hash<float>()(pos.pos.w);
-		res = res * 31 + std::hash<float>()(pos.uvs.x);
-		res = res * 31 + std::hash<float>()(pos.uvs.y);
-		
-		return res;
-	}
-};
-
-struct FbxResult
-{
-	std::vector<ControlPoint> ControlPoints;
-	std::vector<Vertex> Vertices;
-	std::vector<uint32_t> Indices;
-	Skeleton skeleton;
-};
 
 class FBXLoader
 {
-private:
-	FBXLoader();
+public:
+	FBXLoader(const std::string& directorName);
+	~FBXLoader();
 
 public:
-	static FBXLoader* Get();
-	static void Shutdown();
-
-public:
-	FbxResult Import(const std::string& file);
+	void Extract(const std::string & path, const std::string& file);
 
 private:
-	FbxResult process(class FbxNode* root);
+	bool isExistCache(const std::string& file);
 
+private:
+	void init(const std::string& filename);
+	void import(const std::string& filename);
+	void extractAll();
+	void resetScene();
+
+private:
 	vec2 procUV(class FbxMesh* mesh, int index, int controlIndex);
 	//void procNormal();
 
-	void procControlPoint(FbxNode* node, FbxResult& ret);
-	void procVertices(FbxNode* node, FbxResult& ret);
-	void procMaterial(FbxNode* node, FbxResult& ret);
-	void createHierachy(FbxNode* node, FbxResult& ret, int index, int parent);
-	void procBoneHierachy(FbxNode* node, FbxResult& ret);
-	void procAnimation(FbxNode* node, FbxResult& ret);
+	void getControlPoint(class FbxNode* node);
+	void getVertices(FbxNode* node);
+	void getSkeleton(FbxNode* node);
+	void getAnimation(FbxNode* node);
+	//void getMaterial();
+
+	void createHierachy(FbxNode* node, int index, int parent);
 
 private:
 	class FbxManager* m_Manager;
-	class FbxImporter* m_Importer;
-	class FbxScene* scene;
 
+	//Temporary
+	class FbxImporter* importer = nullptr;
+	class FbxScene* scene = nullptr;
+	class FbxNode* root = nullptr;
+
+	FbxData data;
+	std::string filename;
+
+	bool isCached = false;
+	bool isLoaded = false;
 };

@@ -2,7 +2,6 @@
 
 #include "Shader.h"
 #include "Dx11Core.h"
-#include "Resource/Animation.h"
 
 uint32_t GetCBSize(CBuffer::Type type)
 {
@@ -117,7 +116,7 @@ void Shader::SetCameraParam(const CBuffer::Camera & data)
 	Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &find->second);
 }
 
-void Shader::SetBoneParam(const Skeleton & data)
+void Shader::SetBoneParam(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t count)
 {
 	CBuffer::Type type = CBuffer::Type::Bone;
 
@@ -128,7 +127,7 @@ void Shader::SetBoneParam(const Skeleton & data)
 	Dx11Core::Get().Context->Map(find->second, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 
 	CBuffer::Bone* mappedData = (CBuffer::Bone*)mappedResource.pData;
-	mappedData->Upload(data);
+	mappedData->Upload(skinnedTransform, count);
 
 	Dx11Core::Get().Context->Unmap(find->second, 0);
 

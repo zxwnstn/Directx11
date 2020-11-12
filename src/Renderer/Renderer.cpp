@@ -3,22 +3,13 @@
 #include "Renderer.h"
 #include "Dx11Core.h"
 #include "PipelineController.h"
-#include "Model/Texture.h"
+#include "Texture.h"
 #include "Common/Camera.h"
 
 static PipelineController* s_PLController = nullptr;
 static std::unordered_map<std::string, Shader> RendererShaders;
 
-std::string ToString(DefaultShader type)
-{
-	switch (type)
-	{
-	case DefaultShader::Color: return "Color";
-	case DefaultShader::Texture: return "Texture";
-	case DefaultShader::Skinned: return "Skinned";
-	}
-	return "";
-}
+
 
 
 void Renderer::Init()
@@ -40,7 +31,7 @@ void Renderer::BeginScene(Camera & camera)
 
 }
 
-void Renderer::Enque(DefaultShader shader, const ModelBuffer & buffer)
+void Renderer::Enque(RenderingShader shader, const ModelBuffer & buffer)
 {
 	RendererShaders[ToString(shader)].Bind();
 	buffer.Bind();
@@ -48,7 +39,7 @@ void Renderer::Enque(DefaultShader shader, const ModelBuffer & buffer)
 	Dx11Core::Get().Context->DrawIndexed(buffer.GetIndexCount(), 0, 0);
 }
 
-void Renderer::Enque(DefaultShader shader, const ModelBuffer & buffer, const Texture & texture)
+void Renderer::Enque(RenderingShader shader, const ModelBuffer & buffer, const Texture & texture)
 {
 	RendererShaders[ToString(shader)].Bind();
 	buffer.Bind();
@@ -56,7 +47,6 @@ void Renderer::Enque(DefaultShader shader, const ModelBuffer & buffer, const Tex
 
 	Dx11Core::Get().Context->DrawIndexed(buffer.GetIndexCount(), 0, 0);
 }
-
 
 void Renderer::EndScene()
 {
@@ -68,7 +58,7 @@ PipelineController& Renderer::GetPipelineController()
 	return *s_PLController; 
 }
 
-Shader& Renderer::GetDefaultShader(DefaultShader shader)
+Shader& Renderer::GetShader(RenderingShader shader)
 {
 	return RendererShaders[ToString(shader)];
 }
@@ -91,3 +81,13 @@ void Renderer::DeleteShader(const std::string & keyName)
 	RendererShaders.erase(find);
 }
 
+std::string ToString(RenderingShader type)
+{
+	switch (type)
+	{
+	case RenderingShader::Color: return "Color";
+	case RenderingShader::Texture: return "Texture";
+	case RenderingShader::Skinned: return "Skinned";
+	}
+	return "";
+}

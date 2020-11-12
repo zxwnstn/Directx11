@@ -158,11 +158,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\App.cpp" />
-    <ClCompile Include="src\File\FbxLoader2.cpp" />
+    <ClCompile Include="src\File\FbxLoader.cpp" />
     <ClCompile Include="src\File\FileCommon.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Model\2D\Sprite.cpp" />
     <ClCompile Include="src\Model\2D\SpriteAnimation.cpp" />
+    <ClCompile Include="src\Model\3D\Modelbuilder.cpp" />
     <ClCompile Include="src\Model\Model.cpp" />
     <ClCompile Include="src\Model\3D\Skeleton.cpp" />
     <ClCompile Include="src\pch.cpp">
@@ -180,17 +181,18 @@
     <ClCompile Include="src\Renderer\Shader.cpp" />
     <ClCompile Include="src\Common\Camera.cpp" />
     <ClCompile Include="src\Model\3D\SkeletalAnimation.cpp" />
-    <ClCompile Include="src\Model\Texture.cpp" />
+    <ClCompile Include="src\Renderer\Texture.cpp" />
     <ClCompile Include="src\Common\Transform.cpp" />
     <ClCompile Include="src\SandBox.cpp" />
     <ClCompile Include="vendor\stb_image\stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\App.h" />
-    <ClInclude Include="src\File\FbxLoader2.h" />
+    <ClInclude Include="src\File\FbxLoader.h" />
     <ClInclude Include="src\File\FileCommon.h" />
     <ClInclude Include="src\Model\2D\Sprite.h" />
     <ClInclude Include="src\Model\2D\SpriteAnimation.h" />
+    <ClInclude Include="src\Model\3D\ModelBuilder.h" />
     <ClInclude Include="src\Model\Model.h" />
     <ClInclude Include="src\Model\3D\Skeleton.h" />
     <ClInclude Include="src\Renderer\ModelBuffer.h" />
@@ -204,7 +206,7 @@
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\Common\Camera.h" />
     <ClInclude Include="src\Model\3D\SkeletalAnimation.h" />
-    <ClInclude Include="src\Model\Texture.h" />
+    <ClInclude Include="src\Renderer\Texture.h" />
     <ClInclude Include="src\Common\Transform.h" />
     <ClInclude Include="src\SandBox.h" />
     <ClInclude Include="vendor\stb_image\stb_image.h" />

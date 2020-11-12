@@ -3,14 +3,14 @@
 #include "Skeleton.h"
 #include "File/FbxLoader.h"
 
-static std::unordered_map<std::string, std::weak_ptr<Skeleton>> s_Skeletons;
+static std::unordered_map<std::string, Skeleton*> s_Skeletons;
 
-void SkeletonArchive::Add(const std::string& name)
+void SkeletonArchive::Add(Skeleton* skeleton)
 {
-	auto find = s_Skeletons.find(name);
+	auto find = s_Skeletons.find(skeleton->Name);
 	if (find != s_Skeletons.end()) return;
 
-	s_Skeletons.emplace(name, std::weak_ptr<Skeleton>());
+	s_Skeletons.emplace(skeleton->Name, skeleton);
 }
 
 bool SkeletonArchive::Has(const std::string & name)
@@ -19,17 +19,11 @@ bool SkeletonArchive::Has(const std::string & name)
 	return find != s_Skeletons.end();
 }
 
-std::shared_ptr<Skeleton> SkeletonArchive::Get(const std::string & name)
+Skeleton* SkeletonArchive::Get(const std::string & name)
 {
 	if(!Has(name))
 		return nullptr;
 
-	if (s_Skeletons[name].expired())
-	{
-		//TODO : FBX load
-	}
-
-	auto ret = s_Skeletons[name].lock();
-	return ret;
+	return s_Skeletons[name];
 }
 

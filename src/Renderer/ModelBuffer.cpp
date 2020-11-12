@@ -97,8 +97,3 @@ void ModelBuffer::Bind() const
 	Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
-void ModelBuffer::Bind() const
-{
-}
-
-

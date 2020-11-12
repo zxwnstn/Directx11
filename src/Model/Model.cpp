@@ -2,21 +2,35 @@
 
 #include "Model.h"
 
+#include "3D/ModelBuilder.h"
+
 #include "Renderer/ModelBuffer.h"
-#include "3D/Skeleton.h"
-#include "3D/SkeletalAnimation.h"
 #include "Common/Transform.h"
-#include "Texture.h"
+#include "Renderer/Texture.h"
+#include "3D/SkeletalAnimation.h"
 
 void Model3D::Bind()
 {
 }
 
+Model3D::Model3D(const std::string & ShaderName)
+	: m_Shader(ShaderName)
+{
+	
+}
+
 void Model3D::Update(float dt)
 {
-	/*
-	
-	*/
-
-	SkeletalAnimationPlayer::Play(m_Animation);
+	SkeletalAnimationPlayer p; p.Play(m_Animation);
 }
+
+ModelBuilder Model3D::Create(RenderingShader type, std::string && ShaderName)
+{
+	if (ShaderName.empty())
+	{
+		assert(type != RenderingShader::Custum);
+		ShaderName = ToString(type);
+	}
+	return ModelBuilder(new Model3D(ShaderName));
+}
+

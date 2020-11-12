@@ -4,6 +4,7 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/PipelineController.h"
 #include "Renderer/Shader.h"
+#include "File/FbxLoader.h"
 
 bool App::s_Running;
 
@@ -22,6 +23,25 @@ App::App(const WindowProp & prop)
 	{
 		if (file.is_directory())
 			Renderer::CreateShader(file.path().string(), file.path().filename().string());
+	}
+
+	std::string fbxDir = "assets\\Fbx";
+	std::filesystem::directory_iterator FbxFolder(fbxDir);
+	for (auto& dir : FbxFolder)
+	{
+		if (dir.is_directory())
+		{
+			std::filesystem::directory_iterator CurFolder(dir.path());
+			std::string specificDir = fbxDir + "\\" + dir.path().filename().string() + "\\";
+			
+			FBXLoader fbxLoader(dir.path().filename().string());
+			for (auto& file : CurFolder)
+			{
+				if (file.is_directory()) continue;
+				fbxLoader.Extract(specificDir, file.path().filename().string());
+			}
+		}
+
 	}
 }
 

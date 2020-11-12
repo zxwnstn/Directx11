@@ -1,99 +1,148 @@
-
-
 #include "pch.h"
 
 #include <fbxsdk.h>
 #include "FbxLoader.h"
+#include "FileCommon.h"
+
+#include "Model/3D/Skeleton.h"
+#include "Model/3D/SkeletalAnimation.h"
 
 
-FBXLoader::FBXLoader()
+void ControlPoint::push(float weight, uint32_t index)
 {
-	m_Manager = FbxManager::Create();
-	m_Importer = FbxImporter::Create(m_Manager, "");
-	m_Manager->SetIOSettings(FbxIOSettings::Create(m_Manager, IOSROOT));
+	BoneWeight.m[i] = weight;
+	BoneIndex.m[i] = index;
+	++i;
 }
 
-FbxResult FBXLoader::Import(const std::string & file)
+FBXLoader::FBXLoader(const std::string & directorName)
 {
-	scene = FbxScene::Create(m_Manager, "");
-	FbxGeometryConverter geometryConverter(m_Manager);
+	m_Manager = FbxManager::Create();
+	m_Manager->SetIOSettings(FbxIOSettings::Create(m_Manager, IOSROOT));
 
-	m_Importer->Initialize(file.c_str(), -1, m_Manager->GetIOSettings());
-	m_Importer->Import(scene);
+	data.skeleton = new Skeleton;
+	data.skeleton->Name = directorName;
+
+	if (isExistCache(directorName)) isCached = true;
+}
+
+FBXLoader::~FBXLoader()
+{
+	delete[] data.ControlPoints;
+	m_Manager->Destroy();
+}
+
+void FBXLoader::import(const std::string & filename)
+{
+	importer = FbxImporter::Create(m_Manager, "");
+	scene = FbxScene::Create(m_Manager, "");
+	importer->Initialize(filename.c_str(), -1, m_Manager->GetIOSettings());
+	importer->Import(scene);
+	root = scene->GetRootNode();
+}
+
+void FBXLoader::init(const std::string& filename)
+{
+	import(filename);
 
 	FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
 	FbxAxisSystem::MayaYUp.ConvertScene(scene);
+	FbxGeometryConverter geometryConverter(m_Manager);
 	geometryConverter.Triangulate(scene, true);
 
-	FbxNode* root = scene->GetRootNode();
-	return process(root);
+	isLoaded = true;
 }
 
-FBXLoader * FBXLoader::Get()
+void FBXLoader::resetScene()
 {
-	static FBXLoader* inst = nullptr;
-	if (!inst)
-	{
-		inst = new FBXLoader;
-	}
-	return inst;
+	importer->Destroy();
+	scene->Destroy();
 }
 
-void FBXLoader::Shutdown()
+
+void FBXLoader::extractAll()
 {
-
-}
-
-FbxResult FBXLoader::process(FbxNode* root)
-{
-	FbxResult result;
-
 	auto count = root->GetChildCount();
 	for (int i = 0; i < count; ++i)
 	{
 		FbxNode* node = root->GetChild(i);
 		FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
-		
+
 		switch (nodeType)
 		{
 		case fbxsdk::FbxNodeAttribute::eSkeleton:
-			procBoneHierachy(root, result);
+			getSkeleton(root);
 			break;
 		case fbxsdk::FbxNodeAttribute::eMesh:
-			procControlPoint(node, result);
-			procAnimation(node, result);
-			procVertices(node, result);
+			getControlPoint(node);
+			getAnimation(node);
+			getVertices(node);
 			//procMaterial(node, result);
 			break;
 		}
 	}
-
-	return result;
 }
 
-void FBXLoader::procControlPoint(FbxNode* node, FbxResult& ret)
+
+
+void FBXLoader::Extract(const std::string & path, const std::string & file)
+{
+	filename = file;
+	if (isLoaded)
+	{
+		import(path + file);
+		
+		auto count = root->GetChildCount();
+		for (int i = 0; i < count; ++i)
+		{
+			FbxNode* node = root->GetChild(i);
+			FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
+
+			switch (nodeType)
+			{
+			case fbxsdk::FbxNodeAttribute::eMesh:
+				getAnimation(node);
+				break;
+			}
+		}
+	}
+	else
+	{
+		init(path + file);
+		extractAll();
+	}
+	resetScene();
+}
+
+bool FBXLoader::isExistCache(const std::string& file)
+{
+	return false;
+}
+
+void FBXLoader::getControlPoint(FbxNode* node)
 {
 	FbxMesh* mesh = node->GetMesh();
 	uint32_t count = mesh->GetControlPointsCount();
-	ret.ControlPoints.resize(count);
 
-	for (unsigned int i = 0; i < count; ++i)
+	data.ControlPoints = new ControlPoint[count];
+	data.ControlPointCount = count;
+	for (uint32_t i = 0; i < count; ++i)
 	{
-		ret.ControlPoints[i].pos.x = static_cast<float>(mesh->GetControlPointAt(i).mData[0]);
-		ret.ControlPoints[i].pos.y = static_cast<float>(mesh->GetControlPointAt(i).mData[1]);
-		ret.ControlPoints[i].pos.z = static_cast<float>(mesh->GetControlPointAt(i).mData[2]);
-		ret.ControlPoints[i].pos.w = 1.0f;
+		for (uint32_t j = 0; j < 3; ++j)
+		{
+			data.ControlPoints[i].Position.m[j] = static_cast<float>(mesh->GetControlPointAt(i).mData[j]);
+		}
 	}
 }
 
-void FBXLoader::procVertices(FbxNode* node, FbxResult& ret)
+void FBXLoader::getVertices(FbxNode* node)
 {
 	FbxMesh* mesh = node->GetMesh();
 	int count = mesh->GetPolygonCount();
 	uint32_t vertexCount = count * 3;
 
-	ret.Vertices.resize(vertexCount);
-	ret.Indices.resize(vertexCount);
+	data.Vertices = new Vertex[vertexCount];
+	data.Indices = new uint32_t[vertexCount];
 
 	uint32_t index = 0;
 	for (int i = 0; i < count; ++i)
@@ -101,27 +150,27 @@ void FBXLoader::procVertices(FbxNode* node, FbxResult& ret)
 		for (int j = 0; j < 3; ++j)
 		{
 			int controlIndex = mesh->GetPolygonVertex(i, j);
-			ret.Vertices[index].pos = ret.ControlPoints[controlIndex].pos;
-			ret.Vertices[index].uvs = procUV(mesh, index, controlIndex);
+			data.Vertices[index].Position = data.ControlPoints[controlIndex].Position;
+			data.Vertices[index].UV = procUV(mesh, index, controlIndex);
 
 			for (int k = 0; k < 4; ++k)
 			{
-				ret.Vertices[index].BoneIndex[k] = ret.ControlPoints[controlIndex].BoneWeights[k].BoneIndex;
-				ret.Vertices[index].Weight[k] = ret.ControlPoints[controlIndex].BoneWeights[k].Weight;
+				data.Vertices[index].BoneIndex.m[k] = data.ControlPoints[controlIndex].BoneIndex.m[k];
+				data.Vertices[index].BoneWeight.m[k] = data.ControlPoints[controlIndex].BoneWeight.m[k];
 			}
-			ret.Indices[index] = index;
+			data.Indices[index] = index;
 
 			index++;
 		}
-	
 	}
+	data.skeleton->Vertices = data.Vertices;
+	data.skeleton->Indices = data.Indices;
+	data.skeleton->VerticesCount = data.VerticesCount;
+	SkeletonArchive::Add(data.skeleton);
 }
 
-void FBXLoader::procMaterial(FbxNode* node, FbxResult& ret)
-{
-}
 
-void FBXLoader::createHierachy(FbxNode* node, FbxResult& ret, int index, int parent)
+void FBXLoader::createHierachy(FbxNode* node, int index, int parent)
 {
 	FbxNodeAttribute::EType type = node->GetNodeAttribute()->GetAttributeType();
 	if (type == FbxNodeAttribute::EType::eSkeleton)
@@ -129,31 +178,34 @@ void FBXLoader::createHierachy(FbxNode* node, FbxResult& ret, int index, int par
 		Joint joint;
 		joint.Parent = parent;
 		joint.Name = std::string(node->GetName());
-		ret.skeleton.Joints.push_back(joint);
+		data.skeleton->Joints.push_back(joint);
 	}
 	for (int i = 0; i < node->GetChildCount(); ++i)
 	{
-		createHierachy(node->GetChild(i), ret, ret.skeleton.Joints.size(), index);
+		createHierachy(node->GetChild(i), (int)data.skeleton->Joints.size(), index);
 	}
 
 }
 
-void FBXLoader::procBoneHierachy(FbxNode* node, FbxResult& ret)
-{
+void FBXLoader::getSkeleton(FbxNode* node)
+{	
 	for (int child = 0; child < node->GetChildCount(); ++child)
 	{
 		FbxNode* cur = node->GetChild(child);
-		createHierachy(cur, ret, 0, -1);
+		createHierachy(cur, 0, -1);
 	}
+	data.skeleton->NumJoint = (uint32_t)data.skeleton->Joints.size();
 }
 
-void FBXLoader::procAnimation(FbxNode* node, FbxResult& ret)
+void FBXLoader::getAnimation(FbxNode* node)
 {
 	//Defomer -> cluster -> link(Joint)
 	FbxMesh* mesh = node->GetMesh();
 	unsigned int numOfDeformers = mesh->GetDeformerCount();
 	FbxAMatrix geometryTransform;
 	geometryTransform.SetIdentity();
+
+	data.Animation = new SkeletalAnimtion;
 
 	//Defomer
 	for (unsigned int deformerIndex = 0; deformerIndex < numOfDeformers; ++deformerIndex)
@@ -162,110 +214,105 @@ void FBXLoader::procAnimation(FbxNode* node, FbxResult& ret)
 		if (!skin) continue;
 
 		unsigned int numOfClusters = skin->GetClusterCount();
+		data.Animation->JointAnimations.resize(numOfClusters);
+
 		//for each Cluster (that contains link)
 		for (unsigned int clusterIndex = 0; clusterIndex < numOfClusters; ++clusterIndex)
 		{
 			FbxCluster* cluster = skin->GetCluster(clusterIndex);
+			
 
 			//0. Get JointIdex
 			std::string jointName = cluster->GetLink()->GetName();
 			unsigned int jointIndex;
-			for (jointIndex = 0; jointIndex < ret.skeleton.Joints.size(); ++jointIndex)
-				if (jointName == ret.skeleton.Joints[jointIndex].Name)
+			for (jointIndex = 0; jointIndex < data.skeleton->Joints.size(); ++jointIndex)
+				if (jointName == data.skeleton->Joints[jointIndex].Name)
 					break;
 
 			//1. Calc OffsetMat
-			FbxAMatrix transformMatrix;
-			FbxAMatrix transformLinkMatrix;
-			FbxAMatrix offsetMat;
-			DirectX::XMFLOAT4X4 _offsetMat;
-			//축정렬이 되었다면 단위행렬
-			//월드상에서 조인트의 Transform이다.(JointTransform)
-			//조인트 트랜스폼의 역행렬을 취해줌 으로서 해당매트릭스의 포지션으로 가게된다.
-			cluster->GetTransformMatrix(transformMatrix);	
-			cluster->GetTransformLinkMatrix(transformLinkMatrix);	
-			offsetMat = transformLinkMatrix.Inverse() * transformMatrix * geometryTransform;
-			for (int i = 0; i < 4; ++i)
 			{
-				for (int j = 0; j < 4; ++j)
+				FbxAMatrix transformMatrix;
+				FbxAMatrix transformLinkMatrix;
+				FbxAMatrix offsetMat;
+
+				//월드상에서 조인트의 Transform이다.(JointTransform)
+				//조인트 트랜스폼의 역행렬을 취해줌 으로서 해당매트릭스의 포지션으로 가게된다.
+				DirectX::XMFLOAT4X4 offset;
+
+				cluster->GetTransformMatrix(transformMatrix);
+				cluster->GetTransformLinkMatrix(transformLinkMatrix);
+				offsetMat = transformLinkMatrix.Inverse() * transformMatrix * geometryTransform;
+				for (int i = 0; i < 4; ++i)
 				{
-					_offsetMat.m[i][j] = offsetMat[i][j];
+					for (int j = 0; j < 4; ++j)
+					{
+						offset.m[i][j] = (float)offsetMat[i][j];
+					}
+				}
+				data.skeleton->Joints[jointIndex].Offset = DirectX::XMLoadFloat4x4(&offset);
+			}
+			
+
+			//Get Joint Weight
+			{
+				unsigned int indices = cluster->GetControlPointIndicesCount();
+				auto controlPointIndices = cluster->GetControlPointIndices();
+				for (unsigned int i = 0; i < indices; ++i)
+				{
+					data.ControlPoints[controlPointIndices[i]].push((float)cluster->GetControlPointWeights()[i], jointIndex);
 				}
 			}
-			ret.skeleton.Joints[jointIndex].OffsetMat = _offsetMat;
-
-			//Get Bone Weight
-			unsigned int indices = cluster->GetControlPointIndicesCount();
-			auto controlPointIndices = cluster->GetControlPointIndices();
-			for (unsigned int i = 0; i < indices; ++i)
-			{
-				BoneWeight boneWeight;
-				boneWeight.BoneIndex = jointIndex;
-				boneWeight.Weight = cluster->GetControlPointWeights()[i];
-
-				ret.ControlPoints[controlPointIndices[i]].BoneWeights.push_back(boneWeight);
-				ret.ControlPoints[controlPointIndices[i]].boneName = jointName;
-			}
-
+			
 			//Anim
 			//Todo : Supply multiple Animation of one fbx file
-			FbxTime::EMode frameRate = scene->GetGlobalSettings().GetTimeMode();
-			int animStackCount = m_Importer->GetAnimStackCount();
-
-			FbxTakeInfo* takeInfo = m_Importer->GetTakeInfo(0);
-			std::string takeName = takeInfo->mName.Buffer();
-
-			FbxTime start = takeInfo->mLocalTimeSpan.GetStart();
-			FbxTime stop = takeInfo->mLocalTimeSpan.GetStop();
-
-			for (FbxLongLong j = 0; j <= stop.GetFrameCount(frameRate); ++j)
 			{
-				FbxTime curTime;
-				KeyFrame keyFrame;
+				FbxTime::EMode frameRate = scene->GetGlobalSettings().GetTimeMode();
 
-				curTime.SetFrame(j, frameRate);
-				keyFrame.start = curTime.GetSecondDouble();
+				FbxTakeInfo* takeInfo = importer->GetTakeInfo(0);
+				std::string takeName = takeInfo->mName.Buffer();
 
-				FbxAMatrix currentTransformOffset = node->EvaluateGlobalTransform(curTime) * geometryTransform;
-				auto globalTransform = currentTransformOffset.Inverse() * cluster->GetLink()->EvaluateGlobalTransform(curTime);
-				
-				FbxVector4 TS = globalTransform.GetT();
-				keyFrame.Translation = {
-					static_cast<float>(TS.mData[0]),
-					static_cast<float>(TS.mData[1]),
-					static_cast<float>(TS.mData[2]),
-				};
-				TS = globalTransform.GetS();
-				keyFrame.Scale = {
-					static_cast<float>(TS.mData[0]),
-					static_cast<float>(TS.mData[1]),
-					static_cast<float>(TS.mData[2]) };
-				FbxQuaternion Q = globalTransform.GetQ();
-				keyFrame.RotationQuat = {
-					static_cast<float>(Q.mData[0]),
-					static_cast<float>(Q.mData[1]),
-					static_cast<float>(Q.mData[2]) ,
-					static_cast<float>(Q.mData[3]) };
-				curTime.SetFrame(j + 1, frameRate);
-				keyFrame.end = curTime.GetSecondDouble();
+				FbxTime start = takeInfo->mLocalTimeSpan.GetStart();
+				FbxTime stop = takeInfo->mLocalTimeSpan.GetStop();
+				data.Animation->JointAnimations[clusterIndex].Duration = (float)(stop - start).GetSecondDouble();
 
-				ret.skeleton.Joints[clusterIndex].Anim[takeName].KeyFrames.push_back(keyFrame);
+				for (uint32_t timePoint = 0; timePoint <= stop.GetFrameCount(frameRate); ++timePoint)
+				{
+					FbxTime curTime;
+					KeyFrame keyFrame;
+
+					curTime.SetFrame(timePoint, frameRate);
+					keyFrame.Start = (float)curTime.GetSecondDouble();
+
+					FbxAMatrix currentTransformOffset = node->EvaluateGlobalTransform(curTime) * geometryTransform;
+					auto globalTransform = currentTransformOffset.Inverse() * cluster->GetLink()->EvaluateGlobalTransform(curTime);
+
+					FbxVector4 TS = globalTransform.GetT();
+					keyFrame.Translation = {
+						static_cast<float>(TS.mData[0]),
+						static_cast<float>(TS.mData[1]),
+						static_cast<float>(TS.mData[2]),
+					};
+					TS = globalTransform.GetS();
+					keyFrame.Scale = {
+						static_cast<float>(TS.mData[0]),
+						static_cast<float>(TS.mData[1]),
+						static_cast<float>(TS.mData[2]) };
+					FbxQuaternion Q = globalTransform.GetQ();
+					keyFrame.RotationQuat = {
+						static_cast<float>(Q.mData[0]),
+						static_cast<float>(Q.mData[1]),
+						static_cast<float>(Q.mData[2]) ,
+						static_cast<float>(Q.mData[3]) };
+
+					data.Animation->JointAnimations[clusterIndex].KeyFrames[timePoint] = keyFrame;
+				}
 			}
 		}
 	}
 
-	BoneWeight boneWeight;
-	boneWeight.Weight = 0;
-	boneWeight.BoneIndex = 0;
-	for (auto itr = ret.ControlPoints.begin(); itr != ret.ControlPoints.end(); ++itr)
-	{
-		for (unsigned int i = itr->BoneWeights.size(); i < 4; ++i)
-		{
-			itr->BoneWeights.push_back(boneWeight);
-		}
-	}
-
+	SkeletalAnimationArchive::Add(data.skeleton->Name, filename, data.Animation);
 }
+
 
 vec2 FBXLoader::procUV(FbxMesh* mesh, int index, int controlIndex)
 {
@@ -284,13 +331,13 @@ vec2 FBXLoader::procUV(FbxMesh* mesh, int index, int controlIndex)
 		switch (refMode)
 		{
 		case fbxsdk::FbxLayerElement::eDirect:
-			ret.x = static_cast<float>(uv->GetDirectArray().GetAt(controlIndex).mData[0]);
-			ret.y = static_cast<float>(uv->GetDirectArray().GetAt(controlIndex).mData[1]);
+			ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(controlIndex).mData[0]);
+			ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(controlIndex).mData[1]);
 			break;
 		case fbxsdk::FbxLayerElement::eIndexToDirect:
 			auto itd = uv->GetIndexArray().GetAt(controlIndex);
-			ret.x = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[0]);
-			ret.y = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[1]);
+			ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[0]);
+			ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[1]);
 			break;
 		}
 		break;
@@ -298,13 +345,13 @@ vec2 FBXLoader::procUV(FbxMesh* mesh, int index, int controlIndex)
 		switch (refMode)
 		{
 		case fbxsdk::FbxLayerElement::eDirect:
-			ret.x = static_cast<float>(uv->GetDirectArray().GetAt(index).mData[0]);
-			ret.y = static_cast<float>(uv->GetDirectArray().GetAt(index).mData[1]);
+			ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(index).mData[0]);
+			ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(index).mData[1]);
 			break;
 		case fbxsdk::FbxLayerElement::eIndexToDirect:
 			auto itd = uv->GetIndexArray().GetAt(index);
-			ret.x = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[0]);
-			ret.y = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[1]);
+			ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[0]);
+			ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[1]);
 			break;
 		}
 		break;
@@ -312,5 +359,3 @@ vec2 FBXLoader::procUV(FbxMesh* mesh, int index, int controlIndex)
 
 	return ret;
 }
-
-

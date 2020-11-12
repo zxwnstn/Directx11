@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Model/Transform.h"
+#include "Common/Transform.h"
 
 namespace CBuffer {
 
@@ -42,8 +42,8 @@ namespace CBuffer {
 
 	struct Bone
 	{
-		DirectX::XMFLOAT4X4 FinalTransform[100];
-		void Upload(const Skeleton& other);
+		DirectX::XMFLOAT4X4 SkinnedTransform[100];
+		void Upload(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t size);
 	};
 
 	template<typename Type>

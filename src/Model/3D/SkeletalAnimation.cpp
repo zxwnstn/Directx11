@@ -1,7 +1,8 @@
 #include "pch.h"
 
 #include "SkeletalAnimation.h"
-
+#include "Skeleton.h"
+#include "File/FbxLoader.h"
 
 KeyFramePair JointAnimation::GetKeyFramePair(float elapsedTime)
 {
@@ -25,23 +26,14 @@ std::vector<KeyFramePair> SkeletalAnimtion::GetKeyFrames(float elapsedTime)
 }
 
 
-std::unordered_map<std::string, SkeletalAnimtion> SkeletalAnimationArchive::s_Animations;
+std::unordered_map<std::string, SkeletalAnimtion*> SkeletalAnimationArchive::s_Animations;
 
-void SkeletalAnimationArchive::Add(const std::string & skeltonName, const std::string & animName)
+void SkeletalAnimationArchive::Add(const std::string & skeltonName, const std::string & animName, SkeletalAnimtion* animation)
 {
-	if (!SkeletonArchive::Has(skeltonName))
-	{
-		std::cout << "The skeleton doen't exist!\n";
-		return;
-	}
-
 	std::string fullName = skeltonName + "/" + animName;
 	if (Has(fullName)) return;
 
-	auto skeleton = SkeletonArchive::Get(skeltonName);
-	/*
-		TODO : after implement FBX loader
-	*/
+	s_Animations[fullName] = animation;
 }
 
 bool SkeletalAnimationArchive::Has(const std::string & skeltonName, const std::string & animName)
@@ -67,16 +59,16 @@ std::vector<KeyFramePair> SkeletalAnimationArchive::GetAnimationKeys(const std::
 	if (!Has(fullName))
 	{
 		std::cout << "The Animation doen't exist!\n";
-		return;
+		return std::vector<KeyFramePair>();
 	}
-	return s_Animations[fullName].GetKeyFrames(elapsedTime);
+	return s_Animations[fullName]->GetKeyFrames(elapsedTime);
 }
-
 
 void SkeletalAnimationPlayer::Play(std::shared_ptr<AnimationInform> inform)
 {
 	using namespace DirectX;
-	auto keyFrames = SkeletalAnimationArchive::s_Animations[inform->CurAnim].GetKeyFrames(inform->Elapsedtime);
+
+	std::vector<KeyFramePair> keyFrames = SkeletalAnimationArchive::s_Animations[inform->CurAnim]->GetKeyFrames(inform->Elapsedtime);
 
 	int i = 0;
 	for (auto& keyFrame : keyFrames)
@@ -112,6 +104,4 @@ void SkeletalAnimationPlayer::Play(std::shared_ptr<AnimationInform> inform)
 		}
 		i++;
 	}
-
 }
-
