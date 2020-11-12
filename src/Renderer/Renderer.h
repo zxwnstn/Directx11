@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Shader.h"
-#include "Resource/Texture.h"
 
 enum class DefaultShader
 {
@@ -15,8 +14,8 @@ private:
 
 public:
 	static void BeginScene(class Camera& camera);
-	static void Enque(DefaultShader shader, const Buffer& buffer);
-	static void Enque(DefaultShader shader, const Buffer& buffer, const Texture& texture);
+	static void Enque(DefaultShader shader, const ModelBuffer& buffer);
+	static void Enque(DefaultShader shader, const ModelBuffer& buffer, const Texture& texture);
 	static void EndScene();
 
 	static class PipelineController& GetPipelineController();

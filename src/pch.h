@@ -35,3 +35,4 @@
 //vendor
 #include "../vendor/stb_image/stb_image.h"
 
+#define BIT(x) 1 << x

@@ -1,6 +1,6 @@
 #pragma once
-#include "Resource/Animation.h"
-#include "Resource/Transform.h"
+
+#include "Model/Transform.h"
 
 namespace CBuffer {
 

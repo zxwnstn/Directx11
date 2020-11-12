@@ -1,97 +1,84 @@
 #include "pch.h"
 
 #include <fbxsdk.h>
-#include "FbxLoader.h"
+#include "FbxLoader2.h"
+#include "FileCommon.h"
 
 
-FBXLoader::FBXLoader()
+
+FBXLoader::FBXLoader(const std::string & file)
 {
+	if (!File::isExistFile(file)) 
+		return;
+
 	m_Manager = FbxManager::Create();
-	m_Importer = FbxImporter::Create(m_Manager, "");
 	m_Manager->SetIOSettings(FbxIOSettings::Create(m_Manager, IOSROOT));
-}
 
-FbxResult FBXLoader::Import(const std::string & file)
-{
-	scene = FbxScene::Create(m_Manager, "");
-	FbxGeometryConverter geometryConverter(m_Manager);
-
-	m_Importer->Initialize(file.c_str(), -1, m_Manager->GetIOSettings());
-	m_Importer->Import(scene);
-
-	FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
-	FbxAxisSystem::MayaYUp.ConvertScene(scene);
-	geometryConverter.Triangulate(scene, true);
-
-	FbxNode* root = scene->GetRootNode();
-	return process(root);
-}
-
-FBXLoader * FBXLoader::Get()
-{
-	static FBXLoader* inst = nullptr;
-	if (!inst)
+	if (isExistCache(file))
 	{
-		inst = new FBXLoader;
+		isCached = true;
+		return;
 	}
-	return inst;
+
+	importer = FbxImporter::Create(m_Manager, "");
+	scene = FbxScene::Create(m_Manager, "");
+	importer->Initialize(file.c_str(), -1, m_Manager->GetIOSettings());
+	importer->Import(scene);
 }
 
-void FBXLoader::Shutdown()
+void FBXLoader::Extract(uint64_t flag)
 {
-
-}
-
-FbxResult FBXLoader::process(FbxNode* root)
-{
-	FbxResult result;
-
 	auto count = root->GetChildCount();
 	for (int i = 0; i < count; ++i)
 	{
 		FbxNode* node = root->GetChild(i);
 		FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
-		
+
 		switch (nodeType)
 		{
 		case fbxsdk::FbxNodeAttribute::eSkeleton:
-			procBoneHierachy(root, result);
+			getBoneHierachy();
 			break;
 		case fbxsdk::FbxNodeAttribute::eMesh:
-			procControlPoint(node, result);
-			procAnimation(node, result);
-			procVertices(node, result);
-			//procMaterial(node, result);
+			getControlPoint(node);
+			getAnimation();
+			getVertices(node);
+			getMaterial();
 			break;
 		}
 	}
-
-	return result;
 }
 
-void FBXLoader::procControlPoint(FbxNode* node, FbxResult& ret)
+
+bool FBXLoader::isExistCache(const std::string& file)
+{
+	return false;
+}
+
+void FBXLoader::getControlPoint(FbxNode* node)
 {
 	FbxMesh* mesh = node->GetMesh();
 	uint32_t count = mesh->GetControlPointsCount();
-	ret.ControlPoints.resize(count);
 
-	for (unsigned int i = 0; i < count; ++i)
+	data.ControlPoints = new ControlPoint[count];
+
+	for (uint32_t i = 0; i < count; ++i)
 	{
-		ret.ControlPoints[i].pos.x = static_cast<float>(mesh->GetControlPointAt(i).mData[0]);
-		ret.ControlPoints[i].pos.y = static_cast<float>(mesh->GetControlPointAt(i).mData[1]);
-		ret.ControlPoints[i].pos.z = static_cast<float>(mesh->GetControlPointAt(i).mData[2]);
-		ret.ControlPoints[i].pos.w = 1.0f;
+		for (uint32_t j = 0; j < 3; ++j)
+		{
+			data.ControlPoints[i].Position.m[j] = static_cast<float>(mesh->GetControlPointAt(i).mData[j]);
+		}
 	}
 }
 
-void FBXLoader::procVertices(FbxNode* node, FbxResult& ret)
+void FBXLoader::getVertices(FbxNode* node)
 {
 	FbxMesh* mesh = node->GetMesh();
 	int count = mesh->GetPolygonCount();
 	uint32_t vertexCount = count * 3;
 
-	ret.Vertices.resize(vertexCount);
-	ret.Indices.resize(vertexCount);
+	data.Vertices = new Vertex[vertexCount];
+	data.Indices = new uint32_t[vertexCount];
 
 	uint32_t index = 0;
 	for (int i = 0; i < count; ++i)
@@ -99,27 +86,24 @@ void FBXLoader::procVertices(FbxNode* node, FbxResult& ret)
 		for (int j = 0; j < 3; ++j)
 		{
 			int controlIndex = mesh->GetPolygonVertex(i, j);
-			ret.Vertices[index].pos = ret.ControlPoints[controlIndex].pos;
-			ret.Vertices[index].uvs = procUV(mesh, index, controlIndex);
+			data.Vertices[index].Position = data.ControlPoints[controlIndex].Position;
+			data.Vertices[index].UV = procUV(mesh, index, controlIndex);
 
 			for (int k = 0; k < 4; ++k)
 			{
-				ret.Vertices[index].BoneIndex[k] = ret.ControlPoints[controlIndex].BoneWeights[k].BoneIndex;
-				ret.Vertices[index].Weight[k] = ret.ControlPoints[controlIndex].BoneWeights[k].Weight;
+				data.Vertices[index].BoneIndex.m[k] = data.ControlPoints[controlIndex].BoneIndex.m[k];
+				data.Vertices[index].BoneWeight.m[k] = data.ControlPoints[controlIndex].BoneWeight.m[k];
 			}
-			ret.Indices[index] = index;
+			data.Indices[index] = index;
 
 			index++;
 		}
-	
+
 	}
 }
 
-void FBXLoader::procMaterial(FbxNode* node, FbxResult& ret)
-{
-}
 
-void FBXLoader::createHierachy(FbxNode* node, FbxResult& ret, int index, int parent)
+void FBXLoader::createHierachy(FbxNode* node, int index, int parent)
 {
 	FbxNodeAttribute::EType type = node->GetNodeAttribute()->GetAttributeType();
 	if (type == FbxNodeAttribute::EType::eSkeleton)
@@ -136,7 +120,7 @@ void FBXLoader::createHierachy(FbxNode* node, FbxResult& ret, int index, int par
 
 }
 
-void FBXLoader::procBoneHierachy(FbxNode* node, FbxResult& ret)
+void FBXLoader::getBoneHierachy(FbxNode* node)
 {
 	for (int child = 0; child < node->GetChildCount(); ++child)
 	{
@@ -145,14 +129,14 @@ void FBXLoader::procBoneHierachy(FbxNode* node, FbxResult& ret)
 	}
 }
 
-void FBXLoader::procAnimation(FbxNode* node, FbxResult& ret)
+void FBXLoader::getAnimation(FbxNode* node)
 {
+	//Defomer -> cluster -> link(Joint)
 	FbxMesh* mesh = node->GetMesh();
 	unsigned int numOfDeformers = mesh->GetDeformerCount();
 	FbxAMatrix geometryTransform;
 	geometryTransform.SetIdentity();
 
-	//Defomer -> cluster -> link(Joint or Bone)
 	//Defomer
 	for (unsigned int deformerIndex = 0; deformerIndex < numOfDeformers; ++deformerIndex)
 	{
@@ -178,10 +162,10 @@ void FBXLoader::procAnimation(FbxNode* node, FbxResult& ret)
 			FbxAMatrix offsetMat;
 			DirectX::XMFLOAT4X4 _offsetMat;
 			//축정렬이 되었다면 단위행렬
-			cluster->GetTransformMatrix(transformMatrix);	
 			//월드상에서 조인트의 Transform이다.(JointTransform)
-			cluster->GetTransformLinkMatrix(transformLinkMatrix);	
 			//조인트 트랜스폼의 역행렬을 취해줌 으로서 해당매트릭스의 포지션으로 가게된다.
+			cluster->GetTransformMatrix(transformMatrix);
+			cluster->GetTransformLinkMatrix(transformLinkMatrix);
 			offsetMat = transformLinkMatrix.Inverse() * transformMatrix * geometryTransform;
 			for (int i = 0; i < 4; ++i)
 			{
@@ -226,7 +210,7 @@ void FBXLoader::procAnimation(FbxNode* node, FbxResult& ret)
 
 				FbxAMatrix currentTransformOffset = node->EvaluateGlobalTransform(curTime) * geometryTransform;
 				auto globalTransform = currentTransformOffset.Inverse() * cluster->GetLink()->EvaluateGlobalTransform(curTime);
-				
+
 				FbxVector4 TS = globalTransform.GetT();
 				keyFrame.Translation = {
 					static_cast<float>(TS.mData[0]),
@@ -310,5 +294,3 @@ vec2 FBXLoader::procUV(FbxMesh* mesh, int index, int controlIndex)
 
 	return ret;
 }
-
-

@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Buffer.h"
+#include "ModelBuffer.h"
 #include "Renderer.h"
 #include "Dx11Core.h"
 
-void Buffer::VertexBuffer::Init(float * vertices, uint32_t size, bool isDynamic)
+void ModelBuffer::VertexBuffer::Init(void * vertices, uint32_t size, bool isDynamic)
 {
 	IsDynamic = isDynamic;
 	D3D11_BUFFER_DESC vertexBufferDesc;
@@ -31,7 +31,7 @@ void Buffer::VertexBuffer::Init(float * vertices, uint32_t size, bool isDynamic)
 	auto ret = Dx11Core::Get().Device->CreateBuffer(&vertexBufferDesc, &vertexData, &Buffer);
 }
 
-void Buffer::VertexBuffer::SetData(float * data, uint32_t size)
+void ModelBuffer::VertexBuffer::SetData(float * data, uint32_t size)
 {
 	if (!IsDynamic)
 		return;
@@ -45,7 +45,7 @@ void Buffer::VertexBuffer::SetData(float * data, uint32_t size)
 	Dx11Core::Get().Context->Unmap(Buffer, 0);
 }
 
-void Buffer::IndexBuffer::Init(uint32_t * indices, uint32_t count)
+void ModelBuffer::IndexBuffer::Init(void * indices, uint32_t count)
 {
 	Count = count;
 
@@ -70,25 +70,25 @@ BufferBuilder::BufferBuilder(const InputLayout & intpuLayout)
 {
 }
 
-BufferBuilder & BufferBuilder::SetVertex(float * vertices, uint32_t size, bool isDynamic)
+BufferBuilder & BufferBuilder::SetVertex(void* vertices, uint32_t size, bool isDynamic)
 {
 	buffer.Vertex.Init(vertices, size, isDynamic);
 	return *this;
 }
 
-BufferBuilder & BufferBuilder::SetIndex(uint32_t * indices, uint32_t count)
+BufferBuilder & BufferBuilder::SetIndex(void* indices, uint32_t count)
 {
 	buffer.Index.Init(indices, count);
 	return *this;
 }
 
 
-Buffer::Buffer(const InputLayout & inputLayout)
+ModelBuffer::ModelBuffer(const InputLayout & inputLayout)
 	: Layout(inputLayout)
 {
 }
 
-void Buffer::Bind() const
+void ModelBuffer::Bind() const
 {
 	UINT offset = 0;
 
@@ -96,4 +96,9 @@ void Buffer::Bind() const
 	Dx11Core::Get().Context->IASetIndexBuffer(Index.Buffer, DXGI_FORMAT_R32_UINT, 0);
 	Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
+
+void ModelBuffer::Bind() const
+{
+}
+
 

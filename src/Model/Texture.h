@@ -15,3 +15,8 @@ private:
 	ID3D11Texture2D* Buffer;
 	ID3D11ShaderResourceView* View;
 };
+
+class TextureArchive
+{
+
+};

@@ -18,8 +18,6 @@ public:
 	inline const DirectX::XMMATRIX& GetRotate() const { return m_Rotate; }
 	inline const DirectX::XMMATRIX& GetScale() const { return m_Scale; }
 
-	inline const DirectX::XMFLOAT3& GetTranslateValue() const { return m_TranslateValue; }
-
 private:
 	void SetTranslate();
 	void SetRotate();

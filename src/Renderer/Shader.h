@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Buffer.h"
+#include "ModelBuffer.h"
 #include "CBuffer.h"
 #include "Resource/Transform.h"
 #include "Resource/Camera.h"

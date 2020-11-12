@@ -37,7 +37,7 @@ private:
 
 	friend class PipelineController;
 	friend class Renderer;
-	friend class Buffer;
+	friend class ModelBuffer;
 	friend class Shader;
 	friend class Texture;
 };

@@ -3,7 +3,8 @@
 #include "Renderer.h"
 #include "Dx11Core.h"
 #include "PipelineController.h"
-#include "Resource/Camera.h"
+#include "Model/Texture.h"
+#include "Common/Camera.h"
 
 static PipelineController* s_PLController = nullptr;
 static std::unordered_map<std::string, Shader> RendererShaders;
@@ -39,7 +40,7 @@ void Renderer::BeginScene(Camera & camera)
 
 }
 
-void Renderer::Enque(DefaultShader shader, const Buffer & buffer)
+void Renderer::Enque(DefaultShader shader, const ModelBuffer & buffer)
 {
 	RendererShaders[ToString(shader)].Bind();
 	buffer.Bind();
@@ -47,7 +48,7 @@ void Renderer::Enque(DefaultShader shader, const Buffer & buffer)
 	Dx11Core::Get().Context->DrawIndexed(buffer.GetIndexCount(), 0, 0);
 }
 
-void Renderer::Enque(DefaultShader shader, const Buffer & buffer, const Texture & texture)
+void Renderer::Enque(DefaultShader shader, const ModelBuffer & buffer, const Texture & texture)
 {
 	RendererShaders[ToString(shader)].Bind();
 	buffer.Bind();
