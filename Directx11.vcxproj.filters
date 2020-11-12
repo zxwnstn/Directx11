@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="src\Core\App.h" />
+    <ClInclude Include="src\Core\Window.h" />
+    <ClInclude Include="src\Renderer\Buffer.h" />
+    <ClInclude Include="src\Renderer\Renderer.h" />
+    <ClInclude Include="src\Renderer\Shader.h" />
+    <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\Renderer\PipelineController.h" />
+    <ClInclude Include="src\SandBox.h" />
+    <ClInclude Include="src\Renderer\Dx11Core.h" />
+    <ClInclude Include="src\Renderer\InputLayout.h" />
+    <ClInclude Include="src\Resource\Texture.h" />
+    <ClInclude Include="vendor\stb_image\stb_image.h" />
+    <ClInclude Include="src\Resource\Camera.h" />
+    <ClInclude Include="src\Renderer\CBuffer.h" />
+    <ClInclude Include="src\Resource\Transform.h" />
+    <ClInclude Include="src\Resource\Animation.h" />
+    <ClInclude Include="src\FbxLoader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Core\App.cpp" />
+    <ClCompile Include="src\Core\Window.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\Renderer\Renderer.cpp" />
+    <ClCompile Include="src\Renderer\PipelineController.cpp" />
+    <ClCompile Include="src\SandBox.cpp" />
+    <ClCompile Include="src\Renderer\Buffer.cpp" />
+    <ClCompile Include="src\Renderer\Dx11Core.cpp" />
+    <ClCompile Include="src\Renderer\Shader.cpp" />
+    <ClCompile Include="src\Renderer\InputLayout.cpp" />
+    <ClCompile Include="src\Resource\Texture.cpp" />
+    <ClCompile Include="vendor\stb_image\stb_image.cpp" />
+    <ClCompile Include="src\Resource\Camera.cpp" />
+    <ClCompile Include="src\Renderer\CBuffer.cpp" />
+    <ClCompile Include="src\Resource\Transform.cpp" />
+    <ClCompile Include="src\Resource\Animation.cpp" />
+    <ClCompile Include="src\FbxLoader.cpp" />
+  </ItemGroup>
+</Project>
