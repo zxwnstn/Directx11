@@ -60,9 +60,6 @@
 	#elif defined(_M_ARM)
 		#define FBXSDK_ARCH_ARM 1
 		#define FBXSDK_CPU_32 1
-	#elif defined(_M_ARM64)
-		#define FBXSDK_ARCH_ARM 1
-		#define FBXSDK_CPU_64 1
 	#else
 		#error Unsupported architecture!
 	#endif

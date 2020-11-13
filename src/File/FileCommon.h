@@ -2,12 +2,18 @@
 
 namespace File {
 
-	bool isExistFile(const std::string& filename);
-	bool isExistDirectroy(const std::string& filename);
-
-	template<typename Func>
-	void iterateDirectory(const std::string& directroy, Func& func)
+	enum CommonPathType
 	{
+		Assets,
+		Texture,
+		FBX,
+		FBXCache,
+		Shader,
+	};
 
-	}
+	bool isExistFile(const std::string& filename);
+	bool isExistDirectroy(const std::string& path);
+	void CreateDir(const std::string& path);
+
+	std::string GetCommonPath(CommonPathType pathType);
 }

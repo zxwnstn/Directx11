@@ -5,7 +5,7 @@ class Texture
 public:
 	Texture(const std::string& path);
 
-	void Bind() const;
+	void Bind(int slot) const;
 
 private:
 	int32_t Width;
@@ -18,5 +18,9 @@ private:
 
 class TextureArchive
 {
-
+public:
+	static void Add(const std::string& path, const std::string& name);
+	static bool Has(const std::string& name);
+	static std::shared_ptr<Texture> Get(const std::string& name);
+	static void Shudown();
 };

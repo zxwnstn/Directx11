@@ -70,14 +70,21 @@ BufferBuilder::BufferBuilder(const InputLayout & intpuLayout)
 {
 }
 
-BufferBuilder & BufferBuilder::SetVertex(void* vertices, uint32_t size, bool isDynamic)
+BufferBuilder & BufferBuilder::SetVertex(void* vertices, uint32_t count, bool isDynamic)
 {
-	buffer.Vertex.Init(vertices, size, isDynamic);
+	buffer.Vertex.Init(vertices, count * buffer.Layout.Stride, isDynamic);
 	return *this;
 }
 
 BufferBuilder & BufferBuilder::SetIndex(void* indices, uint32_t count)
 {
+	buffer.Index.Init(indices, count);
+	return *this;
+}
+
+BufferBuilder & BufferBuilder::SetBuffer(void* vertices, void* indices, uint32_t count, bool isDynamic)
+{
+	buffer.Vertex.Init(vertices, count * buffer.Layout.Stride, isDynamic);
 	buffer.Index.Init(indices, count);
 	return *this;
 }

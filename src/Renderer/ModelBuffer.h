@@ -45,6 +45,7 @@ public:
 
 	BufferBuilder& SetVertex(void* vertices, uint32_t size, bool isDynamic = false);
 	BufferBuilder& SetIndex(void* indices, uint32_t count);
+	BufferBuilder& SetBuffer(void* vertices, void* indices, uint32_t count, bool isDynamic = false);
 	inline operator std::shared_ptr<ModelBuffer>() const { return std::make_shared<ModelBuffer>(buffer); }
 
 private:

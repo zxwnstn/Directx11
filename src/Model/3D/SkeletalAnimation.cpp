@@ -6,39 +6,52 @@
 
 KeyFramePair JointAnimation::GetKeyFramePair(float elapsedTime)
 {
-	uint32_t timePoint = uint32_t((elapsedTime / Duration) * float(KeyFrames.size()));
-	if(timePoint == 0)
-		return { &KeyFrames[timePoint], nullptr };
+	size_t i;
+	for (i = 0; i < KeyFrames.size(); ++i)
+	{
+		if (KeyFrames[i].Start >= elapsedTime)
+			break;
+	}
+	if (i == KeyFrames.size())
+	{
+		return { &KeyFrames[i - 1], nullptr };
+	}
 
-	if (timePoint > KeyFrames.size())
-		return { &KeyFrames[timePoint - 1], nullptr };
+	if (i == 0)
+		return { &KeyFrames[0], nullptr };
 
-	return { &KeyFrames[timePoint - 1], &KeyFrames[timePoint] };
+	return {&KeyFrames[i - 1], &KeyFrames[i]};
 }
 
 std::vector<KeyFramePair> SkeletalAnimtion::GetKeyFrames(float elapsedTime)
 {
+
 	std::vector<KeyFramePair> ret;
-	for (auto jointAnimation : JointAnimations)
-		ret.emplace_back(jointAnimation.GetKeyFramePair(elapsedTime));
+	for (auto& jointAnimation : JointAnimations)
+		ret.push_back(jointAnimation.GetKeyFramePair(elapsedTime));
 
 	return ret;
 }
 
 
 std::unordered_map<std::string, SkeletalAnimtion*> SkeletalAnimationArchive::s_Animations;
+std::unordered_map<std::string, std::vector<std::string>> SkeletalAnimationArchive::s_AnimList;
 
-void SkeletalAnimationArchive::Add(const std::string & skeltonName, const std::string & animName, SkeletalAnimtion* animation)
+bool SkeletalAnimationArchive::Add(const std::string & skeletonName, const std::string & animName)
 {
-	std::string fullName = skeltonName + "/" + animName;
-	if (Has(fullName)) return;
+	std::string fullName = skeletonName + "/" + animName;
+	if (Has(fullName)) return false;
 
+	SkeletalAnimtion* animation = new SkeletalAnimtion;
 	s_Animations[fullName] = animation;
+	s_AnimList[skeletonName].push_back(animName);
+
+	return true;
 }
 
-bool SkeletalAnimationArchive::Has(const std::string & skeltonName, const std::string & animName)
+bool SkeletalAnimationArchive::Has(const std::string & skeletonName, const std::string & animName)
 {
-	std::string fullName = skeltonName + "/" + animName;
+	std::string fullName = skeletonName + "/" + animName;
 	return Has(fullName);
 }
 
@@ -48,9 +61,14 @@ bool SkeletalAnimationArchive::Has(const std::string & fullName)
 	return find != s_Animations.end();
 }
 
-std::vector<KeyFramePair> SkeletalAnimationArchive::GetAnimationKeys(const std::string & skeltonName, const std::string & animName, float elapsedTime)
+void SkeletalAnimationArchive::Shudown()
 {
-	std::string fullName = skeltonName + "/" + animName;
+	s_Animations.clear();
+}
+
+std::vector<KeyFramePair> SkeletalAnimationArchive::GetAnimationKeys(const std::string & skeletonName, const std::string & animName, float elapsedTime)
+{
+	std::string fullName = skeletonName + "/" + animName;
 	return GetAnimationKeys(fullName, elapsedTime);
 }
 
@@ -64,12 +82,52 @@ std::vector<KeyFramePair> SkeletalAnimationArchive::GetAnimationKeys(const std::
 	return s_Animations[fullName]->GetKeyFrames(elapsedTime);
 }
 
-void SkeletalAnimationPlayer::Play(std::shared_ptr<AnimationInform> inform)
+std::vector<std::string>& SkeletalAnimationArchive::GetAnimList(const std::string & skeletonName)
+{
+	auto find = s_AnimList.find(skeletonName);
+	if (find == s_AnimList.end())
+	{
+		std::cout << "The AnimationList doen't exist!\n";
+		//assert(flase);
+		return  s_AnimList[skeletonName];
+	}
+	return s_AnimList[skeletonName];
+}
+
+SkeletalAnimtion * SkeletalAnimationArchive::GetAnimation(const std::string & skeletonName, const std::string & animName)
+{
+	std::string fullName = skeletonName + "/" + animName;
+	if (!Has(fullName))
+		return nullptr;
+	return s_Animations[fullName];
+}
+
+float SkeletalAnimationArchive::GetAnimationDuration(const std::string & skeletonName, const std::string & animName)
+{
+	std::string fullName = skeletonName + "/" + animName;
+	if (!Has(fullName))
+		return 0.0f;
+
+	return s_Animations[fullName]->JointAnimations.begin()->Duration;
+}
+
+float SkeletalAnimationArchive::GetKeyInterval(const std::string & skeletonName, const std::string & animName)
+{
+	std::string fullName = skeletonName + "/" + animName;
+	if (!Has(fullName))
+		return 0.0f;
+
+	float interval = s_Animations[fullName]->JointAnimations[0].KeyFrames[1].Start -
+	s_Animations[fullName]->JointAnimations[0].KeyFrames[0].Start;
+
+	return interval;
+}
+
+void SkeletalAnimationPlayer::Play(const std::string& skeletonName, std::shared_ptr<AnimationInform> inform)
 {
 	using namespace DirectX;
 
-	std::vector<KeyFramePair> keyFrames = SkeletalAnimationArchive::s_Animations[inform->CurAnim]->GetKeyFrames(inform->Elapsedtime);
-
+	std::vector<KeyFramePair> keyFrames = SkeletalAnimationArchive::s_Animations[skeletonName + "/" + inform->CurAnim]->GetKeyFrames(inform->Elapsedtime);
 	int i = 0;
 	for (auto& keyFrame : keyFrames)
 	{
@@ -84,7 +142,7 @@ void SkeletalAnimationPlayer::Play(std::shared_ptr<AnimationInform> inform)
 		}
 		else
 		{
-			float lerpPercent = (inform->Elapsedtime - keyFrame.first->Start) / (keyFrame.second->Start - keyFrame.first->Start);
+			float lerpPercent = (inform->Elapsedtime - keyFrame.first->Start) / inform->KeyInterval;
 
 			XMVECTOR s0 = XMLoadFloat3(&keyFrame.first->Scale);
 			XMVECTOR s1 = XMLoadFloat3(&keyFrame.second->Scale);
@@ -104,4 +162,14 @@ void SkeletalAnimationPlayer::Play(std::shared_ptr<AnimationInform> inform)
 		}
 		i++;
 	}
+
+	auto& joints = SkeletonArchive::Get(skeletonName)->Joints;
+	for (size_t i = 0; i < joints.size(); ++i)
+	{
+		XMMATRIX skinnedTransform = XMLoadFloat4x4(&inform->MySkinnedTransforms[i]);
+		skinnedTransform = XMMatrixMultiply(joints[i].Offset, skinnedTransform);
+		skinnedTransform *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
+		XMStoreFloat4x4(&inform->MySkinnedTransforms[i], XMMatrixTranspose(skinnedTransform));
+	}
+
 }

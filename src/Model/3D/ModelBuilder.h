@@ -20,6 +20,7 @@ public:
 
 	FinalModelBuilder SetSkeleton(const std::string& skeletonName);
 
+private:
 	Model3D* myModel;
 };
 

@@ -6,9 +6,18 @@
 #pragma comment(lib, "d3dcompiler.lib")
 
 //fbx
-#pragma comment(lib, "vendor/Fbx/lib/x64/libfbxsdk-md.lib")
-#pragma comment(lib, "vendor/Fbx/lib/x64/libxml2-md.lib")
-#pragma comment(lib, "vendor/Fbx/lib/x64/zlib-md.lib")
+#ifdef _DEBUG
+	#pragma comment(lib, "vendor/Fbx/lib/x64/debug/libfbxsdk-md.lib")
+#else
+	#pragma comment(lib, "vendor/Fbx/lib/x64/release/libfbxsdk-md.lib")
+#endif
+
+//boost
+#ifdef _DEBUG
+	#pragma comment(lib, "vendor/boost/stage/lib/libboost_serialization-vc141-mt-gd-x64-1_70.lib")
+#else
+	#pragma comment(lib, "vendor/boost/stage/lib/libboost_serialization-vc141-mt-x64-1_70.lib")
+#endif
 
 #include <Windows.h>
 
@@ -31,6 +40,7 @@
 #include <fstream>
 #include <memory>
 #include <queue>
+#include <algorithm>
 
 //vendor
 #include "../vendor/stb_image/stb_image.h"

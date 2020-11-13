@@ -56,19 +56,10 @@ public:
 	  */
 	bool Validate(ECheckMode pCheckMode=eCheckCycles);
 
-
 /*****************************************************************************************************************************
 ** WARNING! Anything beyond these lines is for internal use, may not be documented and is subject to change without notice! **
 *****************************************************************************************************************************/
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-
-	/** Validate that the data in the given structure is within acceptable ranges
-	  * return \false if any issue is found
-	  */
-	static bool ValidateObjectData(const FbxNurbs* pNurbs);
-	static bool ValidateObjectData(const FbxNurbsCurve* pNurbs);
-	static bool ValidateObjectData(const FbxNurbsSurface* pNurbs);
-
 protected:
 	bool HaveCycles();
 	bool HaveInvalidData(int pCheckMode);
@@ -81,9 +72,7 @@ private:
 	bool CheckMappingMode(FbxLayerElement::EMappingMode pMappingMode, const FbxString& pPrefix);
 	bool CheckReferenceMode(FbxLayerElement::EReferenceMode pReferenceMode, const FbxString& pPrefix);
 	bool CheckSurfaceMode(FbxGeometry::ESurfaceMode pSurfaceMode, const FbxString& pPrefix);
-	
-	template<class T> 
-	bool CheckSurfaceType(T pSurfaceType, const FbxString& pPrefix, const char* pDir);
+	bool CheckSurfaceType(FbxNurbs::EType pSurfaceType, const FbxString& pPrefix, const char* pDir);
 
 	int  MaxCountLimit(FbxLayerElement::EMappingMode pMappingMode, 
 						int pCtrlPointsCount, 

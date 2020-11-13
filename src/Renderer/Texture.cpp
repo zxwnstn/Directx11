@@ -45,7 +45,34 @@ Texture::Texture(const std::string& path)
 	Dx11Core::Get().Context->GenerateMips(View);
 }
 
-void Texture::Bind() const
+void Texture::Bind(int slot) const
 {
-	Dx11Core::Get().Context->PSSetShaderResources(0, 1, &View);
+	Dx11Core::Get().Context->PSSetShaderResources(slot, 1, &View);
+}
+
+
+static std::unordered_map<std::string, std::shared_ptr<Texture>> s_Textures;
+
+void TextureArchive::Add(const std::string & path, const std::string & name)
+{
+	if (Has(name)) return;
+
+	s_Textures[name] = std::make_shared<Texture>(path);
+}
+
+bool TextureArchive::Has(const std::string & name)
+{
+	auto find = s_Textures.find(name);
+	return find != s_Textures.end();
+}
+
+std::shared_ptr<Texture> TextureArchive::Get(const std::string & name)
+{
+	if (!Has(name)) return nullptr;
+	return s_Textures[name];
+}
+
+void TextureArchive::Shudown()
+{
+	s_Textures.clear();
 }

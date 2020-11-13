@@ -127,7 +127,7 @@ void Shader::SetBoneParam(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t count)
 	Dx11Core::Get().Context->Map(find->second, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 
 	CBuffer::Bone* mappedData = (CBuffer::Bone*)mappedResource.pData;
-	mappedData->Upload(skinnedTransform, count);
+	mappedData->Upload(skinnedTransform, count * sizeof(DirectX::XMFLOAT4X4));
 
 	Dx11Core::Get().Context->Unmap(find->second, 0);
 

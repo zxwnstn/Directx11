@@ -932,17 +932,17 @@ public:
     
     FbxCharacterLink*	GetCharacterLinkPtr(ENodeId pCharacterNodeId);
 
-    FbxObject*	Clone(FbxObject::ECloneType pCloneType=eDeepClone, FbxObject* pContainer=NULL, void* pSet = NULL) const override;
+    virtual FbxObject*	Clone(FbxObject::ECloneType pCloneType=eDeepClone, FbxObject* pContainer=NULL, void* pSet = NULL) const;    
 
 protected:
-	void Construct(const FbxObject* pFrom) override;
-	void ConstructProperties(bool pForceSet) override;
-	void Destruct(bool pRecursive) override;
+	virtual void Construct(const FbxObject* pFrom);
+	virtual void ConstructProperties(bool pForceSet);
+	virtual void Destruct(bool pRecursive);
 
-	FbxObject&		Copy(const FbxObject& pObject) override;
-	EType			GetConstraintType() const override;
-	FbxStringList	GetTypeFlags() const override;
-	bool			ConnectNotify (FbxConnectEvent const &pEvent) override;
+	virtual FbxObject&		Copy(const FbxObject& pObject);
+	virtual EType			GetConstraintType() const;
+	virtual FbxStringList	GetTypeFlags() const;
+	virtual bool			ConnectNotify (FbxConnectEvent const &pEvent);
 
 private:
 	bool					InverseProperty(FbxProperty& pProp);

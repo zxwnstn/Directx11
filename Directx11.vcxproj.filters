@@ -24,6 +24,8 @@
     <ClInclude Include="src\Renderer\Texture.h" />
     <ClInclude Include="src\Model\3D\ModelBuilder.h" />
     <ClInclude Include="src\File\FbxLoader.h" />
+    <ClInclude Include="src\File\Serialization.h" />
+    <ClInclude Include="src\File\SerializedData.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\App.cpp" />

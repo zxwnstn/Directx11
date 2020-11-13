@@ -5,12 +5,12 @@
 #include "PipelineController.h"
 #include "Texture.h"
 #include "Common/Camera.h"
+#include "Model/Model.h"
+#include "Model/3D/SkeletalAnimation.h"
+#include "Model/3D/Skeleton.h"
 
 static PipelineController* s_PLController = nullptr;
 static std::unordered_map<std::string, Shader> RendererShaders;
-
-
-
 
 void Renderer::Init()
 {
@@ -43,9 +43,22 @@ void Renderer::Enque(RenderingShader shader, const ModelBuffer & buffer, const T
 {
 	RendererShaders[ToString(shader)].Bind();
 	buffer.Bind();
-	texture.Bind();
+	texture.Bind(0);
 
 	Dx11Core::Get().Context->DrawIndexed(buffer.GetIndexCount(), 0, 0);
+}
+
+void Renderer::Enque(std::shared_ptr<Model3D> model)
+{
+	RendererShaders[model->m_Shader].Bind();
+	RendererShaders[model->m_Shader].SetBoneParam(model->m_Animation->MySkinnedTransforms, (uint32_t)model->m_Skeleton->Joints.size());
+	RendererShaders[model->m_Shader].SetTransformParam(model->m_Transform);
+	
+	for (int i = 0; i < model->m_Textures.size(); ++i)
+		model->m_Textures[i]->Bind(i);
+	model->m_ModelBuffer->Bind();
+
+	Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
 }
 
 void Renderer::EndScene()
@@ -61,6 +74,11 @@ PipelineController& Renderer::GetPipelineController()
 Shader& Renderer::GetShader(RenderingShader shader)
 {
 	return RendererShaders[ToString(shader)];
+}
+
+Shader & Renderer::GetShader(const std::string & shader)
+{
+	return RendererShaders[shader];
 }
 
 void Renderer::CreateShader(const std::string & path, const std::string & keyName)

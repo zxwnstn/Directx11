@@ -627,14 +627,14 @@ public:
           * \return \c True if the content is successfully processed
           * by the receiving stream, \c false otherwise.
           */
-        bool ContentWriteTo(FbxStream& pStream) const override;
+        virtual bool ContentWriteTo(FbxStream& pStream) const;
 
         /** Reads the content of the geometry object from the specified stream.
           * \param pStream The source stream.
           * \return \c True if the geometry object fills itself with the received data
           * from the stream successfully, \c false otherwise.
           */
-        bool ContentReadFrom(const FbxStream& pStream) override;
+        virtual bool ContentReadFrom(const FbxStream& pStream);
     //@}
 
         /** Calculate the actual amount of memory used by this geometry object. 
@@ -646,8 +646,8 @@ public:
 ** WARNING! Anything beyond these lines is for internal use, may not be documented and is subject to change without notice! **
 *****************************************************************************************************************************/
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-    FbxObject& Copy(const FbxObject& pObject) override;
-    void Compact() override;
+	virtual FbxObject& Copy(const FbxObject& pObject);
+	virtual void Compact();
 
     FbxArray<FbxVector4> mControlPoints;
 
@@ -659,8 +659,8 @@ public:
     bool GetBinormalsIndices(FbxLayerElementArrayTemplate<int>** pLockableArray, const int pLayerIndex = 0) const;
 
 protected:
-    void ConstructProperties(bool pForceSet) override;
-    void ContentClear() override;
+    virtual void ConstructProperties(bool pForceSet);
+    virtual void ContentClear();
 #endif /* !DOXYGEN_SHOULD_SKIP_THIS *****************************************************************************************/
 };
 

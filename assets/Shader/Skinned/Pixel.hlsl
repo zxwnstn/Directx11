@@ -1,5 +1,5 @@
 
-Texture2D shaderTexture;
+Texture2D shaderTexture[3]; //diffuse, normal, specular
 SamplerState SampleType;
 
 struct Input
@@ -11,8 +11,7 @@ struct Input
 float4 main(Input input) : SV_TARGET
 {
 	float4 textureColor;
-
-	textureColor = shaderTexture.Sample(SampleType, input.tex);
+	textureColor = shaderTexture[0].Sample(SampleType, input.tex);
 
 	return textureColor;
 }

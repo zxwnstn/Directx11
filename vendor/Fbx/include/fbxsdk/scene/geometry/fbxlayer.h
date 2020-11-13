@@ -1030,12 +1030,7 @@ public:
 	FbxLayerElementArrayTemplate<Type>& GetDirectArray() const
 	{ 
 		FBX_ASSERT(mReferenceMode == FbxLayerElement::eDirect || mReferenceMode == FbxLayerElement::eIndexToDirect);
-
-		if (mDirectArray == NULL)
-		{
-			throw std::runtime_error("FbxLayerElementArrayTemplate - mDirectArray is NULL");
-		}
-		return *mDirectArray;
+		return *mDirectArray; 
 	}
 
 	/** Returns the direct array of Layer Elements.
@@ -1045,12 +1040,7 @@ public:
 	FbxLayerElementArrayTemplate<Type>& GetDirectArray()
 	{ 
 		FBX_ASSERT(mReferenceMode == FbxLayerElement::eDirect || mReferenceMode == FbxLayerElement::eIndexToDirect);
-
-		if (mDirectArray == NULL)
-		{
-			throw std::runtime_error("FbxLayerElementArrayTemplate - mDirectArray is NULL");
-		}
-		return *mDirectArray;
+		return *mDirectArray; 
 	}
 
 	/** Returns the index array of Layer Elements.
