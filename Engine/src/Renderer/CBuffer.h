@@ -2,7 +2,7 @@
 
 #include "Common/Transform.h"
 
-namespace CBuffer {
+namespace Engine::CBuffer {
 
 	enum class Type
 	{
@@ -26,7 +26,7 @@ namespace CBuffer {
 		DirectX::XMMATRIX Rotate;
 		DirectX::XMMATRIX Scale;
 
-		void Upload(const ::Transform& other);
+		void Upload(const Engine::Transform& other);
 	};
 
 	struct Light

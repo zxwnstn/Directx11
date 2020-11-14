@@ -18,8 +18,8 @@ protected:
 	void keyPressEvent(QKeyEvent* event) override;
 
 private:
-	std::shared_ptr<Model3D> model;
-	std::shared_ptr<class Camera> perspective;
+	std::shared_ptr<Engine::Model3D> model;
+	std::shared_ptr<Engine::Camera> perspective;
 
 	QTimer* timer;
 };

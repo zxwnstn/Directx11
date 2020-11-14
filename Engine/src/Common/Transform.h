@@ -1,35 +1,39 @@
 #pragma once
 
-class Transform
-{
-public:
-	Transform();
-	Transform(const DirectX::XMMATRIX& translate, const DirectX::XMMATRIX& rotate, const DirectX::XMMATRIX& scale);
+namespace Engine {
 
-	void SetTranslate(float x, float y, float z);
-	void SetRotate(float x, float y, float z);
-	void SetScale(float x, float y, float z);
+	class Transform
+	{
+	public:
+		Transform();
+		Transform(const DirectX::XMMATRIX& translate, const DirectX::XMMATRIX& rotate, const DirectX::XMMATRIX& scale);
 
-	void AddTranslate(float x, float y, float z);
-	void AddRotate(float x, float y, float z);
-	void AddScale(float x, float y, float z);
+		void SetTranslate(float x, float y, float z);
+		void SetRotate(float x, float y, float z);
+		void SetScale(float x, float y, float z);
 
-	inline const DirectX::XMMATRIX& GetTranslate() const { return m_Translate; }
-	inline const DirectX::XMMATRIX& GetRotate() const { return m_Rotate; }
-	inline const DirectX::XMMATRIX& GetScale() const { return m_Scale; }
+		void AddTranslate(float x, float y, float z);
+		void AddRotate(float x, float y, float z);
+		void AddScale(float x, float y, float z);
 
-private:
-	void SetTranslate();
-	void SetRotate();
-	void SetScale();
+		inline const DirectX::XMMATRIX& GetTranslate() const { return m_Translate; }
+		inline const DirectX::XMMATRIX& GetRotate() const { return m_Rotate; }
+		inline const DirectX::XMMATRIX& GetScale() const { return m_Scale; }
 
-private:
+	private:
+		void SetTranslate();
+		void SetRotate();
+		void SetScale();
 
-	DirectX::XMMATRIX m_Translate;
-	DirectX::XMMATRIX m_Rotate;
-	DirectX::XMMATRIX m_Scale;
+	private:
 
-	DirectX::XMFLOAT3 m_TranslateValue;
-	DirectX::XMFLOAT3 m_RotateValue;
-	DirectX::XMFLOAT3 m_ScaleValue;
-};
+		DirectX::XMMATRIX m_Translate;
+		DirectX::XMMATRIX m_Rotate;
+		DirectX::XMMATRIX m_Scale;
+
+		DirectX::XMFLOAT3 m_TranslateValue;
+		DirectX::XMFLOAT3 m_RotateValue;
+		DirectX::XMFLOAT3 m_ScaleValue;
+	};
+
+}

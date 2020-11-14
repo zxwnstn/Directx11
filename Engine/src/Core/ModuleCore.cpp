@@ -8,58 +8,63 @@
 #include "Renderer/Texture.h"
 #include "File/FileCommon.h"
 
-static bool isInited = false;
 
-void ModuleCore::Init(const WindowProp & prop)
-{
-	if (isInited) return;
+namespace Engine {
 
-	Renderer::Init(prop);
-	Renderer::GetPipelineController().Bind(PipelineComponent::DepthStencil)
-		.SetBlend(BlendOpt::Alpha)
-		.SetDepthStencil(DepthStencilOpt::Enable)
-		.SetRasterize(RasterlizerOpt::Solid);
+	static bool isInited = false;
 
-	std::filesystem::directory_iterator ShaderFolder(File::GetCommonPath(File::Shader));
-	for (auto& file : ShaderFolder)
+	void ModuleCore::Init(const WindowProp & prop)
 	{
-		if (file.is_directory())
-			Renderer::CreateShader(file.path().string(), file.path().filename().string());
-	}
+		if (isInited) return;
 
-	std::string fbxDir = File::GetCommonPath(File::FBX);
-	std::filesystem::directory_iterator FbxFolder(fbxDir);
-	for (auto& dir : FbxFolder)
-	{
-		if (dir.is_directory())
+		Renderer::Init(prop);
+		Renderer::GetPipelineController().Bind(PipelineComponent::DepthStencil)
+			.SetBlend(BlendOpt::Alpha)
+			.SetDepthStencil(DepthStencilOpt::Enable)
+			.SetRasterize(RasterlizerOpt::Solid);
+
+		std::filesystem::directory_iterator ShaderFolder(File::GetCommonPath(File::Shader));
+		for (auto& file : ShaderFolder)
 		{
-			std::filesystem::directory_iterator CurFolder(dir.path());
-			std::string specificDir = fbxDir + "\\" + dir.path().filename().string() + "\\";
+			if (file.is_directory())
+				Renderer::CreateShader(file.path().string(), file.path().filename().string());
+		}
 
-			FBXLoader fbxLoader;
-			if (!fbxLoader.Init(dir.path().stem().string()))
-				continue;
-
-			for (auto& file : CurFolder)
+		std::string fbxDir = File::GetCommonPath(File::FBX);
+		std::filesystem::directory_iterator FbxFolder(fbxDir);
+		for (auto& dir : FbxFolder)
+		{
+			if (dir.is_directory())
 			{
-				if (file.is_directory()) continue;
+				std::filesystem::directory_iterator CurFolder(dir.path());
+				std::string specificDir = fbxDir + "\\" + dir.path().filename().string() + "\\";
 
-				fbxLoader.Extract(specificDir, file);
+				FBXLoader fbxLoader;
+				if (!fbxLoader.Init(dir.path().stem().string()))
+					continue;
+
+				for (auto& file : CurFolder)
+				{
+					if (file.is_directory()) continue;
+
+					fbxLoader.Extract(specificDir, file);
+				}
 			}
 		}
-	}
 
-	std::filesystem::recursive_directory_iterator TextureFolder(File::GetCommonPath(File::Texture));
-	for (auto& dir : TextureFolder)
-	{
-		if (dir.is_regular_file())
+		std::filesystem::recursive_directory_iterator TextureFolder(File::GetCommonPath(File::Texture));
+		for (auto& dir : TextureFolder)
 		{
-			TextureArchive::Add(dir.path().string(), dir.path().stem().string());
+			if (dir.is_regular_file())
+			{
+				TextureArchive::Add(dir.path().string(), dir.path().stem().string());
+			}
 		}
+		isInited = true;
 	}
-	isInited = true;
-}
 
-ModuleCore::~ModuleCore()
-{
+	ModuleCore::~ModuleCore()
+	{
+	}
+
 }

@@ -33,7 +33,6 @@ set(project_source
     src/Common/Transform.cpp
 	src/Common/Timestep.cpp
     src/Core/ModuleCore.cpp
-	src/Core/Base.cpp
     src/File/FbxLoader.cpp
     src/File/FileCommon.cpp
     src/Model/Model.cpp

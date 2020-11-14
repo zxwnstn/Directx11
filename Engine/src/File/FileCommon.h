@@ -1,6 +1,6 @@
 #pragma once
 
-namespace File {
+namespace Engine::File {
 
 	enum CommonPathType
 	{
@@ -16,4 +16,5 @@ namespace File {
 	void CreateDir(const std::string& path);
 
 	std::string GetCommonPath(CommonPathType pathType);
+
 }

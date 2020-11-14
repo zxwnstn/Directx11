@@ -2,41 +2,45 @@
 
 #include "Timestep.h"
 
-static std::chrono::system_clock::time_point StartPoint;
-static std::chrono::system_clock::time_point Last;
+namespace Engine {
 
-void Timestep::SetTimePoint()
-{
-	StartPoint = std::chrono::system_clock::now();
-	Last = StartPoint;
-}
+	static std::chrono::system_clock::time_point StartPoint;
+	static std::chrono::system_clock::time_point Last;
 
-Timestep::operator float()
-{
-	std::chrono::duration<float> duration = std::chrono::system_clock::now() - Last;
-	return duration.count();
-}
+	void Timestep::SetTimePoint()
+	{
+		StartPoint = std::chrono::system_clock::now();
+		Last = StartPoint;
+	}
 
-void Timestep::Update()
-{
-	auto now = std::chrono::system_clock::now();
-	Last = now;
-}
+	Timestep::operator float()
+	{
+		std::chrono::duration<float> duration = std::chrono::system_clock::now() - Last;
+		return duration.count();
+	}
 
-float Timestep::TotalElapse()
-{
-	std::chrono::duration<float> duration = std::chrono::system_clock::now() - StartPoint;
-	return duration.count();
-}
+	void Timestep::Update()
+	{
+		auto now = std::chrono::system_clock::now();
+		Last = now;
+	}
 
-Timestep::ClockTime Timestep::TotalElapse(bool)
-{
-	std::chrono::duration<float> duration = std::chrono::system_clock::now() - StartPoint;
-	uint32_t total = uint32_t(duration.count());
+	float Timestep::TotalElapse()
+	{
+		std::chrono::duration<float> duration = std::chrono::system_clock::now() - StartPoint;
+		return duration.count();
+	}
 
-	uint32_t sec = total % 60;
-	uint32_t minute = total / 60;
-	uint32_t hour = total / 3600;
+	Timestep::ClockTime Timestep::TotalElapse(bool)
+	{
+		std::chrono::duration<float> duration = std::chrono::system_clock::now() - StartPoint;
+		uint32_t total = uint32_t(duration.count());
 
-	return { sec, minute, hour };
+		uint32_t sec = total % 60;
+		uint32_t minute = total / 60;
+		uint32_t hour = total / 3600;
+
+		return { sec, minute, hour };
+	}
+
 }

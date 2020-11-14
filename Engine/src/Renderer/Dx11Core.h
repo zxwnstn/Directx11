@@ -1,45 +1,47 @@
 #pragma once
 
-struct LocalDeviceSpec
-{
-	uint32_t RefreshRateNum;
-	uint32_t RefreshRateDenum;
-	size_t VideoCardMemory;
-	std::wstring Vendor;
-};
+namespace Engine {
 
-class Dx11Core
-{
-private:
-	Dx11Core() = default;
-	
-public:
-	static Dx11Core& Get();
-	static void ErrorMessage(ID3D10Blob* msg);
+	struct LocalDeviceSpec
+	{
+		uint32_t RefreshRateNum;
+		uint32_t RefreshRateDenum;
+		size_t VideoCardMemory;
+		std::wstring Vendor;
+	};
 
-	void Init(const struct WindowProp& prop);
-	void ShutDown();
-	void ClearBackBuffer();
-	void Present();
+	class Dx11Core
+	{
+	private:
+		Dx11Core() = default;
 
-private:
-	void GetUserDeviceInform();
-	void CreateDeviceContext();
-	void SetViewPort();
+	public:
+		static Dx11Core& Get();
+		static void ErrorMessage(ID3D10Blob* msg);
 
-private:
-	LocalDeviceSpec LocalSpec;
+		void Init(const struct WindowProp& prop);
+		void ShutDown();
+		void ClearBackBuffer();
+		void Present();
 
-	ID3D11Device* Device;
-	ID3D11DeviceContext* Context;
-	ID3D11RenderTargetView* RenderTargetView;
-	IDXGISwapChain* SwapChain;
+	private:
+		void GetUserDeviceInform();
+		void CreateDeviceContext();
+		void SetViewPort();
 
-	friend class PipelineController;
-	friend class Renderer;
-	friend class ModelBuffer;
-	friend class Shader;
-	friend class Texture;
-};
+	private:
+		LocalDeviceSpec LocalSpec;
 
-	
+		ID3D11Device* Device;
+		ID3D11DeviceContext* Context;
+		ID3D11RenderTargetView* RenderTargetView;
+		IDXGISwapChain* SwapChain;
+
+		friend class PipelineController;
+		friend class Renderer;
+		friend class ModelBuffer;
+		friend class Shader;
+		friend class Texture;
+	};
+
+}

@@ -3,36 +3,39 @@
 #include "Skeleton.h"
 #include "File/FbxLoader.h"
 
-static std::unordered_map<std::string, std::shared_ptr<Skeleton>> s_Skeletons;
+namespace Engine {
 
-bool SkeletonArchive::Add(const std::string& name)
-{
-	auto find = s_Skeletons.find(name);
-	if (find != s_Skeletons.end()) return false;
+	static std::unordered_map<std::string, std::shared_ptr<Skeleton>> s_Skeletons;
 
-	auto skeleton = std::shared_ptr<Skeleton>(new Skeleton);
-	skeleton->Name = name;
+	bool SkeletonArchive::Add(const std::string& name)
+	{
+		auto find = s_Skeletons.find(name);
+		if (find != s_Skeletons.end()) return false;
 
-	s_Skeletons.emplace(name, skeleton);
-	return true;
+		auto skeleton = std::shared_ptr<Skeleton>(new Skeleton);
+		skeleton->Name = name;
+
+		s_Skeletons.emplace(name, skeleton);
+		return true;
+	}
+
+	bool SkeletonArchive::Has(const std::string & name)
+	{
+		auto find = s_Skeletons.find(name);
+		return find != s_Skeletons.end();
+	}
+
+	std::shared_ptr<Skeleton> SkeletonArchive::Get(const std::string & name)
+	{
+		if (!Has(name))
+			return nullptr;
+
+		return s_Skeletons[name];
+	}
+
+	void SkeletonArchive::Shutdown()
+	{
+		s_Skeletons.clear();
+	}
+
 }
-
-bool SkeletonArchive::Has(const std::string & name)
-{
-	auto find = s_Skeletons.find(name);
-	return find != s_Skeletons.end();
-}
-
-std::shared_ptr<Skeleton> SkeletonArchive::Get(const std::string & name)
-{
-	if(!Has(name))
-		return nullptr;
-
-	return s_Skeletons[name];
-}
-
-void SkeletonArchive::Shutdown()
-{
-	s_Skeletons.clear();
-}
-

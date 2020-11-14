@@ -3,7 +3,7 @@
 
 #include <filesystem>
 
-namespace File {
+namespace Engine::File {
 
 	bool isExistFile(const std::string & filename)
 	{
@@ -39,4 +39,3 @@ namespace File {
 	}
 
 }
-

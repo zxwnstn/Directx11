@@ -1,54 +1,57 @@
 #pragma once
 
-class Model3D;
+namespace Engine {
 
-//Has no any attribute controller
-class FinalModelBuilder
-{
-public:
-	FinalModelBuilder(Model3D* myModel);
-	inline operator std::shared_ptr<Model3D>() const { return std::shared_ptr<Model3D>(myModel); }
+	class Model3D;
 
-private:
-	Model3D* myModel;
-};
+	//Has no any attribute controller
+	class FinalModelBuilder
+	{
+	public:
+		FinalModelBuilder(Model3D* myModel);
+		inline operator std::shared_ptr<Model3D>() const { return std::shared_ptr<Model3D>(myModel); }
 
-class FbxModelBuilder
-{
-public:
-	FbxModelBuilder(Model3D* myModel);
+	private:
+		Model3D* myModel;
+	};
 
-	FinalModelBuilder SetSkeleton(const std::string& skeletonName);
+	class FbxModelBuilder
+	{
+	public:
+		FbxModelBuilder(Model3D* myModel);
 
-private:
-	Model3D* myModel;
-};
+		FinalModelBuilder SetSkeleton(const std::string& skeletonName);
 
-class NoneFbxModelBuilder
-{
-public:
-	NoneFbxModelBuilder(Model3D* myModel);
+	private:
+		Model3D* myModel;
+	};
 
-	NoneFbxModelBuilder& SetIndices();
-	NoneFbxModelBuilder& SetVertices();
-	NoneFbxModelBuilder& SetTexture();
-	NoneFbxModelBuilder& SetMaterial();
+	class NoneFbxModelBuilder
+	{
+	public:
+		NoneFbxModelBuilder(Model3D* myModel);
 
-	FinalModelBuilder Finish();
+		NoneFbxModelBuilder& SetIndices();
+		NoneFbxModelBuilder& SetVertices();
+		NoneFbxModelBuilder& SetTexture();
+		NoneFbxModelBuilder& SetMaterial();
 
-private:
-	Model3D* myModel;
-};
+		FinalModelBuilder Finish();
 
-class ModelBuilder
-{
-public:
-	ModelBuilder(Model3D* myModel);
+	private:
+		Model3D* myModel;
+	};
 
-	FbxModelBuilder buildFromFBX();
-	NoneFbxModelBuilder buildCustum();
+	class ModelBuilder
+	{
+	public:
+		ModelBuilder(Model3D* myModel);
 
-private:
-	Model3D* myModel;
-};
+		FbxModelBuilder buildFromFBX();
+		NoneFbxModelBuilder buildCustum();
 
+	private:
+		Model3D* myModel;
+	};
+
+}
