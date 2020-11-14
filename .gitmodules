@@ -1,3 +1,3 @@
-[submodule "Boost"]
-	path = Boost
+[submodule "vendor/Boost"]
+	path = vendor/Boost
 	url = https://github.com/zxwnstn/Boost
