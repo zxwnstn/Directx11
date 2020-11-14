@@ -26,6 +26,11 @@ public:
 private:
 	void animationUpdate(float dt);
 
+public:
+	//Can't be Shared
+	std::shared_ptr<struct AnimationInform> m_Animation;
+	Transform m_Transform;
+
 private:
 	//Can be Shared
 	std::shared_ptr<struct Skeleton> m_Skeleton;
@@ -34,15 +39,10 @@ private:
 	std::vector<std::shared_ptr<class Texture>> m_Textures;
 	//std::shared_ptr<class Controller> m_Controler;
 
-	//Can't be Shared
-	std::shared_ptr<struct AnimationInform> m_Animation;
-	Transform m_Transform;
-
 	std::string m_Shader;
 
 	friend class NoneFbxModelBuilder;
 	friend class FbxModelBuilder;
 	friend class Renderer;
-	friend class SandBox;
 };
 

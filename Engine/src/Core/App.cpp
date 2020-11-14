@@ -6,6 +6,7 @@
 #include "Renderer/Shader.h"
 #include "File/FbxLoader.h"
 #include "Renderer/Texture.h"
+#include "File/FileCommon.h"
 
 bool App::s_Running;
 
@@ -19,14 +20,14 @@ App::App(const WindowProp & prop)
 		.SetDepthStencil(DepthStencilOpt::Enable)
 		.SetRasterize(RasterlizerOpt::Solid);
 
-	std::filesystem::directory_iterator ShaderFolder("assets\\Shader");
+	std::filesystem::directory_iterator ShaderFolder(File::GetCommonPath(File::Shader));
 	for (auto& file : ShaderFolder)
 	{
 		if (file.is_directory())
 			Renderer::CreateShader(file.path().string(), file.path().filename().string());
 	}
 
-	std::string fbxDir = "assets\\Fbx";
+	std::string fbxDir = File::GetCommonPath(File::FBX);
 	std::filesystem::directory_iterator FbxFolder(fbxDir);
 	for (auto& dir : FbxFolder)
 	{
@@ -48,7 +49,7 @@ App::App(const WindowProp & prop)
 		}
 	}
 
-	std::filesystem::recursive_directory_iterator TextureFolder("assets\\Texture");
+	std::filesystem::recursive_directory_iterator TextureFolder(File::GetCommonPath(File::Texture));
 	for (auto& dir : TextureFolder)
 	{
 		if (dir.is_regular_file())

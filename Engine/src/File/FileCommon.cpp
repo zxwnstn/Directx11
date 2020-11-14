@@ -25,16 +25,17 @@ namespace File {
 		switch (pathType)
 		{
 		case File::Assets:
-			return "assets/";
+			return "../../Engine/assets/";
 		case File::Texture:
-			return "assets/Texture/";
+			return "../../Engine/assets/Texture/";
 		case File::FBX:
-			return "assets/Fbx/";
+			return "../../Engine/assets/Fbx/";
 		case File::FBXCache:
-			return "assets/FbxCache/";
+			return "../../Engine/assets/FbxCache/";
 		case File::Shader:
-			return "assets/Shader/";
+			return "../../Engine/assets/Shader/";
 		}
+		return "";
 	}
 
 }

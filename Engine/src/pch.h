@@ -7,16 +7,16 @@
 
 //fbx
 #ifdef _DEBUG
-	#pragma comment(lib, "vendor/Fbx/lib/x64/debug/libfbxsdk-md.lib")
+	#pragma comment(lib, "../../vendor/FbxSDK/lib/x64/debug/libfbxsdk-md.lib")
 #else
-	#pragma comment(lib, "vendor/Fbx/lib/x64/release/libfbxsdk-md.lib")
+	#pragma comment(lib, "../../vendor/FbxSDK/lib/x64/release/libfbxsdk-md.lib")
 #endif
 
 //boost
 #ifdef _DEBUG
-	#pragma comment(lib, "vendor/boost/stage/lib/libboost_serialization-vc141-mt-gd-x64-1_70.lib")
+	#pragma comment(lib, "../../vendor/boost/stage/lib/libboost_serialization-vc141-mt-gd-x64-1_70.lib")
 #else
-	#pragma comment(lib, "vendor/boost/stage/lib/libboost_serialization-vc141-mt-x64-1_70.lib")
+	#pragma comment(lib, "../../vendor/boost/stage/lib/libboost_serialization-vc141-mt-x64-1_70.lib")
 #endif
 
 #include <Windows.h>
@@ -43,6 +43,6 @@
 #include <algorithm>
 
 //vendor
-#include "../vendor/stb_image/stb_image.h"
+#include "stb_image.h"
 
 #define BIT(x) 1 << x
