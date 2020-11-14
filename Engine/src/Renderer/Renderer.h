@@ -13,7 +13,7 @@ std::string ToString(RenderingShader type);
 class Renderer
 {
 private:
-	static void Init();
+	static void Init(const struct WindowProp& prop);
 
 public:
 	static void BeginScene(class Camera& camera);
@@ -31,5 +31,5 @@ public:
 	static void DeleteShader(const std::string& keyName);
 
 private:
-	friend class App;
+	friend class ModuleCore;
 };

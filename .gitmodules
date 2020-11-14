@@ -4,3 +4,6 @@
 [submodule "vendor/FbxSDK"]
 	path = vendor/FbxSDK
 	url = https://github.com/zxwnstn/FbxSDK
+[submodule "vendor/Qt5_MSVC"]
+	path = vendor/Qt5_MSVC
+	url = https://github.com/zxwnstn/Qt5_MSVC

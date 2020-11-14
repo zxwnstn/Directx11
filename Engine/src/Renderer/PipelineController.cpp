@@ -1,12 +1,12 @@
 #include "pch.h"
 
 #include "PipelineController.h"
+#include "Core/ModuleCore.h"
 #include "Dx11Core.h"
-#include "Core/Window.h"
 
-void PipelineController::Init()
+void PipelineController::Init(const WindowProp& prop)
 {
-	m_DepthStencil.Init();
+	m_DepthStencil.Init(prop);
 	m_Rasterlizer.Init();
 	m_Blend.Init();
 }
@@ -68,13 +68,13 @@ PipelineController& PipelineController::SetRasterize(RasterlizerOpt opt)
 	return *this;
 }
 
-void PipelineController::DepthStencil::Init()
+void PipelineController::DepthStencil::Init(const WindowProp& prop)
 {
 	//Depth/Stencil buffer
 	D3D11_TEXTURE2D_DESC depthBufferDecs;
 	ZeroMemory(&depthBufferDecs, sizeof(depthBufferDecs));
-	depthBufferDecs.Width = Window::Prop.Width;
-	depthBufferDecs.Height = Window::Prop.Width;
+	depthBufferDecs.Width = prop.Width;
+	depthBufferDecs.Height = prop.Width;
 	depthBufferDecs.MipLevels = 1;
 	depthBufferDecs.ArraySize = 1;
 	depthBufferDecs.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;

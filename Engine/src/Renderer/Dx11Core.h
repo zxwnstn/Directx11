@@ -17,7 +17,7 @@ public:
 	static Dx11Core& Get();
 	static void ErrorMessage(ID3D10Blob* msg);
 
-	void Init();
+	void Init(const struct WindowProp& prop);
 	void ShutDown();
 	void ClearBackBuffer();
 	void Present();

@@ -23,7 +23,7 @@ enum class BlendOpt
 class PipelineController
 {
 private:
-	void Init();
+	void Init(const struct WindowProp& prop);
 
 public:
 	PipelineController& Bind(PipelineComponent comp);
@@ -46,7 +46,7 @@ private:
 		ID3D11DepthStencilState* Disable;
 		DepthStencilOpt opt;
 	private:
-		void Init();
+		void Init(const struct WindowProp& prop);
 		friend class PipelineController;
 	};
 

@@ -25,8 +25,9 @@
 #include <algorithm>
 
 //For User
+#include "Core/ModuleCore.h"
 #include "Renderer/Renderer.h"
 #include "Model/Model.h"
-#include "Core/App.h"
 #include "Model/3D/SkeletalAnimation.h"
+#include "Common/Timestep.h"
 

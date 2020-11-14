@@ -3,8 +3,9 @@ project(Engine LANGUAGES CXX)
 set(project_headers 
     src/Common/Camera.h
     src/Common/Transform.h
-    src/Core/App.h
-    src/Core/Window.h
+	src/Common/Timestep.h
+    src/Core/ModuleCore.h
+    src/Core/Base.h
     src/File/FbxLoader.h
     src/File/FileCommon.h
     src/File/Serialization.h
@@ -30,8 +31,9 @@ set(project_headers
 set(project_source 
     src/Common/Camera.cpp
     src/Common/Transform.cpp
-    src/Core/App.cpp
-    src/Core/Window.cpp
+	src/Common/Timestep.cpp
+    src/Core/ModuleCore.cpp
+	src/Core/Base.cpp
     src/File/FbxLoader.cpp
     src/File/FileCommon.cpp
     src/Model/Model.cpp

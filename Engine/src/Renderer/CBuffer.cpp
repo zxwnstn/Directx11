@@ -18,13 +18,6 @@ void CBuffer::Transform::Upload(const ::Transform & other)
 	Scale = other.GetScale();
 }
 
-//void CBuffer::Camera::Upload(const Camera & other)
-//{
-//	World = DirectX::XMMatrixIdentity();
-//	View = other.View;
-//	Projection = other.Projection;
-//}
-
 void CBuffer::Camera::Copy(const Camera & other)
 {
 	World = DirectX::XMMatrixIdentity();

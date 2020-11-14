@@ -12,11 +12,11 @@
 static PipelineController* s_PLController = nullptr;
 static std::unordered_map<std::string, Shader> RendererShaders;
 
-void Renderer::Init()
+void Renderer::Init(const struct WindowProp& prop)
 {
-	Dx11Core::Get().Init();
+	Dx11Core::Get().Init(prop);
 	s_PLController = new PipelineController;
-	s_PLController->Init();
+	s_PLController->Init(prop);
 }
 
 void Renderer::BeginScene(Camera & camera)

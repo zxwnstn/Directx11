@@ -24,6 +24,7 @@ endif()
 
 add_subdirectory(vendor/stb_image)
 add_subdirectory(Engine)
+add_subdirectory(Editor)
 add_subdirectory(SandBox)
 add_subdirectory(WhiteBoard)
 

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Dx11Core.h"
-#include "Core/Window.h"
+#include "Core/ModuleCore.h"
 
 Dx11Core& Dx11Core::Get()
 {
@@ -13,8 +13,11 @@ Dx11Core& Dx11Core::Get()
 	return *Inst;
 }
 
-void Dx11Core::Init()
+static WindowProp myWindow;
+
+void Dx11Core::Init(const WindowProp & prop)
 {
+	myWindow = prop;
 	GetUserDeviceInform();
 	CreateDeviceContext();
 	SetViewPort();
@@ -55,9 +58,9 @@ void Dx11Core::GetUserDeviceInform()
 
 	for (unsigned int i = 0; i < numModes; ++i)
 	{
-		if (displayModeList[i].Width == Window::Prop.Width)
+		if (displayModeList[i].Width == myWindow.Width)
 		{
-			if (displayModeList[i].Height == Window::Prop.Height)
+			if (displayModeList[i].Height == myWindow.Height)
 			{
 				LocalSpec.RefreshRateNum = displayModeList[i].RefreshRate.Numerator;
 				LocalSpec.RefreshRateDenum = displayModeList[i].RefreshRate.Denominator;
@@ -87,15 +90,15 @@ void Dx11Core::CreateDeviceContext()
 	ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
 
 	swapChainDesc.BufferCount = 1;
-	swapChainDesc.BufferDesc.Width = Window::Prop.Width;
-	swapChainDesc.BufferDesc.Height = Window::Prop.Height;
+	swapChainDesc.BufferDesc.Width = myWindow.Width;
+	swapChainDesc.BufferDesc.Height = myWindow.Height;
 	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.BufferDesc.RefreshRate.Numerator = LocalSpec.RefreshRateNum;
 	swapChainDesc.BufferDesc.RefreshRate.Denominator = LocalSpec.RefreshRateDenum;
 	swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.OutputWindow = Window::hWindow;
+	swapChainDesc.OutputWindow = (HWND)myWindow.hWnd;
 	swapChainDesc.SampleDesc.Count = 1;
 	swapChainDesc.SampleDesc.Quality = 0;
 	swapChainDesc.Windowed = true;
@@ -120,8 +123,8 @@ void Dx11Core::CreateDeviceContext()
 void Dx11Core::SetViewPort()
 {
 	D3D11_VIEWPORT viewPort;
-	viewPort.Width = (float)Window::Prop.Width;
-	viewPort.Height = (float)Window::Prop.Height;
+	viewPort.Width = (float)myWindow.Width;
+	viewPort.Height = (float)myWindow.Height;
 	viewPort.MinDepth = 0.0f;
 	viewPort.MaxDepth = 1.0f;
 	viewPort.TopLeftX = 0.0f;

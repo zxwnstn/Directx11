@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "App.h"
+#include "ModuleCore.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/PipelineController.h"
 #include "Renderer/Shader.h"
@@ -8,13 +8,13 @@
 #include "Renderer/Texture.h"
 #include "File/FileCommon.h"
 
-bool App::s_Running;
+static bool isInited = false;
 
-App::App(const WindowProp & prop)
+void ModuleCore::Init(const WindowProp & prop)
 {
-	s_Running = true;
-	Window::Init(prop);
-	Renderer::Init();
+	if (isInited) return;
+
+	Renderer::Init(prop);
 	Renderer::GetPipelineController().Bind(PipelineComponent::DepthStencil)
 		.SetBlend(BlendOpt::Alpha)
 		.SetDepthStencil(DepthStencilOpt::Enable)
@@ -35,9 +35,9 @@ App::App(const WindowProp & prop)
 		{
 			std::filesystem::directory_iterator CurFolder(dir.path());
 			std::string specificDir = fbxDir + "\\" + dir.path().filename().string() + "\\";
-			
+
 			FBXLoader fbxLoader;
-			if (!fbxLoader.Init(dir.path().stem().string())) 
+			if (!fbxLoader.Init(dir.path().stem().string()))
 				continue;
 
 			for (auto& file : CurFolder)
@@ -57,47 +57,9 @@ App::App(const WindowProp & prop)
 			TextureArchive::Add(dir.path().string(), dir.path().stem().string());
 		}
 	}
-
+	isInited = true;
 }
 
-App::~App()
+ModuleCore::~ModuleCore()
 {
-	for (auto&[name, layer] : Layers)
-	{
-		PopLayer(name);
-	}
-	Layers.clear();
-}
-
-int32_t App::Run()
-{
-	while (s_Running)
-	{
-		for (auto& layer : Layers)
-		{
-			layer.second->OnUpdate(1.0f / 60.0f);
-		}
-		Window::Update();
-	}
-
-	return 0;
-}
-
-void App::PushLayer(Layer * layer, const std::string & name)
-{
-	auto find = Layers.find(name);
-	if (find != Layers.end())
-		return;
-
-	layer->OnAttach();
-	Layers.emplace(name, layer);
-}
-
-void App::PopLayer(const std::string & name)
-{
-	auto find = Layers.find(name);
-	if (find == Layers.end())
-		return;
-
-	find->second->OnDettach();
 }
