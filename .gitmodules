@@ -1,3 +1,6 @@
 [submodule "vendor/Boost"]
 	path = vendor/Boost
 	url = https://github.com/zxwnstn/Boost
+[submodule "vendor/FbxSDK"]
+	path = vendor/FbxSDK
+	url = https://github.com/zxwnstn/FbxSDK
