@@ -26,7 +26,7 @@ namespace Engine {
 	{
 	private:
 		void Init(const struct WindowProp& prop);
-
+		
 	public:
 		PipelineController& Bind(PipelineComponent comp);
 		PipelineController& Unbind(PipelineComponent comp);
@@ -39,6 +39,8 @@ namespace Engine {
 		inline BlendOpt GetBlendOpt() const { return m_Blend.opt; }
 		inline RasterlizerOpt GetRasterlizeOpt() const { return m_Rasterlizer.opt; }
 
+		inline void Resize() { m_DepthStencil.Resize(); Bind(PipelineComponent::DepthStencil); }
+
 	private:
 		struct DepthStencil
 		{
@@ -46,8 +48,11 @@ namespace Engine {
 			ID3D11DepthStencilView* View;
 			ID3D11DepthStencilState* Enable;
 			ID3D11DepthStencilState* Disable;
+			D3D11_TEXTURE2D_DESC DepthBufferDecs;
+			D3D11_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc;
 			DepthStencilOpt opt;
 		private:
+			void Resize();
 			void Init(const struct WindowProp& prop);
 			friend class PipelineController;
 		};

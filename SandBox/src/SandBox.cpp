@@ -6,24 +6,28 @@ void SandBox::OnUpdate(float dt)
 {
 	controlUpdate(dt);
 
-	Renderer::BeginScene(*perspective);
-	Renderer::Enque(model);
-	Renderer::EndScene();
+	Engine::Renderer::BeginScene(*perspective);
+	Engine::Renderer::Enque(model);
+	Engine::Renderer::EndScene();
 }
 
 void SandBox::OnAttach()
 {
-	model = Model3D::Create(RenderingShader::Skinned)
+	model = Engine::Model3D::Create(Engine::RenderingShader::Skinned)
 		.buildFromFBX().SetSkeleton("Kachujin");
 
 	float filedOfView = 3.141592f / 3.0f;
-	perspective.reset(new Camera(filedOfView, Window::Prop.Width / (float)Window::Prop.Height));
-	ortho.reset(new Camera(Window::Prop.Width / (float)Window::Prop.Height));
+	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
 }
 
 void SandBox::OnDettach()
 {
 	
+}
+
+void SandBox::OnResize()
+{
+	perspective.reset(new Engine::Camera(3.141592f / 3.0f, float(width) / (float)height));
 }
 
 void SandBox::controlUpdate(float dt)

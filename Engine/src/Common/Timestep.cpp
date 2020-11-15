@@ -43,4 +43,9 @@ namespace Engine {
 		return { sec, minute, hour };
 	}
 
+	float Timestep::Elapse()
+	{
+		return 0.0f;
+	}
+
 }

@@ -13,6 +13,7 @@ namespace Engine {
 		m_Blend.Init();
 	}
 
+	
 	PipelineController& PipelineController::Bind(PipelineComponent comp)
 	{
 		switch (comp)
@@ -44,6 +45,7 @@ namespace Engine {
 		case DepthStencilOpt::Enable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Enable, 1); break;
 		case DepthStencilOpt::Disable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Disable, 1); break;
 		}
+
 		m_DepthStencil.opt = opt;
 		return *this;
 	}
@@ -70,23 +72,43 @@ namespace Engine {
 		return *this;
 	}
 
+	void PipelineController::DepthStencil::Resize()
+	{
+		Buffer->Release();
+		View->Release();
+
+		DepthBufferDecs.Width = Dx11Core::Get().WinProp->Width;
+		DepthBufferDecs.Height = Dx11Core::Get().WinProp->Height;
+
+		Dx11Core::Get().Device->CreateTexture2D(&DepthBufferDecs, NULL, &Buffer);
+		Dx11Core::Get().Device->CreateDepthStencilView(Buffer, &DepthStencilViewDesc, &View);
+	}
+
 	void PipelineController::DepthStencil::Init(const WindowProp& prop)
 	{
 		//Depth/Stencil buffer
-		D3D11_TEXTURE2D_DESC depthBufferDecs;
-		ZeroMemory(&depthBufferDecs, sizeof(depthBufferDecs));
-		depthBufferDecs.Width = prop.Width;
-		depthBufferDecs.Height = prop.Width;
-		depthBufferDecs.MipLevels = 1;
-		depthBufferDecs.ArraySize = 1;
-		depthBufferDecs.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		depthBufferDecs.SampleDesc.Count = 1;
-		depthBufferDecs.SampleDesc.Quality = 0;
-		depthBufferDecs.Usage = D3D11_USAGE_DEFAULT;
-		depthBufferDecs.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-		depthBufferDecs.CPUAccessFlags = 0;
-		depthBufferDecs.MiscFlags = 0;
-		Dx11Core::Get().Device->CreateTexture2D(&depthBufferDecs, NULL, &Buffer);
+		ZeroMemory(&DepthBufferDecs, sizeof(DepthBufferDecs));
+		DepthBufferDecs.Width = prop.Width;
+		DepthBufferDecs.Height = prop.Width;
+		DepthBufferDecs.MipLevels = 1;
+		DepthBufferDecs.ArraySize = 1;
+		DepthBufferDecs.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		DepthBufferDecs.SampleDesc.Count = 1;
+		DepthBufferDecs.SampleDesc.Quality = 0;
+		DepthBufferDecs.Usage = D3D11_USAGE_DEFAULT;
+		DepthBufferDecs.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		DepthBufferDecs.CPUAccessFlags = 0;
+		DepthBufferDecs.MiscFlags = 0;
+		Dx11Core::Get().Device->CreateTexture2D(&DepthBufferDecs, NULL, &Buffer);
+
+		//Depth/Stencil View
+		ZeroMemory(&DepthStencilViewDesc, sizeof(DepthStencilViewDesc));
+
+		DepthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		DepthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		DepthStencilViewDesc.Texture2D.MipSlice = 0;
+
+		Dx11Core::Get().Device->CreateDepthStencilView(Buffer, &DepthStencilViewDesc, &View);
 
 		//Depth/Stencil State
 		D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
@@ -111,16 +133,6 @@ namespace Engine {
 
 		depthStencilDesc.DepthEnable = false;
 		Dx11Core::Get().Device->CreateDepthStencilState(&depthStencilDesc, &Disable);
-
-		//Depth/Stencil View
-		D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-		ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-
-		depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-		depthStencilViewDesc.Texture2D.MipSlice = 0;
-
-		Dx11Core::Get().Device->CreateDepthStencilView(Buffer, &depthStencilViewDesc, &View);
 	}
 
 	void PipelineController::Rasterlizer::Init()

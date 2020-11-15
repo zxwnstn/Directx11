@@ -17,6 +17,7 @@ namespace Engine {
 
 	public:
 		static void Init(const WindowProp& prop);
+		static bool IsInitiated();
 	};
 
 }

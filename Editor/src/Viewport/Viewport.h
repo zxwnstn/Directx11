@@ -1,5 +1,6 @@
 #pragma once
 
+
 class Viewport : public QWidget
 {
 	Q_OBJECT
@@ -16,10 +17,11 @@ private slots:
 
 protected:
 	void keyPressEvent(QKeyEvent* event) override;
+	void resizeEvent(QResizeEvent* event) override;
+	void paintEvent(QPaintEvent* event) override;
+
 
 private:
-	std::shared_ptr<Engine::Model3D> model;
-	std::shared_ptr<Engine::Camera> perspective;
 
 	QTimer* timer;
 };

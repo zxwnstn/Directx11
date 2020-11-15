@@ -23,6 +23,7 @@
 #include <memory>
 #include <queue>
 #include <algorithm>
+#include <thread>
 
 //For User
 #include "Core/ModuleCore.h"

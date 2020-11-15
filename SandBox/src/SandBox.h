@@ -1,20 +1,21 @@
 #pragma once
 
-class SandBox : public Layer
+class SandBox 
 {
 public:
-	void OnUpdate(float dt) override;
-	void OnAttach() override;
-	void OnDettach() override;
+	void OnUpdate(float dt);
+	void OnAttach();
+	void OnDettach();
+	void OnResize();
 
 private:
 	void controlUpdate(float dt);
 
-	std::shared_ptr<class ModelBuffer> buffer;
-	std::shared_ptr<class Texture> texture;
+	std::shared_ptr<class Engine::ModelBuffer> buffer;
+	std::shared_ptr<class Engine::Texture> texture;
 
-	std::shared_ptr<class Model3D> model;
+	std::shared_ptr<class Engine::Model3D> model;
 
-	std::shared_ptr<class Camera> ortho;
-	std::shared_ptr<class Camera> perspective;
+	std::shared_ptr<class Engine::Camera> ortho;
+	std::shared_ptr<class Engine::Camera> perspective;
 };

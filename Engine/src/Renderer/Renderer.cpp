@@ -73,6 +73,17 @@ namespace Engine {
 		return *s_PLController;
 	}
 
+	void Renderer::Resize(uint32_t width, uint32_t height)
+	{
+		Dx11Core::Get().Resize(width, height);
+		s_PLController->Resize();
+	}
+
+	unsigned char * Renderer::GetBackBufferData()
+	{
+		return Dx11Core::Get().GetBackBufferData();
+	}
+
 	Shader& Renderer::GetShader(RenderingShader shader)
 	{
 		return RendererShaders[ToString(shader)];

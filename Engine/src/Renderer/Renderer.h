@@ -26,6 +26,8 @@ namespace Engine {
 		static void EndScene();
 
 		static class PipelineController& GetPipelineController();
+		static void Resize(uint32_t width, uint32_t height);
+		static unsigned char* GetBackBufferData();
 
 		static Shader& GetShader(RenderingShader shader);
 		static Shader& GetShader(const std::string& shader);

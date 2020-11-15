@@ -17,6 +17,7 @@ namespace Engine {
 		Camera(float screenAspect);
 		~Camera();
 
+		void Resize(uint32_t width, uint32_t height);
 		void SetPosition(float x, float y, float z);
 		void SetRotation(float x, float y, float z);
 
@@ -42,6 +43,7 @@ namespace Engine {
 
 		CameraType m_Type = CameraType::None;
 
+		float m_Fov;
 		float m_ScreenAspect;
 		DirectX::XMFLOAT3 m_Rotation;
 		DirectX::XMFLOAT3 m_Position;

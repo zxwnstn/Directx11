@@ -13,6 +13,11 @@ namespace Engine {
 
 	static bool isInited = false;
 
+	bool ModuleCore::IsInitiated()
+	{
+		return isInited;
+	}
+
 	void ModuleCore::Init(const WindowProp & prop)
 	{
 		if (isInited) return;

@@ -41,6 +41,7 @@
 #include <memory>
 #include <queue>
 #include <algorithm>
+#include <thread>
 
 //vendor
 #include "stb_image.h"

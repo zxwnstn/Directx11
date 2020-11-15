@@ -15,6 +15,7 @@ namespace Engine {
 		SetPosition(0.0f, 0.0f, -1.1f);
 		SetRotation(0.0f, 0.0f, 0.0f);
 
+		m_Fov = fov;
 		m_ScreenAspect = screenAspect;
 		m_WorldMatrix = DirectX::XMMatrixIdentity();
 		RecalculateViewMatrix();
@@ -36,6 +37,20 @@ namespace Engine {
 
 	Camera::~Camera()
 	{
+	}
+
+	void Camera::Resize(uint32_t width, uint32_t height)
+	{
+		m_ScreenAspect = width / (float)height;
+		switch (m_Type)
+		{
+		case Engine::CameraType::Ortho:
+			m_ProjectionMatrix = DirectX::XMMatrixOrthographicLH(m_ScreenAspect * 5.0f, 5.0f, 30.f, 10000.0f);
+			break;
+		case Engine::CameraType::Perspective:
+			m_ProjectionMatrix = DirectX::XMMatrixPerspectiveFovLH(m_Fov, m_ScreenAspect, 0.1f, 10000.0f);
+			break;
+		}
 	}
 
 	void Camera::SetPosition(float x, float y, float z)

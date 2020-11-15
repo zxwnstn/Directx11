@@ -12,6 +12,7 @@ namespace Engine {
 		static float TotalElapse();
 		static void Update();
 		static ClockTime TotalElapse(bool);
+		static float Elapse();
 		operator float();
 	};
 

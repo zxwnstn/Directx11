@@ -20,4 +20,6 @@
 #include <QMenu>
 #include <QKeyEvent>
 #include <QListWidget.h>
+#include <QStylePainter.h>
+#include <QGraphicsView.h>
 

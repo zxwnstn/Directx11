@@ -23,6 +23,8 @@ namespace Engine {
 		void ShutDown();
 		void ClearBackBuffer();
 		void Present();
+		void Resize(uint32_t width, uint32_t height);
+		unsigned char* GetBackBufferData();
 
 	private:
 		void GetUserDeviceInform();
@@ -35,7 +37,10 @@ namespace Engine {
 		ID3D11Device* Device;
 		ID3D11DeviceContext* Context;
 		ID3D11RenderTargetView* RenderTargetView;
+		ID3D11Buffer* RenderTargetBuffer;
 		IDXGISwapChain* SwapChain;
+
+		std::unique_ptr<struct WindowProp> WinProp;
 
 		friend class PipelineController;
 		friend class Renderer;

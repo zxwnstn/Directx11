@@ -6,46 +6,60 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>922</width>
-    <height>653</height>
+    <width>841</width>
+    <height>615</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="Viewport" name="viewport" native="true">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>70</y>
-      <width>721</width>
-      <height>501</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>51</width>
-      <height>16</height>
-     </rect>
-    </property>
-   </widget>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="Viewport" name="viewport" native="true"/>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>922</width>
+     <width>841</width>
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionInspector"/>
+   </widget>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QDockWidget" name="dockWidget">
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <widget class="QLineEdit" name="lineEdit">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>140</y>
+       <width>113</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+  <action name="actionInspector">
+   <property name="text">
+    <string>Inspector</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
