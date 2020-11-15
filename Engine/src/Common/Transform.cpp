@@ -4,6 +4,8 @@
 
 namespace Engine {
 
+	using namespace DirectX;
+
 	Transform::Transform()
 		: m_RotateValue(0.0f, 0.0f, 0.0f), m_ScaleValue(1.0f, 1.0f, 1.0f), m_TranslateValue(0.0f, 0.0f, 0.0f)
 	{
@@ -63,6 +65,44 @@ namespace Engine {
 		m_ScaleValue.y += y;
 		m_ScaleValue.z += z;
 		SetScale();
+	}
+
+	void Transform::MoveForwad(float d)
+	{
+		DirectX::XMFLOAT3 lookAt;
+		DirectX::XMVECTOR lookVector;
+		lookAt.x = 0.0f;
+		lookAt.y = 0.0f;
+		lookAt.z = 1.0f;
+		lookVector = XMLoadFloat3(&lookAt);
+
+		lookVector = XMVector3TransformCoord(lookVector, XMMatrixTranspose(m_Rotate));
+		DirectX::XMVector3Normalize(lookVector);
+
+		m_TranslateValue.x += lookVector.m128_f32[0] * d;
+		m_TranslateValue.y += lookVector.m128_f32[1] * d;
+		m_TranslateValue.z += lookVector.m128_f32[2] * d;
+
+		SetTranslate();
+	}
+
+	void Transform::MoveBack(float d)
+	{
+		DirectX::XMFLOAT3 lookAt;
+		DirectX::XMVECTOR lookVector;
+		lookAt.x = 0.0f;
+		lookAt.y = 0.0f;
+		lookAt.z = 1.0f;
+		lookVector = XMLoadFloat3(&lookAt);
+
+		lookVector = XMVector3TransformCoord(lookVector, XMMatrixTranspose(m_Rotate));
+		DirectX::XMVector3Normalize(lookVector);
+
+		m_TranslateValue.x -= lookVector.m128_f32[0] * d;
+		m_TranslateValue.y -= lookVector.m128_f32[1] * d;
+		m_TranslateValue.z -= lookVector.m128_f32[2] * d;
+
+		SetTranslate();
 	}
 
 	void Transform::SetTranslate()

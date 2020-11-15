@@ -28,6 +28,12 @@ namespace Engine {
 	FinalModelBuilder FbxModelBuilder::SetSkeleton(const std::string & skeletonName)
 	{
 		myModel->m_Skeleton = SkeletonArchive::Get(skeletonName);
+		if (!myModel->m_Skeleton)
+		{
+			std::cout << "There is no Skeleton : " << skeletonName << "\n";
+			return FinalModelBuilder(myModel);
+		}
+
 		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
 			.CreateCompotibleBuffer()
 			.SetBuffer(myModel->m_Skeleton->Vertices.data(), myModel->m_Skeleton->Indices.data(), (uint32_t)myModel->m_Skeleton->Indices.size());

@@ -96,7 +96,7 @@ namespace Engine {
 	}
 
 
-	void Shader::SetCameraParam(const CBuffer::Camera & data)
+	void Shader::SetCameraParam(Camera & data)
 	{
 		CBuffer::Type type = CBuffer::Type::Camera;
 
@@ -107,10 +107,7 @@ namespace Engine {
 		Dx11Core::Get().Context->Map(find->second, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 
 		CBuffer::Camera* mappedData = (CBuffer::Camera*)mappedResource.pData;
-		mappedData->Position = data.Position;
-		mappedData->Projection = data.Projection;
-		mappedData->View = data.View;
-		mappedData->World = data.World;
+		mappedData->Upload(data);
 
 		Dx11Core::Get().Context->Unmap(find->second, 0);
 
@@ -155,27 +152,6 @@ namespace Engine {
 		unsigned bufferNumber = 1;
 		Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &find->second);
 	}
-
-	void Shader::SetCamParam(const Camera & data)
-	{
-		CBuffer::Type type = CBuffer::Type::Camera;
-
-		auto find = CBuffers.find(type);
-		if (find == CBuffers.end()) return;
-
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		Dx11Core::Get().Context->Map(find->second, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-
-		CBuffer::Camera* mappedData = (CBuffer::Camera*)mappedResource.pData;
-		//mappedData->Upload(data);
-
-		Dx11Core::Get().Context->Unmap(find->second, 0);
-
-		unsigned bufferNumber = 0;
-		Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &find->second);
-	}
-
-
 
 	void Shader::AddCBuffer(const std::filesystem::path & path)
 	{

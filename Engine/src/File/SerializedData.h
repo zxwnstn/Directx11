@@ -109,7 +109,7 @@ namespace Engine {
 			ar & UV;
 			ar & Normal;
 			ar & BiNormal;
-			ar & BiTangent;
+			ar & Tangent;
 			ar & BoneWeight;
 			ar & BoneIndex;
 		}
@@ -117,7 +117,7 @@ namespace Engine {
 		vec2 UV;
 		vec3 Normal;
 		vec3 BiNormal;
-		vec3 BiTangent;
+		vec3 Tangent;
 
 		vec4 BoneWeight;
 		uvec4 BoneIndex;

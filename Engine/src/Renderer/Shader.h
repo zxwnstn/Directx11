@@ -2,6 +2,7 @@
 
 #include "ModelBuffer.h"
 #include "Common/Camera.h"
+#include "CBuffer.h"
 
 namespace Engine {
 
@@ -30,10 +31,9 @@ namespace Engine {
 
 		BufferBuilder CreateCompotibleBuffer();
 
-		void SetCameraParam(const CBuffer::Camera& data);
+		void SetCameraParam(Camera& data);
 		void SetBoneParam(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t count);
 		void SetTransformParam(const Transform& data);
-		void SetCamParam(const Camera& data);
 
 	private:
 		void AddCBuffer(const std::filesystem::path& path);

@@ -26,7 +26,7 @@ namespace Engine {
 
 	private:
 		vec2 getUV(class FbxMesh* mesh, int index, int controlIndex);
-		vec3 getNormal();
+		vec3 getNormal(FbxMesh* mesh, int index, int controlIndex);
 		vec3 getBinormal();
 		vec3 getBitangent();
 

@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget* parent)
 	connect(timer, &QTimer::timeout, [this]() {
 		Engine::Timestep ts;
 		auto fps = 1.0f / ts;
-		ui->lineEdit->setText(QString::number(fps));
+		ui->FPS->setText(QString::number(fps));
 	});
 }
 

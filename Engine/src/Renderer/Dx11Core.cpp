@@ -98,6 +98,8 @@ namespace Engine {
 		std::wcout << LocalSpec.Vendor << "\n";
 		std::cout << "Memory capacity : " << LocalSpec.VideoCardMemory << "MB\n";
 
+		factory->MakeWindowAssociation((HWND)WinProp->hWnd, 0);
+
 		delete[] displayModeList;
 		adapterOutput->Release();
 		adapter->Release();

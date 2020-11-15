@@ -28,7 +28,7 @@ namespace Engine {
 
 		for (auto&[name, shader] : RendererShaders)
 		{
-			shader.SetCameraParam((CBuffer::Camera)camera);
+			shader.SetCameraParam(camera);
 		}
 
 	}

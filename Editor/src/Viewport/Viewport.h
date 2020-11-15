@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderingThread.h"
 
 class Viewport : public QWidget
 {
@@ -11,17 +12,9 @@ public:
 public:
 	void Init();
 
-private slots:
-	void Update();
-	void Render();
-
 protected:
-	void keyPressEvent(QKeyEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;
-	void paintEvent(QPaintEvent* event) override;
-
 
 private:
-
-	QTimer* timer;
+	RenderingThread* m_RenderThread;
 };

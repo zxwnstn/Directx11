@@ -16,9 +16,16 @@ namespace Engine {
 		void AddRotate(float x, float y, float z);
 		void AddScale(float x, float y, float z);
 
+		void MoveForwad(float d);
+		void MoveBack(float d);
+
 		inline const DirectX::XMMATRIX& GetTranslate() const { return m_Translate; }
 		inline const DirectX::XMMATRIX& GetRotate() const { return m_Rotate; }
 		inline const DirectX::XMMATRIX& GetScale() const { return m_Scale; }
+
+		inline const DirectX::XMFLOAT3 GetTranslateValue() const { return m_TranslateValue; }
+		inline const DirectX::XMFLOAT3 GetRotationValue() const { return m_RotateValue; }
+		inline const DirectX::XMFLOAT3 GetScaleValue() const { return m_ScaleValue; }
 
 	private:
 		void SetTranslate();

@@ -122,6 +122,56 @@ namespace Engine {
 		}
 	}
 
+	namespace Detail {
+
+		struct Type2
+		{
+			using ReturnType = vec2;
+			static const int count = 2;
+		};
+		struct Type3
+		{
+			using ReturnType = vec3;
+			static const int count = 3;
+		};
+	}
+
+	template<typename Type, typename Elem>
+	decltype(auto) getElement(Elem elem, int index, int controlIndex)
+	{
+		using Ret = Type::ReturnType;
+
+		Ret ret;
+		if (elem == nullptr) return ret;
+
+		auto mapMode = elem->GetMappingMode();
+		auto refMode = elem->GetReferenceMode();
+
+		int myIndex;
+		switch (mapMode)
+		{
+		case fbxsdk::FbxLayerElement::eByControlPoint:
+			switch (refMode)
+			{
+			case fbxsdk::FbxLayerElement::eDirect: myIndex = controlIndex; break;
+			case fbxsdk::FbxLayerElement::eIndexToDirect: myIndex = elem->GetIndexArray().GetAt(controlIndex); break;
+			}
+			break;
+		case fbxsdk::FbxLayerElement::eByPolygonVertex:
+			switch (refMode)
+			{
+			case fbxsdk::FbxLayerElement::eDirect: myIndex = index; break;
+			case fbxsdk::FbxLayerElement::eIndexToDirect: myIndex = elem->GetIndexArray().GetAt(index); break;
+			}
+			break;
+		}
+		for (int i = 0; i < Type::count; ++i)
+			ret.m[i] = static_cast<float>(elem->GetDirectArray().GetAt(myIndex).mData[i]);
+
+		return ret;
+	}
+	
+
 	void FBXLoader::getVertices(FbxNode* node)
 	{
 		FbxMesh* mesh = node->GetMesh();
@@ -148,15 +198,22 @@ namespace Engine {
 		}
 
 		Vertices.resize(count * 3);
-
+		auto* uv = mesh->GetElementUV();
+		auto* normal = mesh->GetElementNormal();
+		auto* binormal = mesh->GetElementBinormal();
+		auto* tangent = mesh->GetElementTangent();
 		uint32_t index = 0;
+
 		for (int i = 0; i < count; ++i)
 		{
 			for (int j = 0; j < 3; ++j)
 			{
 				int controlIndex = mesh->GetPolygonVertex(i, j);
 				Vertices[index].Position = ControlPoints[controlIndex].Position;
-				Vertices[index].UV = getUV(mesh, index, controlIndex);
+				Vertices[index].UV = getElement<Detail::Type2>(uv, index, controlIndex);
+				Vertices[index].Normal = getElement<Detail::Type3>(normal, index, controlIndex);
+				Vertices[index].BiNormal = getElement<Detail::Type3>(binormal, index, controlIndex);
+				Vertices[index].Tangent = getElement<Detail::Type3>(tangent, index, controlIndex);
 
 				for (int k = 0; k < 4; ++k)
 				{
@@ -169,66 +226,7 @@ namespace Engine {
 		ExportCache(Type::Vertices);
 	}
 
-	vec2 FBXLoader::getUV(FbxMesh* mesh, int index, int controlIndex)
-	{
-		if (mesh->GetElementNormalCount() < 1)
-			return vec2{ 0,0 };
-
-		vec2 ret;
-
-		auto uv = mesh->GetElementUV();
-		auto mapMode = uv->GetMappingMode();
-		auto refMode = uv->GetReferenceMode();
-
-		switch (mapMode)
-		{
-		case fbxsdk::FbxLayerElement::eByControlPoint:
-			switch (refMode)
-			{
-			case fbxsdk::FbxLayerElement::eDirect:
-				ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(controlIndex).mData[0]);
-				ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(controlIndex).mData[1]);
-				break;
-			case fbxsdk::FbxLayerElement::eIndexToDirect:
-				auto itd = uv->GetIndexArray().GetAt(controlIndex);
-				ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[0]);
-				ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[1]);
-				break;
-			}
-			break;
-		case fbxsdk::FbxLayerElement::eByPolygonVertex:
-			switch (refMode)
-			{
-			case fbxsdk::FbxLayerElement::eDirect:
-				ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(index).mData[0]);
-				ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(index).mData[1]);
-				break;
-			case fbxsdk::FbxLayerElement::eIndexToDirect:
-				auto itd = uv->GetIndexArray().GetAt(index);
-				ret.m[0] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[0]);
-				ret.m[1] = static_cast<float>(uv->GetDirectArray().GetAt(itd).mData[1]);
-				break;
-			}
-			break;
-		}
-
-		return ret;
-	}
-
-	vec3 FBXLoader::getNormal()
-	{
-		return vec3();
-	}
-
-	vec3 FBXLoader::getBinormal()
-	{
-		return vec3();
-	}
-
-	vec3 FBXLoader::getBitangent()
-	{
-		return vec3();
-	}
+	
 
 	void FBXLoader::getJoints(FbxNode* node)
 	{

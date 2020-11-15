@@ -20,16 +20,18 @@ namespace Engine::CBuffer {
 		Scale = other.GetScale();
 	}
 
-	void Camera::Copy(const Camera & other)
-	{
-		World = DirectX::XMMatrixIdentity();
-		View = other.View;
-		Projection = other.Projection;
-	}
-
 	void Bone::Upload(DirectX::XMFLOAT4X4* other, uint32_t size)
 	{
 		memcpy(SkinnedTransform, other, size);
+	}
+
+	void Camera::Upload(Engine::Camera & other)
+	{
+		auto translate = other.GetTransform().GetTranslateValue();
+		Position = DirectX::XMFLOAT4(translate.x, translate.y, translate.z, 1.0f);
+		World = DirectX::XMMatrixIdentity();
+		View = DirectX::XMMatrixTranspose(other.GetViewMatrix());
+		Projection = DirectX::XMMatrixTranspose(other.GetProjectionMatrix());
 	}
 
 }

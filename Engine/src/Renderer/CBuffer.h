@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common/Transform.h"
+#include "Common/Camera.h"
 
 namespace Engine::CBuffer {
 
@@ -16,8 +16,7 @@ namespace Engine::CBuffer {
 		DirectX::XMMATRIX Projection;
 		DirectX::XMFLOAT4 Position;
 
-		//void Upload(const ::Camera& other);
-		void Copy(const Camera& other);
+		void Upload(Engine::Camera& other);
 	};
 
 	struct Transform

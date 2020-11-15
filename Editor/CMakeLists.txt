@@ -22,6 +22,7 @@ set(project_headers
     src/pch.h
 	src/Viewport/Viewport.h
     src/MainWindow/MainWindow.h
+	src/Viewport/RenderingThread.h
 )
 
 set(moc_headers
@@ -35,6 +36,7 @@ set(project_sources
     src/main.cpp
 	src/Viewport/Viewport.cpp
     src/MainWindow/MainWindow.cpp
+	src/Viewport/RenderingThread.cpp
 )
 
 #qrc
