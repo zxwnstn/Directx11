@@ -27,6 +27,8 @@ namespace Engine {
 		inline const DirectX::XMFLOAT3 GetRotationValue() const { return m_RotateValue; }
 		inline const DirectX::XMFLOAT3 GetScaleValue() const { return m_ScaleValue; }
 
+		DirectX::XMVECTOR GetFowardVector() const;
+
 	private:
 		void SetTranslate();
 		void SetRotate();

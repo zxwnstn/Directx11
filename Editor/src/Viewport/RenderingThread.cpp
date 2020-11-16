@@ -4,12 +4,11 @@
 
 RenderingThread::RenderingThread()
 {
-	model = Engine::Model3D::Create(Engine::RenderingShader::Skinned)
+	model = Engine::Model3D::Create(Engine::RenderingShader::Lighting)
 		.buildFromFBX().SetSkeleton("Kachujin");
 
 	float filedOfView = 3.141592f / 3.0f;
 	perspective.reset(new Engine::Camera(filedOfView, w / (float)h));
-
 }
 
 void RenderingThread::run()
@@ -32,7 +31,7 @@ void RenderingThread::run()
 		model->Update(speed);
 		ts.Update();
 
-		Engine::Renderer::BeginScene(*perspective);
+		Engine::Renderer::BeginScene(*perspective, light);
 		Engine::Renderer::Enque(model);
 		Engine::Renderer::EndScene();
 	}

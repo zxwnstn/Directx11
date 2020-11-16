@@ -69,19 +69,11 @@ namespace Engine {
 
 	void Transform::MoveForwad(float d)
 	{
-		DirectX::XMFLOAT3 lookAt;
-		DirectX::XMVECTOR lookVector;
-		lookAt.x = 0.0f;
-		lookAt.y = 0.0f;
-		lookAt.z = 1.0f;
-		lookVector = XMLoadFloat3(&lookAt);
+		DirectX::XMVECTOR lookAt = GetFowardVector();
 
-		lookVector = XMVector3TransformCoord(lookVector, XMMatrixTranspose(m_Rotate));
-		DirectX::XMVector3Normalize(lookVector);
-
-		m_TranslateValue.x += lookVector.m128_f32[0] * d;
-		m_TranslateValue.y += lookVector.m128_f32[1] * d;
-		m_TranslateValue.z += lookVector.m128_f32[2] * d;
+		m_TranslateValue.x += lookAt.m128_f32[0] * d;
+		m_TranslateValue.y += lookAt.m128_f32[1] * d;
+		m_TranslateValue.z += lookAt.m128_f32[2] * d;
 
 		SetTranslate();
 	}
@@ -103,6 +95,21 @@ namespace Engine {
 		m_TranslateValue.z -= lookVector.m128_f32[2] * d;
 
 		SetTranslate();
+	}
+
+	DirectX::XMVECTOR Transform::GetFowardVector() const
+	{
+		DirectX::XMFLOAT3 lookAt;
+		DirectX::XMVECTOR lookVector;
+		lookAt.x = 0.0f;
+		lookAt.y = 0.0f;
+		lookAt.z = 1.0f;
+		lookVector = XMLoadFloat3(&lookAt);
+
+		lookVector = XMVector3TransformCoord(lookVector, XMMatrixTranspose(m_Rotate));
+		DirectX::XMVector3Normalize(lookVector);
+
+		return lookVector;
 	}
 
 	void Transform::SetTranslate()

@@ -44,13 +44,19 @@ namespace Engine {
 		Context->OMSetRenderTargets(0, 0, 0);
 		RenderTargetView->Release();
 
-		WinProp->Width = width;
-		WinProp->Height = height;
-
 		SwapChain->ResizeBuffers(1, 0, 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 
 		ID3D11Texture2D* backBuffer;
 		SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
+
+		if (!backBuffer)
+		{
+			std::cout << "Some errors ocurpy!\n";
+			return;
+		}
+
+		WinProp->Width = width;
+		WinProp->Height = height;
 
 		Device->CreateRenderTargetView(backBuffer, NULL, &RenderTargetView);
 		backBuffer->Release();

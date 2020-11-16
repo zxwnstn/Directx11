@@ -18,6 +18,7 @@ private:
 
 	std::shared_ptr<Engine::Model3D> model;
 	std::shared_ptr<Engine::Camera> perspective;
+	Engine::Light light;
 
 	friend class Viewport;
 };

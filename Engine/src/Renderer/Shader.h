@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ModelBuffer.h"
-#include "Common/Camera.h"
 #include "CBuffer.h"
 
 namespace Engine {
@@ -21,26 +20,51 @@ namespace Engine {
 			None
 		};
 
+		struct ContantBuffer
+		{
+			int Register;
+			Type ShaderType;
+			ID3D11Buffer* Buffer;
+		};
+
 	public:
 		Shader(const std::string& path);
 		Shader() = default;
-
-	public:
-
-		void Bind() const;
-
 		BufferBuilder CreateCompotibleBuffer();
 
-		void SetCameraParam(Camera& data);
-		void SetBoneParam(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t count);
-		void SetTransformParam(const Transform& data);
+	public:
+		void Bind() const;
+		
+		template<class ConstantBuffer, class PramType>
+		void SetParam(PramType& param)
+		{
+			CBuffer::Type type = CBuffer::detail::GetType<ConstantBuffer>::value;
+			auto find = CBuffers.find(type);
+			if (find == CBuffers.end()) return;
+
+			auto& cbuffer = find->second;
+
+			D3D11_MAPPED_SUBRESOURCE mappedResource;
+			Dx11Core::Get().Context->Map(cbuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+
+			ConstantBuffer* mappedData = (ConstantBuffer*)mappedResource.pData;
+			mappedData->Upload(param);
+
+			Dx11Core::Get().Context->Unmap(cbuffer.Buffer, 0);
+
+			unsigned bufferNumber = cbuffer.Register;
+			switch (cbuffer.ShaderType)
+			{
+			case Type::VertexShader: Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
+			case Type::PixelShader: Dx11Core::Get().Context->PSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
+			}
+		}
 
 	private:
 		void AddCBuffer(const std::filesystem::path& path);
-		void CreateCBuffer(CBuffer::Type cbtype);
+		void CreateCBuffer(int regNumber, Type shaderType, CBuffer::Type cbtype);
 		void CreateSampler();
 		void SetLayout(const std::filesystem::path& path, ID3D10Blob* binary);
-
 		void CreateShader(ID3D10Blob* binary, Type type);
 		ID3D10Blob* CompileShader(const std::filesystem::path& path, Type type);
 
@@ -50,7 +74,7 @@ namespace Engine {
 		InputLayout InputLayout;
 
 		std::unordered_map<Type, ShaderVar> Shaders;
-		std::unordered_map<CBuffer::Type, ID3D11Buffer*> CBuffers;
+		std::unordered_map<CBuffer::Type, ContantBuffer> CBuffers;
 
 		ID3D11SamplerState* SamplerState = nullptr;
 	};

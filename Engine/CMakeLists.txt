@@ -4,6 +4,8 @@ set(project_headers
     src/Common/Camera.h
     src/Common/Transform.h
 	src/Common/Timestep.h
+	src/Common/Light.h
+	src/Common/Material.h
     src/Core/ModuleCore.h
     src/Core/Base.h
     src/File/FbxLoader.h
@@ -32,6 +34,8 @@ set(project_source
     src/Common/Camera.cpp
     src/Common/Transform.cpp
 	src/Common/Timestep.cpp
+	src/Common/Light.cpp
+	src/Common/Material.cpp
     src/Core/ModuleCore.cpp
     src/File/FbxLoader.cpp
     src/File/FileCommon.cpp
@@ -51,6 +55,7 @@ set(project_source
     src/Renderer/Texture.cpp
     src/pch.cpp
 )
+
 
 add_library(
     ${PROJECT_NAME}

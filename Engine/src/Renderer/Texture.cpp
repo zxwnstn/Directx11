@@ -12,7 +12,9 @@ namespace Engine {
 		return DXGI_FORMAT_UNKNOWN;
 	}
 
-	Texture::Texture(const std::string& path)
+	Texture::Texture(const std::string& path, UsageType type, int mySlot)
+		: MySlot(mySlot)
+		, type(type)
 	{
 		stbi_set_flip_vertically_on_load(1);
 
@@ -52,14 +54,23 @@ namespace Engine {
 		Dx11Core::Get().Context->PSSetShaderResources(slot, 1, &View);
 	}
 
+	void Texture::Bind() const
+	{
+		Dx11Core::Get().Context->PSSetShaderResources(MySlot, 1, &View);
+	}
+
+	void Texture::MultipleBind(ID3D11ShaderResourceView** Views, int num)
+	{
+		Dx11Core::Get().Context->PSSetShaderResources(0, 3, Views);
+	}
 
 	static std::unordered_map<std::string, std::shared_ptr<Texture>> s_Textures;
 
-	void TextureArchive::Add(const std::string & path, const std::string & name)
+	void TextureArchive::Add(const std::string & path, const std::string & name, Texture::UsageType type, int slot)
 	{
 		if (Has(name)) return;
 
-		s_Textures[name] = std::make_shared<Texture>(path);
+		s_Textures[name] = std::make_shared<Texture>(path, type, slot);
 	}
 
 	bool TextureArchive::Has(const std::string & name)

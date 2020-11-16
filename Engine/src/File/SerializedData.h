@@ -107,6 +107,8 @@ namespace Engine {
 		{
 			ar & Position;
 			ar & UV;
+			ar & TintColor;
+
 			ar & Normal;
 			ar & BiNormal;
 			ar & Tangent;
@@ -115,6 +117,8 @@ namespace Engine {
 		}
 		vec3 Position;
 		vec2 UV;
+		vec4 TintColor{1.0, 1.0f, 1.0f, 1.0f};
+
 		vec3 Normal;
 		vec3 BiNormal;
 		vec3 Tangent;

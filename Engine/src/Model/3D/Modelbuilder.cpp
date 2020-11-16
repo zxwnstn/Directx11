@@ -38,9 +38,11 @@ namespace Engine {
 			.CreateCompotibleBuffer()
 			.SetBuffer(myModel->m_Skeleton->Vertices.data(), myModel->m_Skeleton->Indices.data(), (uint32_t)myModel->m_Skeleton->Indices.size());
 
-		myModel->m_Textures.push_back(TextureArchive::Get(skeletonName + "_diffuse"));
-		myModel->m_Textures.push_back(TextureArchive::Get(skeletonName + "_normal"));
-		myModel->m_Textures.push_back(TextureArchive::Get(skeletonName + "_specular"));
+		myModel->m_Material = MaterialArchive::Get(skeletonName);
+		for (auto& name : myModel->m_Material->MaterialTextures)
+		{
+			myModel->m_Textures.emplace_back(TextureArchive::Get(name));
+		}
 
 		myModel->m_Animation.reset(new AnimationInform);
 

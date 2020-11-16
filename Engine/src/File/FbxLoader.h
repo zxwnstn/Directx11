@@ -25,11 +25,6 @@ namespace Engine {
 		void Extract(const std::string & path, const std::filesystem::path& file);
 
 	private:
-		vec2 getUV(class FbxMesh* mesh, int index, int controlIndex);
-		vec3 getNormal(FbxMesh* mesh, int index, int controlIndex);
-		vec3 getBinormal();
-		vec3 getBitangent();
-
 		void getControlPoint(class FbxNode* node);
 		void getVertices(FbxNode* node);
 		void getJoints(FbxNode* node);

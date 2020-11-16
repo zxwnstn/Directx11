@@ -18,4 +18,6 @@ private:
 
 	std::shared_ptr<class Engine::Camera> ortho;
 	std::shared_ptr<class Engine::Camera> perspective;
+
+	Engine::Light light;
 };

@@ -2,6 +2,9 @@
 
 #include "Shader.h"
 #include "Dx11Core.h"
+#include "Common/Camera.h"
+#include "Common/Light.h"
+#include "Common/Material.h"
 
 namespace Engine {
 
@@ -13,6 +16,8 @@ namespace Engine {
 		case CBuffer::Type::Transform: return sizeof(CBuffer::Transform);
 		case CBuffer::Type::Light: return sizeof(CBuffer::Light);
 		case CBuffer::Type::Bone: return sizeof(CBuffer::Bone);
+		case CBuffer::Type::Environment: return sizeof(CBuffer::Environment);
+		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
 		}
 		return 0;
 	}
@@ -23,6 +28,8 @@ namespace Engine {
 		if (name == "Light") return CBuffer::Type::Light;
 		if (name == "Transform") return CBuffer::Type::Transform;
 		if (name == "Bone") return CBuffer::Type::Bone;
+		if (name == "Environment") return CBuffer::Type::Environment;
+		if (name == "Material") return CBuffer::Type::Material;
 		return CBuffer::Type::None;
 	}
 
@@ -57,7 +64,7 @@ namespace Engine {
 		return Shader::Type::None;
 	}
 
-	void Shader::CreateCBuffer(CBuffer::Type cbtype)
+	void Shader::CreateCBuffer(int regNumber, Type shaderType, CBuffer::Type cbtype)
 	{
 		ID3D11Buffer* buffer;
 
@@ -69,8 +76,42 @@ namespace Engine {
 		BufferDesc.MiscFlags = 0;
 		BufferDesc.StructureByteStride = 0;
 		Dx11Core::Get().Device->CreateBuffer(&BufferDesc, NULL, &buffer);
+		assert(buffer);
 
-		CBuffers.emplace(cbtype, buffer);
+		CBuffers.emplace(cbtype, Shader::ContantBuffer{regNumber, shaderType, buffer});
+	}
+
+	void Shader::AddCBuffer(const std::filesystem::path & path)
+	{
+		std::ifstream file(path);
+		auto shaderType = GetShaderType(path.filename().string());
+		if (file.is_open())
+		{
+			std::string tokken;
+			std::string CBName;
+			while (!file.eof())
+			{
+				file >> tokken;
+				if (tokken == "cbuffer")
+				{
+					file >> CBName;
+					file >> tokken;
+					file >> tokken;
+
+					auto startReg = tokken.find('b');
+					auto endReg = tokken.find(')');
+					std::string v;
+					for (int i = startReg + 1; i < endReg; ++i)
+						v += tokken[i];
+
+					int regNum = std::atoi(v.c_str());
+					CBuffer::Type cbtype = GetCBType(CBName);
+					if (cbtype != CBuffer::Type::None)
+						CreateCBuffer(regNum, shaderType, cbtype);
+				}
+			}
+		}
+		file.close();
 	}
 
 	Shader::Shader(const std::string & path)
@@ -93,86 +134,6 @@ namespace Engine {
 
 			std::cout << "\tCompile Success : " << file.path().filename() << "\n";
 		}
-	}
-
-
-	void Shader::SetCameraParam(Camera & data)
-	{
-		CBuffer::Type type = CBuffer::Type::Camera;
-
-		auto find = CBuffers.find(type);
-		if (find == CBuffers.end()) return;
-
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		Dx11Core::Get().Context->Map(find->second, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-
-		CBuffer::Camera* mappedData = (CBuffer::Camera*)mappedResource.pData;
-		mappedData->Upload(data);
-
-		Dx11Core::Get().Context->Unmap(find->second, 0);
-
-		unsigned bufferNumber = 0;
-		Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &find->second);
-	}
-
-	void Shader::SetBoneParam(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t count)
-	{
-		CBuffer::Type type = CBuffer::Type::Bone;
-
-		auto find = CBuffers.find(type);
-		if (find == CBuffers.end()) return;
-
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		Dx11Core::Get().Context->Map(find->second, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-
-		CBuffer::Bone* mappedData = (CBuffer::Bone*)mappedResource.pData;
-		mappedData->Upload(skinnedTransform, count * sizeof(DirectX::XMFLOAT4X4));
-
-		Dx11Core::Get().Context->Unmap(find->second, 0);
-
-		unsigned bufferNumber = 2;
-		Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &find->second);
-	}
-
-	void Shader::SetTransformParam(const Transform & data)
-	{
-		CBuffer::Type type = CBuffer::Type::Transform;
-
-		auto find = CBuffers.find(type);
-		if (find == CBuffers.end()) return;
-
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		Dx11Core::Get().Context->Map(find->second, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-
-		CBuffer::Transform* mappedData = (CBuffer::Transform*)mappedResource.pData;
-		mappedData->Upload(data);
-
-		Dx11Core::Get().Context->Unmap(find->second, 0);
-
-		unsigned bufferNumber = 1;
-		Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &find->second);
-	}
-
-	void Shader::AddCBuffer(const std::filesystem::path & path)
-	{
-		std::ifstream file(path);
-		if (file.is_open())
-		{
-			std::string tokken;
-			std::string CBName;
-			while (!file.eof())
-			{
-				file >> tokken;
-				if (tokken == "cbuffer")
-				{
-					file >> CBName;
-					CBuffer::Type cbtype = GetCBType(CBName);
-					if (cbtype != CBuffer::Type::None)
-						CreateCBuffer(cbtype);
-				}
-			}
-		}
-		file.close();
 	}
 
 	void AddElements(const std::string& dataFormat, char* sementicName, uint32_t offset, std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDescs)

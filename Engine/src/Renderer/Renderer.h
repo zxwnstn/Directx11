@@ -6,7 +6,7 @@ namespace Engine {
 
 	enum class RenderingShader
 	{
-		Color, Texture, Skinned, Custum
+		Color, Texture, Skinned, Lighting, Custum
 	};
 
 	std::string ToString(RenderingShader type);
@@ -18,9 +18,7 @@ namespace Engine {
 		static void Init(const struct WindowProp& prop);
 
 	public:
-		static void BeginScene(class Camera& camera);
-		static void Enque(RenderingShader shader, const ModelBuffer& buffer);
-		static void Enque(RenderingShader shader, const ModelBuffer& buffer, const class Texture& texture);
+		static void BeginScene(class Camera& camera, struct Light& light);
 		static void Enque(std::shared_ptr<class Model3D> model);
 		static void Enque(std::shared_ptr<class Model2D> model);
 		static void EndScene();
@@ -33,6 +31,7 @@ namespace Engine {
 		static Shader& GetShader(const std::string& shader);
 		static void CreateShader(const std::string& path, const std::string& keyName);
 		static void DeleteShader(const std::string& keyName);
+		static Environment* GetGlobalEnv();
 
 	private:
 		friend class ModuleCore;

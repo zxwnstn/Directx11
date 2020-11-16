@@ -1,12 +1,16 @@
 #pragma once
 
 #include "Common/Camera.h"
+#include "Common/Light.h"
+#include "Common/Material.h"
 
 namespace Engine::CBuffer {
 
 	enum class Type
 	{
-		Camera, Transform, Light, Bone, None
+		Camera, Transform, Bone, 
+		Environment, Light, Material,
+		None
 	};
 
 	struct Camera
@@ -30,46 +34,81 @@ namespace Engine::CBuffer {
 
 	struct Light
 	{
-		DirectX::XMFLOAT4 Ambient;
-		DirectX::XMFLOAT4 Diffuse;
-		DirectX::XMFLOAT4 Specular;
-		DirectX::XMFLOAT3 Direction;
-		float Power;
+		DirectX::XMFLOAT4 Position;
+		DirectX::XMFLOAT4 Direction;
+		DirectX::XMFLOAT4 Color;
+		int type;
+		int padding[3];
 
-		void Copy(const Light& other);
+		void Upload(const Engine::Light& other);
 	};
 
 	struct Bone
 	{
 		DirectX::XMFLOAT4X4 SkinnedTransform[100];
-		void Upload(DirectX::XMFLOAT4X4* skinnedTransform, uint32_t size);
+		void Upload(DirectX::XMFLOAT4X4* skinnedTransform);
 	};
 
-	template<typename Type>
-	struct GetType
+	struct Environment
 	{
+		DirectX::XMFLOAT4 Ambient;
+
+		void Upload(const Engine::Environment& other);
 	};
 
-	template<>
-	struct GetType<CBuffer::Camera>
+	struct Material
 	{
-		static const Type value = Type::Camera;
+		int MMode;
+		DirectX::XMFLOAT3 Ambient;
+		DirectX::XMFLOAT4 Diffuse;
+		DirectX::XMFLOAT3 Emissive;
+		DirectX::XMFLOAT3 Specular;
+		DirectX::XMFLOAT3 Fresnel;
+		float Roughness;
+		int padding[2];
+
+		void Upload(const Engine::Material& other);
 	};
 
-	template<>
-	struct GetType<CBuffer::Transform>
-	{
-		static const Type value = Type::Transform;
-	};
+	namespace detail {
 
-	template<>
-	struct GetType<CBuffer::Light>
-	{
-		static const Type value = Type::Light;
-	};
-	template<>
-	struct GetType<CBuffer::Bone>
-	{
-		static const Type value = Type::Bone;
-	};
+		template<typename Type>
+		struct GetType
+		{
+		};
+
+		template<>
+		struct GetType<CBuffer::Camera>
+		{
+			static const Type value = Type::Camera;
+		};
+
+		template<>
+		struct GetType<CBuffer::Transform>
+		{
+			static const Type value = Type::Transform;
+		};
+
+		template<>
+		struct GetType<CBuffer::Light>
+		{
+			static const Type value = Type::Light;
+		};
+		template<>
+		struct GetType<CBuffer::Bone>
+		{
+			static const Type value = Type::Bone;
+		};
+		template<>
+		struct GetType<CBuffer::Environment>
+		{
+			static const Type value = Type::Environment;
+		};
+		template<>
+		struct GetType<CBuffer::Material>
+		{
+			static const Type value = Type::Material;
+		};
+
+	}
 }

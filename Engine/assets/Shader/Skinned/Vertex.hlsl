@@ -23,9 +23,12 @@ struct Input
 {
 	float3 position : POSITION;
 	float2 tex : TEXCOORD0;
-	float3 Normal : NORMAL;
+	float4 tintColor : COlOR;
+
+	float3 normal : NORMAL;
 	float3 binormal : BINORMAL;
-	float3 bitangent : BITANGENT;
+	float3 tangent : TANGENT;
+
 	float4 boneWeight : WEIGHT;
 	uint4 boneIndices : BONEINDICES;
 };
@@ -34,12 +37,18 @@ struct Output
 {
 	float4 position : SV_POSITION;
 	float2 tex : TEXCOORD0;
+	float4 tintColor : COLOR;
+
+	float3 normal : NORMAL;
+	float3 binormal : BINORMAL;
+	float3 tangent : TANGENT;
 };
 
 Output main(Input input)
 {	
 	Output output;
 
+	//Transform
 	matrix skinTransform = 0;
 	skinTransform += FinalTransform[input.boneIndices.x] * input.boneWeight.x;
 	skinTransform += FinalTransform[input.boneIndices.y] * input.boneWeight.y;
@@ -56,6 +65,7 @@ Output main(Input input)
 	output.position = mul(output.position, View);
 	output.position = mul(output.position, Projection);
 
+	//Pixel Inputs
 	output.tex = input.tex;
 
 	return output;

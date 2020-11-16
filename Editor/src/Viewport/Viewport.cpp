@@ -21,6 +21,8 @@ void Viewport::Init()
 
 	m_RenderThread->w = width();
 	m_RenderThread->h = height();
+	m_RenderThread->resized = true;
+
 	m_RenderThread->start();
 }
 

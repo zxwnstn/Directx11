@@ -6,6 +6,8 @@
 
 #include "Model/3D/Skeleton.h"
 #include "Model/3D/SkeletalAnimation.h"
+#include "Common/Material.h"
+#include "Renderer/Texture.h"
 
 #include "Serialization.h"
 
@@ -34,6 +36,7 @@ namespace Engine {
 		}
 
 		m_SkeletonName = skeletonName;
+		MaterialArchive::Add(skeletonName);
 		return SkeletonArchive::Add(skeletonName);
 	}
 
@@ -93,6 +96,7 @@ namespace Engine {
 					getControlPoint(node);
 					getAnimation(node);
 					getVertices(node);
+					getMaterial(node);
 					break;
 				}
 			}
@@ -122,7 +126,7 @@ namespace Engine {
 		}
 	}
 
-	namespace Detail {
+	namespace detail {
 
 		struct Type2
 		{
@@ -171,6 +175,75 @@ namespace Engine {
 		return ret;
 	}
 	
+	std::pair<vec3, vec3> CalculateBinomal(vec3 p1, vec3 p2, vec3 p3, vec2 p1uv, vec2 p2uv, vec2 p3uv)
+	{
+		DirectX::XMFLOAT3 vertex1(p1.m[0], p1.m[1], p1.m[2]);
+		DirectX::XMFLOAT3 vertex2(p2.m[0], p2.m[1], p2.m[2]);
+		DirectX::XMFLOAT3 vertex3(p3.m[0], p3.m[1], p3.m[2]);
+		
+		DirectX::XMFLOAT3 binormal;
+		DirectX::XMFLOAT3 tangent;
+		vec3 retbi;
+		vec3 retan;
+
+		float vector1[3], vector2[3];
+		float tuVector[2], tvVector[2];
+		float den;
+		float length;
+
+		// Calculate the two vectors for this face.
+		vector1[0] = vertex2.x - vertex1.x;
+		vector1[1] = vertex2.y - vertex1.y;
+		vector1[2] = vertex2.z - vertex1.z;
+
+		vector2[0] = vertex3.x - vertex1.x;
+		vector2[1] = vertex3.y - vertex1.y;
+		vector2[2] = vertex3.z - vertex1.z;
+
+		// Calculate the tu and tv texture space vectors.
+		tuVector[0] = p2uv.m[0] - p1uv.m[0];
+		tvVector[0] = p2uv.m[1] - p1uv.m[1];
+
+		tuVector[1] = p3uv.m[0] - p1uv.m[0];
+		tvVector[1] = p3uv.m[1] - p1uv.m[1];
+
+		// Calculate the denominator of the tangent/binormal equation.
+		den = 1.0f / (tuVector[0] * tvVector[1] - tuVector[1] * tvVector[0]);
+
+		// Calculate the cross products and multiply by the coefficient to get the tangent and binormal.
+		tangent.x = (tvVector[1] * vector1[0] - tvVector[0] * vector2[0]) * den;
+		tangent.y = (tvVector[1] * vector1[1] - tvVector[0] * vector2[1]) * den;
+		tangent.z = (tvVector[1] * vector1[2] - tvVector[0] * vector2[2]) * den;
+
+		binormal.x = (tuVector[0] * vector2[0] - tuVector[1] * vector1[0]) * den;
+		binormal.y = (tuVector[0] * vector2[1] - tuVector[1] * vector1[1]) * den;
+		binormal.z = (tuVector[0] * vector2[2] - tuVector[1] * vector1[2]) * den;
+
+		// Calculate the length of this normal.
+		length = sqrt((tangent.x * tangent.x) + (tangent.y * tangent.y) + (tangent.z * tangent.z));
+
+		// Normalize the normal and then store it
+		tangent.x = tangent.x / length;
+		tangent.y = tangent.y / length;
+		tangent.z = tangent.z / length;
+
+		// Calculate the length of this normal.
+		length = sqrt((binormal.x * binormal.x) + (binormal.y * binormal.y) + (binormal.z * binormal.z));
+
+		// Normalize the normal and then store it
+		binormal.x = binormal.x / length;
+		binormal.y = binormal.y / length;
+		binormal.z = binormal.z / length;
+
+		retbi.m[0] = binormal.x;
+		retbi.m[1] = binormal.y;
+		retbi.m[2] = binormal.z;
+		retan.m[0] = tangent.x;
+		retan.m[1] = tangent.y;
+		retan.m[2] = tangent.z;
+
+		return { retbi , retan };
+	}
 
 	void FBXLoader::getVertices(FbxNode* node)
 	{
@@ -210,11 +283,10 @@ namespace Engine {
 			{
 				int controlIndex = mesh->GetPolygonVertex(i, j);
 				Vertices[index].Position = ControlPoints[controlIndex].Position;
-				Vertices[index].UV = getElement<Detail::Type2>(uv, index, controlIndex);
-				Vertices[index].Normal = getElement<Detail::Type3>(normal, index, controlIndex);
-				Vertices[index].BiNormal = getElement<Detail::Type3>(binormal, index, controlIndex);
-				Vertices[index].Tangent = getElement<Detail::Type3>(tangent, index, controlIndex);
-
+				Vertices[index].UV = getElement<detail::Type2>(uv, index, controlIndex);
+				Vertices[index].Normal = getElement<detail::Type3>(normal, index, controlIndex);
+				//Vertices[index].BiNormal = getElement<detail::Type3>(binormal, index, controlIndex);
+				//Vertices[index].Tangent = getElement<detail::Type3>(tangent, index, controlIndex);
 				for (int k = 0; k < 4; ++k)
 				{
 					Vertices[index].BoneIndex.m[k] = ControlPoints[controlIndex].BoneIndex.m[k];
@@ -222,6 +294,16 @@ namespace Engine {
 				}
 				index++;
 			}
+			auto[binormal, tangent] = CalculateBinomal(Vertices[index - 3].Position, Vertices[index - 2].Position, Vertices[index - 1].Position,
+				Vertices[index - 3].UV, Vertices[index - 2].UV, Vertices[index - 1].UV);
+
+			Vertices[index - 1].Tangent = tangent;
+			Vertices[index - 2].Tangent = tangent;
+			Vertices[index - 3].Tangent = tangent;
+
+			Vertices[index - 1].BiNormal = binormal;
+			Vertices[index - 2].BiNormal = binormal;
+			Vertices[index - 3].BiNormal = binormal;
 		}
 		ExportCache(Type::Vertices);
 	}
@@ -260,8 +342,141 @@ namespace Engine {
 		}
 	}
 
+	void getMaterialTexture(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
+	{
+		unsigned int textureIndex = 0;
+		FbxProperty property;
+
+		auto mat = MaterialArchive::Get(skeltonName);
+		FBXSDK_FOR_EACH_TEXTURE(textureIndex)
+		{
+			property = pMaterial->FindProperty(FbxLayerElement::sTextureChannelNames[textureIndex]);
+			if (property.IsValid())
+			{
+				unsigned int textureCount = property.GetSrcObjectCount<FbxTexture>();
+				for (unsigned int i = 0; i < textureCount; ++i)
+				{
+					FbxLayeredTexture* layeredTexture = property.GetSrcObject<FbxLayeredTexture>(i);
+					if (layeredTexture)
+					{
+						throw std::exception("Layered Texture is currently unsupported\n");
+					}
+					else
+					{
+						FbxTexture* texture = property.GetSrcObject<FbxTexture>(i);
+						if (texture)
+						{
+							std::string textureType = property.GetNameAsCStr();
+							FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+							if (fileTexture)
+							{
+								auto path = fileTexture->GetFileName();
+								if (textureType == "DiffuseColor")
+								{
+									auto textureName = skeltonName + "_diffuse";
+									TextureArchive::Add(path, textureName, Texture::eDiffuse, 0);
+									mat->MaterialTextures.emplace_back(textureName, Texture::eDiffuse);
+								}
+								if (textureType == "NormalMap")
+								{
+									auto textureName = skeltonName + "_normal";
+									TextureArchive::Add(path, textureName, Texture::eNormal, 1);
+									mat->MaterialTextures.emplace_back(textureName, Texture::eNormal);
+								}
+								if (textureType == "SpecularColor")
+								{
+									auto textureName = skeltonName + "_specular";
+									TextureArchive::Add(path, textureName, Texture::eSpecular, 2);
+									mat->MaterialTextures.emplace_back(textureName, Texture::eSpecular);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void getMaterialAttribute(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
+	{
+		FbxDouble3 double3;
+		FbxDouble double1;
+		auto mat = MaterialArchive::Get(skeltonName);
+		if (pMaterial->GetClassId().Is(FbxSurfacePhong::ClassId))
+		{
+			// Amibent Color
+			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Ambient;
+			mat->Ambient.x = static_cast<float>(double3.mData[0]);
+			mat->Ambient.y = static_cast<float>(double3.mData[1]);
+			mat->Ambient.z = static_cast<float>(double3.mData[2]);
+
+			// Diffuse Color
+			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Diffuse;
+			mat->Diffuse.x = static_cast<float>(double3.mData[0]);
+			mat->Diffuse.y = static_cast<float>(double3.mData[1]);
+			mat->Diffuse.z = static_cast<float>(double3.mData[2]);
+			mat->Diffuse.w = static_cast<float>(double3.mData[3]);
+
+			// Roughness 
+			double1 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Shininess;
+			mat->Roughness = float(1.0 - double1);
+
+			// Reflection
+			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Reflection;
+			mat->Fresnel.x = static_cast<float>(double3.mData[0]);
+			mat->Fresnel.y = static_cast<float>(double3.mData[1]);
+			mat->Fresnel.z = static_cast<float>(double3.mData[2]);
+
+			// Specular Color
+			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Specular;
+			mat->Specular.x = static_cast<float>(double3.mData[0]);
+			mat->Specular.y = static_cast<float>(double3.mData[1]);
+			mat->Specular.z = static_cast<float>(double3.mData[2]);
+
+			// Emissive Color
+			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Emissive;
+			mat->Emissive.x = static_cast<float>(double3.mData[0]);
+			mat->Emissive.y = static_cast<float>(double3.mData[1]);
+			mat->Emissive.z = static_cast<float>(double3.mData[2]);
+		}
+		else if (pMaterial->GetClassId().Is(FbxSurfaceLambert::ClassId))
+		{
+			// Amibent Color
+			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Ambient;
+			mat->Ambient.x = static_cast<float>(double3.mData[0]);
+			mat->Ambient.y = static_cast<float>(double3.mData[1]);
+			mat->Ambient.z = static_cast<float>(double3.mData[2]);
+
+			// Diffuse Color
+			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Diffuse;
+			mat->Diffuse.x = static_cast<float>(double3.mData[0]);
+			mat->Diffuse.y = static_cast<float>(double3.mData[1]);
+			mat->Diffuse.z = static_cast<float>(double3.mData[2]);
+
+			// Emissive Color
+			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Emissive;
+			mat->Emissive.x = static_cast<float>(double3.mData[0]);
+			mat->Emissive.y = static_cast<float>(double3.mData[1]);
+			mat->Emissive.z = static_cast<float>(double3.mData[2]);
+		}
+	}
 	void FBXLoader::getMaterial(FbxNode * node)
 	{
+		if (isExistCache(Type::Material))
+		{
+			ImportCache(Type::Material);
+			return;
+		}
+
+		int count = node->GetMaterialCount();
+		for (int i = 0; i < count; ++i)
+		{
+			
+			FbxSurfaceMaterial* SurfaceMaterial = node->GetMaterial(i);
+			getMaterialAttribute(SurfaceMaterial, m_SkeletonName);
+			getMaterialTexture(SurfaceMaterial, m_SkeletonName);
+		}
+		ExportCache(Type::Material);
 	}
 
 	void FBXLoader::getAnimation(FbxNode* node)
@@ -439,6 +654,10 @@ namespace Engine {
 		}
 		break;
 		case FBXLoader::Type::Material:
+		{
+			auto& Material = MaterialArchive::Get(m_SkeletonName);
+			Serializer::Write(path, *Material);
+		}
 			break;
 		case FBXLoader::Type::Animation:
 		{
@@ -475,6 +694,10 @@ namespace Engine {
 		}
 		break;
 		case FBXLoader::Type::Material:
+		{
+			auto Material = MaterialArchive::Get(m_SkeletonName);
+			Serializer::Read(path, *Material);
+		}
 			break;
 		case FBXLoader::Type::Animation:
 		{

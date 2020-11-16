@@ -6,17 +6,21 @@ void SandBox::OnUpdate(float dt)
 {
 	controlUpdate(dt);
 
-	Engine::Renderer::BeginScene(*perspective);
+	Engine::Renderer::BeginScene(*perspective, light);
 	Engine::Renderer::Enque(model);
 	Engine::Renderer::EndScene();
 }
 
 void SandBox::OnAttach()
 {
-	model = Engine::Model3D::Create(Engine::RenderingShader::Skinned)
+	model = Engine::Model3D::Create(Engine::RenderingShader::Lighting)
 		.buildFromFBX().SetSkeleton("Kachujin");
 
 	float filedOfView = 3.141592f / 3.0f;
+	//model->m_Material->SetMaterialTexture(Engine::Texture::eDiffuse, true);
+	//model->m_Material->SetMaterialTexture(Engine::Texture::eNormal, true);
+	//model->m_Material->SetMaterialTexture(Engine::Texture::eSpecular, true);
+	model->m_Material->MMode = 0b1110;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
 }
 
@@ -32,18 +36,26 @@ void SandBox::OnResize()
 
 void SandBox::controlUpdate(float dt)
 {
-	auto pos = perspective->GetPosition();
+	auto& perspectiveTransform = perspective->GetTransform();
 	auto& transform = model->m_Transform;
+
+	if (GetAsyncKeyState('T') & 0x8000)
+	{
+		model->SetShader(Engine::ToString(Engine::RenderingShader::Skinned));
+	}
+	if (GetAsyncKeyState('R') & 0x8000)
+	{
+		model->SetShader(Engine::ToString(Engine::RenderingShader::Lighting));
+	}
+
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
-		pos.z += 0.1f;
-		perspective->SetPosition(pos.x, pos.y, pos.z);
+		perspectiveTransform.AddTranslate(0.0f, 0.0f, 0.1f);
 	}
 
 	if (GetAsyncKeyState('S') & 0x8000)
 	{
-		pos.z -= 0.1f;
-		perspective->SetPosition(pos.x, pos.y, pos.z);
+		perspectiveTransform.AddTranslate(0.0f, 0.0f, -0.1f);
 	}
 	if (GetAsyncKeyState(VK_UP) & 0x8000)
 	{

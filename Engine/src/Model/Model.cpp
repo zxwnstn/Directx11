@@ -45,6 +45,11 @@ namespace Engine {
 		return ModelBuilder(new Model3D(ShaderName));
 	}
 
+	void Model3D::SetShader(const std::string& shader)
+	{
+		m_Shader = shader;
+	}
+
 	void Model3D::animationUpdate(float dt)
 	{
 		if (!m_Animation->Expired)
