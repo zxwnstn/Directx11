@@ -7,20 +7,34 @@ void SandBox::OnUpdate(float dt)
 	controlUpdate(dt);
 
 	Engine::Renderer::BeginScene(*perspective, light);
+	//Engine::Renderer::Enque(buffer, Engine::RenderingShader::Skinned);
 	Engine::Renderer::Enque(model);
 	Engine::Renderer::EndScene();
 }
 
 void SandBox::OnAttach()
 {
-	model = Engine::Model3D::Create(Engine::RenderingShader::Lighting)
-		.buildFromFBX().SetSkeleton("Kachujin");
+	/*float vertices[] = {
+		0.5f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+		-0.5f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+	};
+	uint32_t indices[] = {
+		0, 2, 1
+	};
+
+	buffer = Engine::Renderer::GetShader(Engine::RenderingShader::Skinned)
+		.CreateCompotibleBuffer()
+		.SetBuffer(vertices, indices, 3);*/
+
+	model = Engine::Model3D::Create(Engine::RenderingShader::Skinned)
+		.buildFromFBX().SetSkeleton("lucy");
+
+	//model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eDiffuse, false);
+	//model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eNormal, true);
+	//model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eSpecular, true);
 
 	float filedOfView = 3.141592f / 3.0f;
-	//model->m_Material->SetMaterialTexture(Engine::Texture::eDiffuse, true);
-	//model->m_Material->SetMaterialTexture(Engine::Texture::eNormal, true);
-	//model->m_Material->SetMaterialTexture(Engine::Texture::eSpecular, true);
-	model->m_Material->MMode = 0b1110;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
 }
 
@@ -50,12 +64,14 @@ void SandBox::controlUpdate(float dt)
 
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
-		perspectiveTransform.AddTranslate(0.0f, 0.0f, 0.1f);
+		std::cout << perspectiveTransform.GetTranslateValue().z << std::endl;
+		perspectiveTransform.AddTranslate(0.0f, 0.0f, 0.5f);
 	}
 
 	if (GetAsyncKeyState('S') & 0x8000)
 	{
-		perspectiveTransform.AddTranslate(0.0f, 0.0f, -0.1f);
+		std::cout << perspectiveTransform.GetTranslateValue().z << std::endl;
+		perspectiveTransform.AddTranslate(0.0f, 0.0f, -0.5f);
 	}
 	if (GetAsyncKeyState(VK_UP) & 0x8000)
 	{
@@ -75,6 +91,31 @@ void SandBox::controlUpdate(float dt)
 	{
 		transform.AddRotate(0.0f, -0.02f, 0.0f);
 	}
+
+	/*if (GetAsyncKeyState(VK_NUMPAD1) & 0x8000)
+	{
+		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eDiffuse, false);
+	}
+	if (GetAsyncKeyState(VK_NUMPAD2) & 0x8000)
+	{
+		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eSpecular, false);
+	}
+	if (GetAsyncKeyState(VK_NUMPAD3) & 0x8000)
+	{
+		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eNormal, false);
+	}
+	if (GetAsyncKeyState(VK_NUMPAD4) & 0x8000)
+	{
+		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eDiffuse, true);
+	}
+	if (GetAsyncKeyState(VK_NUMPAD5) & 0x8000)
+	{
+		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eSpecular, true);
+	}
+	if (GetAsyncKeyState(VK_NUMPAD6) & 0x8000)
+	{
+		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eNormal, true);
+	}*/
 
 
 	static bool myFlag = true;

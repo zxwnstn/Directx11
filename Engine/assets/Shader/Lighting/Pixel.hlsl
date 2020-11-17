@@ -1,4 +1,3 @@
-
 Texture2D shaderTexture[3]; //diffuse, normal, specular
 SamplerState SampleType;
 
@@ -18,7 +17,7 @@ cbuffer Light : register(b1)
 
 cbuffer Material : register(b2)
 {
-	int MMode;			//0 Color, 1 $ has Diffuse 2 $ has Normal 3 $ has specular
+	int MMode;			//0 Color, 1 $ has Diffuse 2 $ has Normal 4 $ has specular
 	float3 MAmbient;
 	float4 MDiffuse;
 	float3 MSpecular;
@@ -48,19 +47,28 @@ float4 main(Input input) : SV_TARGET
 	float3 MS = MSpecular;
 
 	//0. Calc Maps
-	float4 diffuseMap;
-	diffuseMap = shaderTexture[0].Sample(SampleType, input.tex);
-	MD = MDiffuse * diffuseMap;
+	if (1 & MMode)
+	{
+		float4 diffuseMap;
+		diffuseMap = shaderTexture[0].Sample(SampleType, input.tex);
+		MD = MDiffuse * diffuseMap;
+	}
 
-	float4 normalMap;
-	normalMap = shaderTexture[2].Sample(SampleType, input.tex);
-	normalMap = normalMap * 2.0f - 1.0f;
-	input.normal = normalMap.x * input.tangent + normalMap.y * input.binormal + normalMap.z * input.normal;
+	if (2 & MMode)
+	{
+		float4 normalMap;
+		normalMap = shaderTexture[2].Sample(SampleType, input.tex);
+		normalMap = normalMap * 2.0f - 1.0f;
+		input.normal = normalMap.x * input.tangent + normalMap.y * input.binormal + normalMap.z * input.normal;
+	}
 	input.normal = normalize(input.normal);
 
-	float4 specularMap;
-	specularMap = shaderTexture[1].Sample(SampleType, input.tex);
-	MS = MSpecular * specularMap;
+	if (4 & MMode)
+	{
+		float4 specularMap;
+		specularMap = shaderTexture[1].Sample(SampleType, input.tex);
+		MS = MSpecular * specularMap;
+	}
 
 	//1. Get Light Color
 	float LightPower = 1.0f;						// no light decrease
@@ -92,6 +100,6 @@ float4 main(Input input) : SV_TARGET
 	color.y = Ambient.y + Diffuse.y + Specular.y;
 	color.z = Ambient.z + Diffuse.z + Specular.z;
 
-	pixel = float4(color, 1.0f) * input.tintColor;
+	pixel = float4(color, 1.0f);
 	return pixel;
 }

@@ -39,24 +39,22 @@ namespace Engine {
 
 	void Renderer::Enque(std::shared_ptr<Model3D> model)
 	{
-		uint32_t jointSize = (uint32_t)model->m_Skeleton->Joints.size();
-
 		RendererShaders[model->m_Shader].Bind();
-		RendererShaders[model->m_Shader].SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+		//RendererShaders[model->m_Shader].SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
 		RendererShaders[model->m_Shader].SetParam<CBuffer::Transform>(model->m_Transform);
-		RendererShaders[model->m_Shader].SetParam<CBuffer::Material>(*model->m_Material);
+		//RendererShaders[model->m_Shader].SetParam<CBuffer::Material>(*model->m_Material);
 
-		ID3D11ShaderResourceView* textures[3];
-		for (int i = 0; i < 3; ++i)
-		{
-			textures[i] = model->m_Textures[i]->View;
-		}
-		Texture::MultipleBind(textures, 3);
-
-
+		//Texture::MultipleBind(model->m_Textures);
 		model->m_ModelBuffer->Bind();
 
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+	}
+
+	void Renderer::Enque(std::shared_ptr<ModelBuffer> buffer, RenderingShader type)
+	{
+		RendererShaders[ToString(type)].Bind();
+		buffer->Bind();
+		Dx11Core::Get().Context->DrawIndexed(buffer->GetIndexCount(), 0, 0);
 	}
 
 	void Renderer::EndScene()

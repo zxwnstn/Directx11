@@ -107,24 +107,60 @@ namespace Engine {
 		{
 			ar & Position;
 			ar & UV;
-			ar & TintColor;
 
 			ar & Normal;
 			ar & BiNormal;
 			ar & Tangent;
+
 			ar & BoneWeight;
 			ar & BoneIndex;
 		}
 		vec3 Position;
 		vec2 UV;
-		vec4 TintColor{1.0, 1.0f, 1.0f, 1.0f};
-
+		
 		vec3 Normal;
 		vec3 BiNormal;
 		vec3 Tangent;
 
 		vec4 BoneWeight;
 		uvec4 BoneIndex;
+
+		bool check()
+		{
+			for (int i = 0; i < 3; ++i)
+			{
+				if (!(-1000.0f <= Position.m[i]  && Position.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
+				if (!(-1000.0f <= Normal.m[i] && Normal.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
+				if (!(-1000.0f <= BiNormal.m[i] && BiNormal.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
+				if (!(-1000.0f <= Tangent.m[i] && Tangent.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
+			}
+
+			for (int i = 0; i < 4; ++i)
+			{
+				if (!(-1000.0f <= BoneWeight.m[i] && BoneWeight.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
+				if (!(-1000.0f <= BoneIndex.m[i] && BoneIndex.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
+			}
+			return true;
+		}
+		//int MaterialIndex = 0;
 	};
 
 	struct ControlPoint
@@ -143,6 +179,11 @@ namespace Engine {
 		uint8_t i = 0;
 		inline void push(float weight, uint32_t index)
 		{
+			if (i >= 4)
+			{
+				std::cout << "Bone Weight have over 4\n";
+				return;
+			}
 			BoneWeight.m[i] = weight;
 			BoneIndex.m[i] = index;
 			++i;

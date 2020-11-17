@@ -58,13 +58,12 @@ namespace Engine::CBuffer {
 
 	void Material::Upload(const Engine::Material& other)
 	{
-		MMode = other.MMode;
 		Ambient = other.Ambient;
 		Diffuse = other.Diffuse;
 		Specular = other.Specular;
 		Fresnel = other.Fresnel;
 		Emissive = other.Emissive;
-		Roughness = other.Roughness;
+		Shiness = other.Shiness;
 	}
 
 }

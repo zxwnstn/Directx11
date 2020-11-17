@@ -42,7 +42,7 @@ namespace Engine {
 			if (dir.is_directory())
 			{
 				std::filesystem::directory_iterator CurFolder(dir.path());
-				std::string specificDir = fbxDir + "\\" + dir.path().filename().string() + "\\";
+				std::string specificDir = fbxDir + dir.path().filename().string() + "/";
 
 				FBXLoader fbxLoader;
 				if (!fbxLoader.Init(dir.path().stem().string()))

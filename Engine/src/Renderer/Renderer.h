@@ -21,6 +21,7 @@ namespace Engine {
 		static void BeginScene(class Camera& camera, struct Light& light);
 		static void Enque(std::shared_ptr<class Model3D> model);
 		static void Enque(std::shared_ptr<class Model2D> model);
+		static void Enque(std::shared_ptr<ModelBuffer> buffer, RenderingShader type);
 		static void EndScene();
 
 		static class PipelineController& GetPipelineController();

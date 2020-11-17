@@ -19,7 +19,7 @@ namespace Engine {
 
 		int Parent;
 		std::string Name;
-		DirectX::XMMATRIX Offset;
+		DirectX::XMMATRIX Offset = DirectX::XMMatrixIdentity();
 	};
 
 	struct Skeleton
@@ -28,7 +28,7 @@ namespace Engine {
 
 		std::vector<Joint> Joints;
 
-		std::vector<ControlPoint> ControlPoints;
+		std::unordered_map<std::string, std::vector<ControlPoint>> ControlPoints;
 		std::vector<Vertex> Vertices;
 		std::vector<uint32_t> Indices;
 	};

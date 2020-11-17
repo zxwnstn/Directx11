@@ -5,6 +5,7 @@
 namespace Engine {
 
 	static std::unordered_map<std::string, std::shared_ptr<Material>> s_Materials;
+	static std::unordered_map<std::string, std::shared_ptr<MaterialSet>> s_MaterialSets;
 
 	void Engine::MaterialArchive::Add(const std::string & name)
 	{
@@ -18,12 +19,29 @@ namespace Engine {
 		s_Materials[name] = material;
 	}
 
+	void MaterialArchive::AddSet(const std::string & name)
+	{
+		if (HasSet(name))
+		{
+			std::cout << "Aleady exist " << name << " material sSet!";
+			return;
+		}
+
+		std::shared_ptr<MaterialSet> materialset(new MaterialSet);
+		s_MaterialSets[name] = materialset;
+	}
+
 	bool MaterialArchive::Has(const std::string & name)
 	{
 		auto find = s_Materials.find(name);
 		return find != s_Materials.end();
 	}
 
+	bool MaterialArchive::HasSet(const std::string & name)
+	{
+		auto find = s_MaterialSets.find(name);
+		return find != s_MaterialSets.end();
+	}
 
 	std::shared_ptr<Material> MaterialArchive::Get(const std::string & name)
 	{
@@ -36,31 +54,15 @@ namespace Engine {
 		return s_Materials[name];
 	}
 
-	void Material::Bind() const
+	std::shared_ptr<MaterialSet> MaterialArchive::GetSet(const std::string & name)
 	{
-	}
-
-	void Material::SetMaterialTexture(Texture::UsageType type, bool enable)
-	{
-		for (auto& texture : MaterialTextures)
+		if (!HasSet(name))
 		{
-			auto usageType = TextureArchive::Get(texture)->Type();
-			if (usageType == type)
-			{
-				if (enable)
-				{
-					MMode |= type;
-				}
-				else
-				{
-					if (MMode & type)
-					{
-						MMode ^= type;
-					}
-				}
-				break;
-			}
+			std::cout << "Doesn't exist " << name << " material set!";
+			return nullptr;
 		}
+
+		return s_MaterialSets[name];
 	}
 
 }

@@ -13,7 +13,8 @@ namespace Engine {
 			ControlPoints,
 			Joints,
 			Material,
-			Animation
+			Animation, 
+			None
 		};
 
 	public:
@@ -27,8 +28,9 @@ namespace Engine {
 	private:
 		void getControlPoint(class FbxNode* node);
 		void getVertices(FbxNode* node);
-		void getJoints(FbxNode* node);
 		void getJoints(FbxNode* node, int index, int parent, std::vector<Joint>& joints);
+		void getJoints(FbxNode* node);
+		void getLinks(FbxNode* node);
 		void getAnimation(FbxNode* node);
 		void getMaterial(FbxNode* node);
 
@@ -39,11 +41,23 @@ namespace Engine {
 		void ExportCache(Type type);
 		void ImportCache(Type type);
 
+		void TryImport(Type type);
+		void TryExport(Type type);
+
+
+
 	private:
 		std::string m_SkeletonName;
 		std::string m_FileName;
 
-		bool isLoaded = false;
+		bool loadedMesh = false;
+
+		bool loadedSkeleton		= false;
+		bool loadedVert			= false;
+		bool loadedControlPoint = false;
+		bool loadedLink			= false;
+		bool loadedMaterial		= false;
+		bool loadedAnimation	= false;
 	};
 
 }

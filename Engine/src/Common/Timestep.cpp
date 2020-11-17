@@ -15,14 +15,12 @@ namespace Engine {
 
 	Timestep::operator float()
 	{
-		std::chrono::duration<float> duration = std::chrono::system_clock::now() - Last;
-		return duration.count();
+		return Elapse();
 	}
 
 	void Timestep::Update()
 	{
-		auto now = std::chrono::system_clock::now();
-		Last = now;
+		Last = std::chrono::system_clock::now();
 	}
 
 	float Timestep::TotalElapse()
@@ -45,7 +43,8 @@ namespace Engine {
 
 	float Timestep::Elapse()
 	{
-		return 0.0f;
+		std::chrono::duration<float> duration = std::chrono::system_clock::now() - Last;
+		return duration.count();
 	}
 
 }

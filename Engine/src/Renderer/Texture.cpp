@@ -5,13 +5,7 @@
 
 namespace Engine {
 
-	DXGI_FORMAT GetDxFormat(int32_t channels)
-	{
-		if (channels == 3) return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
-		if (channels == 4) return DXGI_FORMAT_R8G8B8A8_UNORM;
-		return DXGI_FORMAT_UNKNOWN;
-	}
-
+	
 	Texture::Texture(const std::string& path, UsageType type, int mySlot)
 		: MySlot(mySlot)
 		, type(type)
@@ -19,15 +13,15 @@ namespace Engine {
 		stbi_set_flip_vertically_on_load(1);
 
 		stbi_uc* data = nullptr;
-		data = stbi_load(path.c_str(), &Width, &Height, &Channels, 0);
-		uint32_t rowPitch = (Width * Channels) * sizeof(unsigned char);
+		data = stbi_load(path.c_str(), &Width, &Height, &Channels, 4);
+		uint32_t rowPitch = Width * 4 * sizeof(unsigned char);
 
 		D3D11_TEXTURE2D_DESC textureDesc;
 		textureDesc.Width = Width;
 		textureDesc.Height = Height;
 		textureDesc.MipLevels = 0;
 		textureDesc.ArraySize = 1;
-		textureDesc.Format = GetDxFormat(Channels);
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.SampleDesc.Quality = 0;
 		textureDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -59,9 +53,13 @@ namespace Engine {
 		Dx11Core::Get().Context->PSSetShaderResources(MySlot, 1, &View);
 	}
 
-	void Texture::MultipleBind(ID3D11ShaderResourceView** Views, int num)
+	void Texture::MultipleBind(const std::vector<std::shared_ptr<Texture>>& textures)
 	{
-		Dx11Core::Get().Context->PSSetShaderResources(0, 3, Views);
+		static ID3D11ShaderResourceView* views[100];
+		for (size_t i = 0; i < textures.size(); ++i)
+			views[i] = textures[i]->View;
+
+		Dx11Core::Get().Context->PSSetShaderResources(0, (unsigned int)textures.size(), views);
 	}
 
 	static std::unordered_map<std::string, std::shared_ptr<Texture>> s_Textures;

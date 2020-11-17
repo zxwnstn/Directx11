@@ -23,7 +23,6 @@ struct Input
 {
 	float3 position : POSITION;
 	float2 tex : TEXCOORD0;
-	float4 tintColor : COLOR;
 
 	float3 normal : NORMAL;
 	float3 binormal : BINORMAL;
@@ -36,7 +35,6 @@ struct Output
 {
 	float4 position : SV_POSITION;
 	float2 tex : TEXCOORD0;
-	float4 tintColor : COLOR;
 
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
@@ -65,7 +63,6 @@ Output main(Input input)
 	output.position = mul(output.position, Projection);
 
 	//Pixel Inputs
-	output.tintColor = input.tintColor;
 	output.tex = input.tex;
 	output.normal = mul(input.normal, mul(skinTransform, Rotate));
 	output.binormal = mul(input.binormal, mul(skinTransform, Rotate));

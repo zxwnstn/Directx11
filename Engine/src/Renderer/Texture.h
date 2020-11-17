@@ -21,7 +21,7 @@ namespace Engine {
 		void Bind(int slot) const;
 		void Bind() const;
 
-		static void MultipleBind(ID3D11ShaderResourceView** Buffers, int num);
+		static void MultipleBind(const std::vector<std::shared_ptr<Texture>>& textures);
 
 		inline const UsageType Type() const { return type; }
 

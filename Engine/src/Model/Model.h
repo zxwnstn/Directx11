@@ -22,7 +22,7 @@ namespace Engine {
 		void Update(float dt);
 		bool SetAnimation(const std::string& animationName, bool loop);
 		void SetShader(const std::string& shader);
-		std::shared_ptr<struct Material> m_Material;
+		std::shared_ptr<struct MaterialSet> m_Material;
 
 	public:
 		static ModelBuilder Create(RenderingShader type, std::string&& ShaderName = "");

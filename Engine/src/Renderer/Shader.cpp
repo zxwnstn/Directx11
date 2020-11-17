@@ -35,6 +35,7 @@ namespace Engine {
 
 	DXGI_FORMAT GetDxDataFormat(const std::string& dataFormat)
 	{
+		if (dataFormat == "int") return DXGI_FORMAT_R32_SINT;
 		if (dataFormat == "float") return DXGI_FORMAT_R32_FLOAT;
 		if (dataFormat == "float2") return DXGI_FORMAT_R32G32_FLOAT;
 		if (dataFormat == "float3") return DXGI_FORMAT_R32G32B32_FLOAT;
@@ -49,6 +50,7 @@ namespace Engine {
 		if (dataFormat == "float2") return 8;
 		if (dataFormat == "float3") return 12;
 		if (dataFormat == "float4") return 16;
+		if (dataFormat == "int") return 4;
 		if (dataFormat == "uint4") return 16;
 		return 0;
 	}
@@ -101,7 +103,7 @@ namespace Engine {
 					auto startReg = tokken.find('b');
 					auto endReg = tokken.find(')');
 					std::string v;
-					for (int i = startReg + 1; i < endReg; ++i)
+					for (size_t i = startReg + 1; i < endReg; ++i)
 						v += tokken[i];
 
 					int regNum = std::atoi(v.c_str());

@@ -110,6 +110,12 @@ namespace Engine {
 		if (!Has(fullName))
 			return 0.0f;
 
+		if (s_Animations[fullName]->JointAnimations.empty())
+		{
+			std::cout << "The animation is empty";
+			return 0.0f;
+		}
+		
 		return s_Animations[fullName]->JointAnimations.begin()->Duration;
 	}
 
@@ -118,6 +124,12 @@ namespace Engine {
 		std::string fullName = skeletonName + "/" + animName;
 		if (!Has(fullName))
 			return 0.0f;
+
+		if(s_Animations[fullName]->JointAnimations.empty())
+		{
+			std::cout << "The animation is empty";
+			return 0.0f;
+		}
 
 		float interval = s_Animations[fullName]->JointAnimations[0].KeyFrames[1].Start -
 			s_Animations[fullName]->JointAnimations[0].KeyFrames[0].Start;

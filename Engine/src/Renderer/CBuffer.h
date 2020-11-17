@@ -64,7 +64,7 @@ namespace Engine::CBuffer {
 		DirectX::XMFLOAT3 Emissive;
 		DirectX::XMFLOAT3 Specular;
 		DirectX::XMFLOAT3 Fresnel;
-		float Roughness;
+		float Shiness;
 		int padding[2];
 
 		void Upload(const Engine::Material& other);

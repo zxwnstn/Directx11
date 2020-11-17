@@ -9,6 +9,7 @@
 #include "Common/Material.h"
 #include "Renderer/Texture.h"
 
+#include "Common/Timestep.h"
 #include "Serialization.h"
 
 namespace Engine {
@@ -36,7 +37,13 @@ namespace Engine {
 		}
 
 		m_SkeletonName = skeletonName;
-		MaterialArchive::Add(skeletonName);
+		MaterialArchive::AddSet(m_SkeletonName);
+
+		//Create Chache folder
+		auto dir = GetCachePath(Type::None);
+		if (!File::isExistDirectroy(dir))
+			File::CreateDir(dir);
+
 		return SkeletonArchive::Add(skeletonName);
 	}
 
@@ -49,23 +56,28 @@ namespace Engine {
 		m_FileName = file.stem().string();
 		auto fullpath = path + file.filename().string();
 
+		std::cout << "\nFBXLoad::Extract with \"" << m_FileName << "\"\n";
 		importer->Initialize(fullpath.c_str(), -1, s_FbxManager->GetIOSettings());
 		importer->Import(scene);
 		importer->Destroy();
 
 		FbxNode* root = scene->GetRootNode();
-		if (!isLoaded)
+		if (!loadedMesh)
 		{
 			FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
 			FbxAxisSystem::MayaYUp.ConvertScene(scene);
 			FbxGeometryConverter geometryConverter(s_FbxManager);
+
+			Timestep::SetTimePoint();
+			std::cout << "Process Triangulate... ";
 			geometryConverter.Triangulate(scene, true);
+			std::cout << "Completed : " << Timestep::Elapse() << "sec\n";
 		}
 		SkeletalAnimationArchive::Add(m_SkeletonName, m_FileName);
 
 		//Extract
 		auto nodeCount = root->GetChildCount();
-		if (isLoaded)
+		if (loadedMesh)
 		{
 			for (int i = 0; i < nodeCount; ++i)
 			{
@@ -82,48 +94,117 @@ namespace Engine {
 		}
 		else
 		{
-			for (int i = 0; i < nodeCount; ++i)
+			std::cout << "***Start Geometry proess***\n";
+#pragma region 1. Construct Skeleton
+			std::cout << "Construct Skeleton Hierachy!... ";
+			if (isExistCache(Type::Joints))
 			{
-				FbxNode* node = root->GetChild(i);
-				FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
-
-				switch (nodeType)
+				loadedSkeleton = true;
+				ImportCache(Type::Joints);
+				std::cout << "Completed by cache!\n";
+			}		
+			bool isConstructed = false;
+			if (!loadedSkeleton)
+			{
+				for (int i = 0; i < nodeCount; ++i)
 				{
-				case fbxsdk::FbxNodeAttribute::eSkeleton:
-					getJoints(root);
-					break;
-				case fbxsdk::FbxNodeAttribute::eMesh:
-					getControlPoint(node);
-					getAnimation(node);
-					getVertices(node);
-					getMaterial(node);
-					break;
+					FbxNode* node = root->GetChild(i);
+					FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
+					if (nodeType == fbxsdk::FbxNodeAttribute::eSkeleton)
+					{
+						isConstructed = true;
+						getJoints(root);
+					}
+				}
+				if (isConstructed)
+				{
+					std::cout << "Completed!\n";
+				}
+				else
+				{
+					std::cout << "Therer is no Skeleton!\n";
+					__debugbreak();
 				}
 			}
-			isLoaded = true;
+			
+#pragma endregion
+
+#pragma region 2. Extract Mesh
+			Timestep::Update();
+			std::cout << "Extract mesh data!...\n";
+			
+			TryImport(Type::Material);
+			TryImport(Type::Vertices);
+			TryImport(Type::ControlPoints);
+
+			if (!loadedControlPoint || !loadedVert || !loadedMaterial)
+			{
+				for (int i = 0; i < nodeCount; ++i)
+				{
+					FbxNode* node = root->GetChild(i);
+					FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
+
+					if (nodeType == fbxsdk::FbxNodeAttribute::eMesh)
+					{
+						auto name = node->GetName();
+						std::cout << "==== Processing " << name << "....\n";
+
+						getMaterial(node);
+						getControlPoint(node);
+						getLinks(node);
+						getVertices(node);
+					}
+				}
+			}
+
+			std::cout << "Processing Indices!...";
+			{
+				auto& indices = SkeletonArchive::Get(m_SkeletonName)->Indices;
+				auto& vertices = SkeletonArchive::Get(m_SkeletonName)->Vertices;
+				indices.resize(vertices.size());
+				for (unsigned int i = 0; i < indices.size(); ++i)
+				{
+					indices[i] = i;
+				}
+				std::cout << "Completed!\n";
+			}
+			std::cout << "***Complete "<< m_SkeletonName << " geometry process! : " << Timestep::Elapse() << "sec ***\n";
+			loadedMesh = true;
+#pragma endregion
+
+			TryExport(Type::Material);
+			TryExport(Type::Vertices);
+			TryExport(Type::ControlPoints);
+
+			//getAnimation(node);
+			//loadedAnimation = true;
 		}
 	}
 
 	void FBXLoader::getControlPoint(FbxNode* node)
 	{
-		if (isExistCache(Type::ControlPoints))
+		std::cout << "\tProcessing ControlPoint... ";
+		if (loadedControlPoint)
 		{
-			ImportCache(Type::ControlPoints);
-			return;
+			std::cout << "Completed by cache...\n";
 		}
-
 		FbxMesh* mesh = node->GetMesh();
 		uint32_t count = mesh->GetControlPointsCount();
-		auto& ControlPoints = SkeletonArchive::Get(m_SkeletonName)->ControlPoints;
 
-		ControlPoints.resize(count);
+		std::vector<ControlPoint> curControlPoints;
+		curControlPoints.resize(count);
 		for (uint32_t i = 0; i < count; ++i)
 		{
 			for (uint32_t j = 0; j < 3; ++j)
 			{
-				ControlPoints[i].Position.m[j] = static_cast<float>(mesh->GetControlPointAt(i).mData[j]);
+				curControlPoints[i].Position.m[j] = static_cast<float>(mesh->GetControlPointAt(i).mData[j]) * 0.01f;
 			}
 		}
+
+		auto& ControlPoints = SkeletonArchive::Get(m_SkeletonName)->ControlPoints;
+		std::string name = node->GetName();
+		ControlPoints[name] = curControlPoints;
+		std::cout << "Completed!\n";
 	}
 
 	namespace detail {
@@ -174,103 +255,69 @@ namespace Engine {
 
 		return ret;
 	}
-	
-	std::pair<vec3, vec3> CalculateBinomal(vec3 p1, vec3 p2, vec3 p3, vec2 p1uv, vec2 p2uv, vec2 p3uv)
+
+	std::pair<vec3, vec3> CalculateBinomal(const vec3& p1, const vec3& p2, const vec3& p3, 
+		const vec2& p1uv, const vec2& p2uv, const vec2& p3uv)
 	{
-		DirectX::XMFLOAT3 vertex1(p1.m[0], p1.m[1], p1.m[2]);
-		DirectX::XMFLOAT3 vertex2(p2.m[0], p2.m[1], p2.m[2]);
-		DirectX::XMFLOAT3 vertex3(p3.m[0], p3.m[1], p3.m[2]);
-		
-		DirectX::XMFLOAT3 binormal;
-		DirectX::XMFLOAT3 tangent;
-		vec3 retbi;
-		vec3 retan;
-
-		float vector1[3], vector2[3];
-		float tuVector[2], tvVector[2];
-		float den;
-		float length;
-
 		// Calculate the two vectors for this face.
-		vector1[0] = vertex2.x - vertex1.x;
-		vector1[1] = vertex2.y - vertex1.y;
-		vector1[2] = vertex2.z - vertex1.z;
+		vec3 vector1, vector2;
+		for (int i = 0; i < 3; ++i)
+		{
+			vector1.m[i] = p2.m[i] - p1.m[i];
+			vector2.m[i] = p3.m[i] - p1.m[i];
+		}
 
-		vector2[0] = vertex3.x - vertex1.x;
-		vector2[1] = vertex3.y - vertex1.y;
-		vector2[2] = vertex3.z - vertex1.z;
-
+		vec2 tuVector, tvVector;
 		// Calculate the tu and tv texture space vectors.
-		tuVector[0] = p2uv.m[0] - p1uv.m[0];
-		tvVector[0] = p2uv.m[1] - p1uv.m[1];
+		tuVector.m[0] = p2uv.m[0] - p1uv.m[0];
+		tvVector.m[0] = p2uv.m[1] - p1uv.m[1];
 
-		tuVector[1] = p3uv.m[0] - p1uv.m[0];
-		tvVector[1] = p3uv.m[1] - p1uv.m[1];
+		tuVector.m[1] = p3uv.m[0] - p1uv.m[0];
+		tvVector.m[1] = p3uv.m[1] - p1uv.m[1];
 
 		// Calculate the denominator of the tangent/binormal equation.
-		den = 1.0f / (tuVector[0] * tvVector[1] - tuVector[1] * tvVector[0]);
+		float den = 1.0f / (tuVector.m[0] * tvVector.m[1] - tuVector.m[1] * tvVector.m[0]);
 
 		// Calculate the cross products and multiply by the coefficient to get the tangent and binormal.
-		tangent.x = (tvVector[1] * vector1[0] - tvVector[0] * vector2[0]) * den;
-		tangent.y = (tvVector[1] * vector1[1] - tvVector[0] * vector2[1]) * den;
-		tangent.z = (tvVector[1] * vector1[2] - tvVector[0] * vector2[2]) * den;
+		vec3 tangent, binormal;
+		tangent.m[0] = (tvVector.m[1] * vector1.m[0] - tvVector.m[0] * vector2.m[0]) * den;
+		tangent.m[1] = (tvVector.m[1] * vector1.m[1] - tvVector.m[0] * vector2.m[1]) * den;
+		tangent.m[2] = (tvVector.m[1] * vector1.m[2] - tvVector.m[0] * vector2.m[2]) * den;
+		binormal.m[0] = (tuVector.m[0] * vector2.m[0] - tuVector.m[1] * vector1.m[0]) * den;
+		binormal.m[1] = (tuVector.m[0] * vector2.m[1] - tuVector.m[1] * vector1.m[1]) * den;
+		binormal.m[2] = (tuVector.m[0] * vector2.m[2] - tuVector.m[1] * vector1.m[2]) * den;
 
-		binormal.x = (tuVector[0] * vector2[0] - tuVector[1] * vector1[0]) * den;
-		binormal.y = (tuVector[0] * vector2[1] - tuVector[1] * vector1[1]) * den;
-		binormal.z = (tuVector[0] * vector2[2] - tuVector[1] * vector1[2]) * den;
+		//Normalize
+		float length = sqrt((tangent.m[0] * tangent.m[0]) + (tangent.m[1] * tangent.m[1]) + (tangent.m[2] * tangent.m[2]));
+		tangent.m[0] = tangent.m[0] / length;
+		tangent.m[1] = tangent.m[1] / length;
+		tangent.m[2] = tangent.m[2] / length;
 
-		// Calculate the length of this normal.
-		length = sqrt((tangent.x * tangent.x) + (tangent.y * tangent.y) + (tangent.z * tangent.z));
+		length = sqrt((binormal.m[0] * binormal.m[0]) + (binormal.m[1] * binormal.m[1]) + (binormal.m[2] * binormal.m[2]));
+		binormal.m[0] = binormal.m[0] / length;
+		binormal.m[1] = binormal.m[1] / length;
+		binormal.m[2] = binormal.m[2] / length;
 
-		// Normalize the normal and then store it
-		tangent.x = tangent.x / length;
-		tangent.y = tangent.y / length;
-		tangent.z = tangent.z / length;
-
-		// Calculate the length of this normal.
-		length = sqrt((binormal.x * binormal.x) + (binormal.y * binormal.y) + (binormal.z * binormal.z));
-
-		// Normalize the normal and then store it
-		binormal.x = binormal.x / length;
-		binormal.y = binormal.y / length;
-		binormal.z = binormal.z / length;
-
-		retbi.m[0] = binormal.x;
-		retbi.m[1] = binormal.y;
-		retbi.m[2] = binormal.z;
-		retan.m[0] = tangent.x;
-		retan.m[1] = tangent.y;
-		retan.m[2] = tangent.z;
-
-		return { retbi , retan };
+		return { tangent, binormal };
 	}
 
 	void FBXLoader::getVertices(FbxNode* node)
 	{
+		std::cout << "\tProcessing Vertices... ";
+		if (loadedVert)
+		{
+			std::cout << "Completed by cache...\n";
+		}
+
 		FbxMesh* mesh = node->GetMesh();
+		std::string nodeName = node->GetName();
 		int count = mesh->GetPolygonCount();
 
 		auto skeleton = SkeletonArchive::Get(m_SkeletonName);
-		auto& ControlPoints = skeleton->ControlPoints;
+		
+		auto& ControlPoints = skeleton->ControlPoints[nodeName];
 		auto& Vertices = skeleton->Vertices;
-		auto& Indices = skeleton->Indices;
 
-		Indices.resize(count * 3);
-		for (int i = 0; i < count; ++i)
-		{
-			for (int j = 0; j < 3; ++j)
-			{
-				Indices[i * 3 + j] = i * 3 + j;
-			}
-		}
-
-		if (isExistCache(Type::Vertices))
-		{
-			ImportCache(Type::Vertices);
-			return;
-		}
-
-		Vertices.resize(count * 3);
 		auto* uv = mesh->GetElementUV();
 		auto* normal = mesh->GetElementNormal();
 		auto* binormal = mesh->GetElementBinormal();
@@ -279,51 +326,45 @@ namespace Engine {
 
 		for (int i = 0; i < count; ++i)
 		{
+			Vertex vertex[3];
 			for (int j = 0; j < 3; ++j)
 			{
+				
 				int controlIndex = mesh->GetPolygonVertex(i, j);
-				Vertices[index].Position = ControlPoints[controlIndex].Position;
-				Vertices[index].UV = getElement<detail::Type2>(uv, index, controlIndex);
-				Vertices[index].Normal = getElement<detail::Type3>(normal, index, controlIndex);
-				//Vertices[index].BiNormal = getElement<detail::Type3>(binormal, index, controlIndex);
-				//Vertices[index].Tangent = getElement<detail::Type3>(tangent, index, controlIndex);
+				vertex[j].Position = ControlPoints[controlIndex].Position;
+				vertex[j].UV = getElement<detail::Type2>(uv, index, controlIndex);
+				vertex[j].Normal = getElement<detail::Type3>(normal, index, controlIndex);
+
+				if (binormal && tangent)
+				{
+					vertex[j].BiNormal = getElement<detail::Type3>(binormal, index, controlIndex);
+					vertex[j].Tangent = getElement<detail::Type3>(tangent, index, controlIndex);
+				}
 				for (int k = 0; k < 4; ++k)
 				{
-					Vertices[index].BoneIndex.m[k] = ControlPoints[controlIndex].BoneIndex.m[k];
-					Vertices[index].BoneWeight.m[k] = ControlPoints[controlIndex].BoneWeight.m[k];
+					vertex[j].BoneWeight.m[k] = ControlPoints[controlIndex].BoneWeight.m[k];
+					vertex[j].BoneIndex.m[k] = ControlPoints[controlIndex].BoneIndex.m[k];
 				}
+				vertex[j].check();
+
 				index++;
 			}
-			auto[binormal, tangent] = CalculateBinomal(Vertices[index - 3].Position, Vertices[index - 2].Position, Vertices[index - 1].Position,
-				Vertices[index - 3].UV, Vertices[index - 2].UV, Vertices[index - 1].UV);
 
-			Vertices[index - 1].Tangent = tangent;
-			Vertices[index - 2].Tangent = tangent;
-			Vertices[index - 3].Tangent = tangent;
-
-			Vertices[index - 1].BiNormal = binormal;
-			Vertices[index - 2].BiNormal = binormal;
-			Vertices[index - 3].BiNormal = binormal;
+			if (!binormal || !tangent)
+			{
+				auto[binormal, tangent] = CalculateBinomal(vertex[0].Position, vertex[1].Position, vertex[2].Position,
+					vertex[0].UV, vertex[1].UV, vertex[2].UV);
+				for (int k = 0; k < 3; ++k)
+				{
+					vertex[k].Tangent = tangent;
+					vertex[k].BiNormal = binormal;
+					
+					Vertices.push_back(vertex[k]);
+				}
+			}
+			
 		}
-		ExportCache(Type::Vertices);
-	}
-
-	
-
-	void FBXLoader::getJoints(FbxNode* node)
-	{
-		if (isExistCache(Type::Joints))
-		{
-			ImportCache(Type::Joints);
-			return;
-		}
-
-		auto& joints = SkeletonArchive::Get(m_SkeletonName)->Joints;
-		for (int child = 0; child < node->GetChildCount(); ++child)
-		{
-			FbxNode* cur = node->GetChild(child);
-			getJoints(cur, 0, -1, joints);
-		}
+		std::cout << "Complete!\n";
 	}
 
 	void FBXLoader::getJoints(FbxNode * node, int index, int parent, std::vector<Joint>& joints)
@@ -342,12 +383,103 @@ namespace Engine {
 		}
 	}
 
+	void FBXLoader::getJoints(FbxNode* node)
+	{
+		if (isExistCache(Type::Joints))
+		{
+			ImportCache(Type::Joints);
+			return;
+		}
+
+		auto& joints = SkeletonArchive::Get(m_SkeletonName)->Joints;
+		for (int child = 0; child < node->GetChildCount(); ++child)
+		{
+			FbxNode* cur = node->GetChild(child);
+			getJoints(cur, 0, -1, joints);
+		}
+		ExportCache(Type::Joints);
+	}
+
+	void FBXLoader::getLinks(FbxNode * node)
+	{
+		std::cout << "\tProcessing Links... ";
+		if (loadedVert)
+		{
+			std::cout << "Completed by cache...\n";
+		}
+
+		std::string nodeName = node->GetName();
+		FbxMesh* mesh = node->GetMesh();
+		FbxAMatrix geometryTransform;
+		geometryTransform.SetIdentity();
+
+		auto skeleton = SkeletonArchive::Get(m_SkeletonName);
+		auto& Joints = skeleton->Joints;
+		auto& ControlPoints = skeleton->ControlPoints[nodeName];
+
+		//Extract
+		for (int deformerIndex = 0; deformerIndex < mesh->GetDeformerCount(); ++deformerIndex)
+		{
+			FbxSkin* skin = reinterpret_cast<FbxSkin*>(mesh->GetDeformer(deformerIndex, FbxDeformer::eSkin));
+			if (!skin) continue;
+
+			unsigned int numOfClusters = skin->GetClusterCount();
+
+			//for each Cluster (that contains link)
+			for (unsigned int clusterIndex = 0; clusterIndex < numOfClusters; ++clusterIndex)
+			{
+				FbxCluster* cluster = skin->GetCluster(clusterIndex);
+
+				//0. Get JointIdex
+				std::string jointName = cluster->GetLink()->GetName();
+				unsigned int jointIndex;
+				for (jointIndex = 0; jointIndex < Joints.size(); ++jointIndex)
+					if (jointName == Joints[jointIndex].Name)
+						break;
+
+
+				//1. Get joint OffsetMat
+				{
+					FbxAMatrix transformMatrix;
+					FbxAMatrix transformLinkMatrix;
+					FbxAMatrix offsetMat;
+					DirectX::XMFLOAT4X4 offset;
+
+					cluster->GetTransformMatrix(transformMatrix);
+					cluster->GetTransformLinkMatrix(transformLinkMatrix);
+					offsetMat = transformLinkMatrix.Inverse() * transformMatrix * geometryTransform;
+					for (int i = 0; i < 4; ++i)
+					{
+						for (int j = 0; j < 4; ++j)
+						{
+							offset.m[i][j] = (float)offsetMat[i][j];
+						}
+					}
+					Joints[jointIndex].Offset = DirectX::XMLoadFloat4x4(&offset);
+				}
+
+				//2. Get joint Weight-Index
+				unsigned int indices = cluster->GetControlPointIndicesCount();
+				auto controlPointIndices = cluster->GetControlPointIndices();
+				for (unsigned int i = 0; i < indices; ++i)
+				{
+					float weight = (float)cluster->GetControlPointWeights()[i];
+					if (-100 > weight && weight < 100)
+						__debugbreak();
+
+					ControlPoints[controlPointIndices[i]].push(weight, jointIndex);
+				}
+			}
+		}
+		std::cout << "Completed!\n";
+	}
+
 	void getMaterialTexture(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
 	{
 		unsigned int textureIndex = 0;
 		FbxProperty property;
 
-		auto mat = MaterialArchive::Get(skeltonName);
+		auto& matTextures = MaterialArchive::GetSet(skeltonName)->MaterialTextures;
 		FBXSDK_FOR_EACH_TEXTURE(textureIndex)
 		{
 			property = pMaterial->FindProperty(FbxLayerElement::sTextureChannelNames[textureIndex]);
@@ -359,7 +491,8 @@ namespace Engine {
 					FbxLayeredTexture* layeredTexture = property.GetSrcObject<FbxLayeredTexture>(i);
 					if (layeredTexture)
 					{
-						throw std::exception("Layered Texture is currently unsupported\n");
+						std::cout << "Layered Texture is currently unsupported\n";
+						return;
 					}
 					else
 					{
@@ -371,23 +504,31 @@ namespace Engine {
 							if (fileTexture)
 							{
 								auto path = fileTexture->GetFileName();
+								MaterialTextureInfo info;
+								info.Path = path;
 								if (textureType == "DiffuseColor")
 								{
 									auto textureName = skeltonName + "_diffuse";
 									TextureArchive::Add(path, textureName, Texture::eDiffuse, 0);
-									mat->MaterialTextures.emplace_back(textureName, Texture::eDiffuse);
+									info.Name = textureName;
+									info.UsageType = Texture::eDiffuse;
+									matTextures.emplace_back(info);
 								}
 								if (textureType == "NormalMap")
 								{
 									auto textureName = skeltonName + "_normal";
 									TextureArchive::Add(path, textureName, Texture::eNormal, 1);
-									mat->MaterialTextures.emplace_back(textureName, Texture::eNormal);
+									info.Name = textureName;
+									info.UsageType = Texture::eNormal;
+									matTextures.emplace_back(info);
 								}
 								if (textureType == "SpecularColor")
 								{
 									auto textureName = skeltonName + "_specular";
 									TextureArchive::Add(path, textureName, Texture::eSpecular, 2);
-									mat->MaterialTextures.emplace_back(textureName, Texture::eSpecular);
+									info.Name = textureName;
+									info.UsageType = Texture::eSpecular;
+									matTextures.emplace_back(info);
 								}
 							}
 						}
@@ -397,96 +538,101 @@ namespace Engine {
 		}
 	}
 
-	void getMaterialAttribute(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
+	Material getMaterialAttribute(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
 	{
 		FbxDouble3 double3;
+		FbxDouble4 double4;
 		FbxDouble double1;
-		auto mat = MaterialArchive::Get(skeltonName);
+		Material mat;
+
 		if (pMaterial->GetClassId().Is(FbxSurfacePhong::ClassId))
 		{
 			// Amibent Color
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Ambient;
-			mat->Ambient.x = static_cast<float>(double3.mData[0]);
-			mat->Ambient.y = static_cast<float>(double3.mData[1]);
-			mat->Ambient.z = static_cast<float>(double3.mData[2]);
+			mat.Ambient.x = static_cast<float>(double3.mData[0]);
+			mat.Ambient.y = static_cast<float>(double3.mData[1]);
+			mat.Ambient.z = static_cast<float>(double3.mData[2]);
 
 			// Diffuse Color
-			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Diffuse;
-			mat->Diffuse.x = static_cast<float>(double3.mData[0]);
-			mat->Diffuse.y = static_cast<float>(double3.mData[1]);
-			mat->Diffuse.z = static_cast<float>(double3.mData[2]);
-			mat->Diffuse.w = static_cast<float>(double3.mData[3]);
+			double4 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Diffuse;
+			mat.Diffuse.x = static_cast<float>(double4.mData[0]);
+			mat.Diffuse.y = static_cast<float>(double4.mData[1]);
+			mat.Diffuse.z = static_cast<float>(double4.mData[2]);
+			mat.Diffuse.w = static_cast<float>(double4.mData[3]);
 
 			// Roughness 
 			double1 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Shininess;
-			mat->Roughness = float(1.0 - double1);
+			mat.Shiness = static_cast<float>(double1);
 
 			// Reflection
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Reflection;
-			mat->Fresnel.x = static_cast<float>(double3.mData[0]);
-			mat->Fresnel.y = static_cast<float>(double3.mData[1]);
-			mat->Fresnel.z = static_cast<float>(double3.mData[2]);
+			mat.Fresnel.x = static_cast<float>(double3.mData[0]);
+			mat.Fresnel.y = static_cast<float>(double3.mData[1]);
+			mat.Fresnel.z = static_cast<float>(double3.mData[2]);
 
 			// Specular Color
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Specular;
-			mat->Specular.x = static_cast<float>(double3.mData[0]);
-			mat->Specular.y = static_cast<float>(double3.mData[1]);
-			mat->Specular.z = static_cast<float>(double3.mData[2]);
+			mat.Specular.x = static_cast<float>(double3.mData[0]);
+			mat.Specular.y = static_cast<float>(double3.mData[1]);
+			mat.Specular.z = static_cast<float>(double3.mData[2]);
 
 			// Emissive Color
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Emissive;
-			mat->Emissive.x = static_cast<float>(double3.mData[0]);
-			mat->Emissive.y = static_cast<float>(double3.mData[1]);
-			mat->Emissive.z = static_cast<float>(double3.mData[2]);
+			mat.Emissive.x = static_cast<float>(double3.mData[0]);
+			mat.Emissive.y = static_cast<float>(double3.mData[1]);
+			mat.Emissive.z = static_cast<float>(double3.mData[2]);
 		}
 		else if (pMaterial->GetClassId().Is(FbxSurfaceLambert::ClassId))
 		{
 			// Amibent Color
 			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Ambient;
-			mat->Ambient.x = static_cast<float>(double3.mData[0]);
-			mat->Ambient.y = static_cast<float>(double3.mData[1]);
-			mat->Ambient.z = static_cast<float>(double3.mData[2]);
+			mat.Ambient.x = static_cast<float>(double3.mData[0]);
+			mat.Ambient.y = static_cast<float>(double3.mData[1]);
+			mat.Ambient.z = static_cast<float>(double3.mData[2]);
 
 			// Diffuse Color
 			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Diffuse;
-			mat->Diffuse.x = static_cast<float>(double3.mData[0]);
-			mat->Diffuse.y = static_cast<float>(double3.mData[1]);
-			mat->Diffuse.z = static_cast<float>(double3.mData[2]);
+			mat.Diffuse.x = static_cast<float>(double3.mData[0]);
+			mat.Diffuse.y = static_cast<float>(double3.mData[1]);
+			mat.Diffuse.z = static_cast<float>(double3.mData[2]);
 
 			// Emissive Color
 			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Emissive;
-			mat->Emissive.x = static_cast<float>(double3.mData[0]);
-			mat->Emissive.y = static_cast<float>(double3.mData[1]);
-			mat->Emissive.z = static_cast<float>(double3.mData[2]);
+			mat.Emissive.x = static_cast<float>(double3.mData[0]);
+			mat.Emissive.y = static_cast<float>(double3.mData[1]);
+			mat.Emissive.z = static_cast<float>(double3.mData[2]);
 		}
+		return mat;
 	}
+
 	void FBXLoader::getMaterial(FbxNode * node)
 	{
-		if (isExistCache(Type::Material))
+		std::cout << "\tProcessing Mertarial... ";
+		if (loadedMaterial)
 		{
-			ImportCache(Type::Material);
+			std::cout << "Completed by cache...\n";
+		}
+		int count = node->GetMaterialCount();
+		std::string nodeName = node->GetName();
+		if (!count)
+		{
+			std::cout << "Theres is no " << nodeName << "Material!\n";
 			return;
 		}
 
-		int count = node->GetMaterialCount();
-		for (int i = 0; i < count; ++i)
+		FbxSurfaceMaterial* SurfaceMaterial = node->GetMaterial(0);
+		auto materialSets = MaterialArchive::GetSet(m_SkeletonName);
+		materialSets->materials[nodeName] = getMaterialAttribute(SurfaceMaterial, m_SkeletonName);
+		if (materialSets->MaterialTextures.empty())
 		{
-			
-			FbxSurfaceMaterial* SurfaceMaterial = node->GetMaterial(i);
-			getMaterialAttribute(SurfaceMaterial, m_SkeletonName);
 			getMaterialTexture(SurfaceMaterial, m_SkeletonName);
 		}
-		ExportCache(Type::Material);
+
+		std::cout << "Complete!\n";
 	}
 
 	void FBXLoader::getAnimation(FbxNode* node)
 	{
-		if (isExistCache(Type::Animation))
-		{
-			ImportCache(Type::Animation);
-			return;
-		}
-
 		FbxMesh* mesh = node->GetMesh();
 		unsigned int numOfDeformers = mesh->GetDeformerCount();
 		FbxAMatrix geometryTransform;
@@ -517,39 +663,6 @@ namespace Engine {
 				for (jointIndex = 0; jointIndex < Joints.size(); ++jointIndex)
 					if (jointName == Joints[jointIndex].Name)
 						break;
-
-				if (!isLoaded)
-				{
-					//1. Calc OffsetMat
-					{
-						FbxAMatrix transformMatrix;
-						FbxAMatrix transformLinkMatrix;
-						FbxAMatrix offsetMat;
-						DirectX::XMFLOAT4X4 offset;
-
-						cluster->GetTransformMatrix(transformMatrix);
-						cluster->GetTransformLinkMatrix(transformLinkMatrix);
-						offsetMat = transformLinkMatrix.Inverse() * transformMatrix * geometryTransform;
-						for (int i = 0; i < 4; ++i)
-						{
-							for (int j = 0; j < 4; ++j)
-							{
-								offset.m[i][j] = (float)offsetMat[i][j];
-							}
-						}
-						Joints[jointIndex].Offset = DirectX::XMLoadFloat4x4(&offset);
-					}
-
-					//Get Joint Weight
-					{
-						unsigned int indices = cluster->GetControlPointIndicesCount();
-						auto controlPointIndices = cluster->GetControlPointIndices();
-						for (unsigned int i = 0; i < indices; ++i)
-						{
-							ControlPoints[controlPointIndices[i]].push((float)cluster->GetControlPointWeights()[i], jointIndex);
-						}
-					}
-				}
 
 				//Anim
 				//Todo : Supply multiple Animation of one fbx file
@@ -602,12 +715,6 @@ namespace Engine {
 				}
 			}
 		}
-		if (!isLoaded)
-		{
-			ExportCache(Type::Joints);
-			ExportCache(Type::ControlPoints);
-		}
-		ExportCache(Type::Animation);
 	}
 
 	bool FBXLoader::isExistCache(Type type)
@@ -625,7 +732,7 @@ namespace Engine {
 		case FBXLoader::Type::Material: return File::GetCommonPath(File::FBXCache) + m_SkeletonName + "/" + "Material";
 		case FBXLoader::Type::Animation:return File::GetCommonPath(File::FBXCache) + m_SkeletonName + "/" + m_FileName;
 		}
-		return "";
+		return File::GetCommonPath(File::FBXCache) + m_SkeletonName;
 	}
 
 	void FBXLoader::ExportCache(Type type)
@@ -649,16 +756,16 @@ namespace Engine {
 		break;
 		case FBXLoader::Type::Joints:
 		{
-			auto& Joints = skeleton->Joints;
-			Serializer::Write(path, Joints);
+			auto& joints = skeleton->Joints;
+			Serializer::Write(path, joints);
 		}
 		break;
 		case FBXLoader::Type::Material:
 		{
-			auto& Material = MaterialArchive::Get(m_SkeletonName);
+			auto Material = MaterialArchive::GetSet(m_SkeletonName);
 			Serializer::Write(path, *Material);
 		}
-			break;
+		break;
 		case FBXLoader::Type::Animation:
 		{
 			auto& Animation = SkeletalAnimationArchive::GetAnimation(m_SkeletonName, m_FileName)->JointAnimations;
@@ -689,22 +796,69 @@ namespace Engine {
 		break;
 		case FBXLoader::Type::Joints:
 		{
-			auto& Joints = skeleton->Joints;
-			Serializer::Read(path, Joints);
+			auto& joints = skeleton->Joints;
+			Serializer::Read(path, joints);
 		}
 		break;
 		case FBXLoader::Type::Material:
 		{
-			auto Material = MaterialArchive::Get(m_SkeletonName);
+			auto Material = MaterialArchive::GetSet(m_SkeletonName);
 			Serializer::Read(path, *Material);
+			for (auto& texture : Material->MaterialTextures)
+			{
+				TextureArchive::Add(texture.Path, texture.Name, Texture::UsageType(texture.UsageType));
+			}
 		}
-			break;
+		break;
 		case FBXLoader::Type::Animation:
 		{
 			auto& Animation = SkeletalAnimationArchive::GetAnimation(m_SkeletonName, m_FileName)->JointAnimations;
 			Serializer::Read(path, Animation);
 		}
 		break;
+		}
+	}
+
+	std::string ToString(FBXLoader::Type type)
+	{
+		switch (type)
+		{
+		case Engine::FBXLoader::Type::Vertices: return "Vertices";
+		case Engine::FBXLoader::Type::ControlPoints: return "ControlPoints";
+		case Engine::FBXLoader::Type::Joints: return "Joints";
+		case Engine::FBXLoader::Type::Material: return "Material";
+		case Engine::FBXLoader::Type::Animation: return "Animation";
+		}
+		return "";
+	}
+
+	void Engine::FBXLoader::TryImport(Type type)
+	{
+		if (isExistCache(Type::Material))
+		{
+			switch (type)
+			{
+			case Engine::FBXLoader::Type::Vertices: loadedVert = true;
+			case Engine::FBXLoader::Type::ControlPoints: loadedControlPoint = true;
+			case Engine::FBXLoader::Type::Joints: loadedLink = true;
+			case Engine::FBXLoader::Type::Material: loadedMaterial = true;
+			}
+			Timestep::Update();
+			std::cout << "Import " << m_SkeletonName << " " << ToString(type) << " cache!...";
+			ImportCache(type);
+			std::cout << "Completed " << Timestep::Elapse() << "sec\n";
+		}
+	}
+
+	void Engine::FBXLoader::TryExport(Type type)
+	{
+		if (!isExistCache(type))
+		{
+			loadedMaterial = true;
+			Timestep::Update();
+			std::cout << "Export " << m_SkeletonName << " " << ToString(type) << " cache!...";
+			ExportCache(type);
+			std::cout << "Completed " << Timestep::Elapse() << "sec\n";
 		}
 	}
 
