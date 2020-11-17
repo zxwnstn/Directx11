@@ -14,25 +14,22 @@ void SandBox::OnUpdate(float dt)
 
 void SandBox::OnAttach()
 {
-	/*float vertices[] = {
-		0.5f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		-0.5f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
-	};
-	uint32_t indices[] = {
-		0, 2, 1
-	};
+	//float vertices[] = {
+	//	//pos                tex           norm                binorm              tan                 weight                     /*weight                   indice                   */  indice
+	//	 0.5f, 0.0f, 0.0f,   0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f, 0.0f,    /*0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f,  */  0.0f, 0.0f, 0.0f, 0.0f,
+	//	 0.0f, 1.0f, 0.0f,   0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f, 0.0f,    /*0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f,  */  0.0f, 0.0f, 0.0f, 0.0f,
+	//	-0.5f, 0.0f, 0.0f,   0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f, 0.0f,    /*0.0f, 0.0f, 0.0f, 0.0f,	 0.0f, 0.0f, 0.0f, 0.0f,  */  0.0f, 0.0f, 0.0f, 0.0f
+	//};
+	//uint32_t indices[] = {
+	//	0, 1, 2
+	//};
 
-	buffer = Engine::Renderer::GetShader(Engine::RenderingShader::Skinned)
-		.CreateCompotibleBuffer()
-		.SetBuffer(vertices, indices, 3);*/
+	//buffer = Engine::Renderer::GetShader(Engine::RenderingShader::Skinned)
+	//	.CreateCompotibleBuffer()
+	//	.SetBuffer(vertices, indices, 3);
 
 	model = Engine::Model3D::Create(Engine::RenderingShader::Skinned)
 		.buildFromFBX().SetSkeleton("lucy");
-
-	//model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eDiffuse, false);
-	//model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eNormal, true);
-	//model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eSpecular, true);
 
 	float filedOfView = 3.141592f / 3.0f;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));

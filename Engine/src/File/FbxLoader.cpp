@@ -165,6 +165,7 @@ namespace Engine {
 				for (unsigned int i = 0; i < indices.size(); ++i)
 				{
 					indices[i] = i;
+					vertices[i].check();
 				}
 				std::cout << "Completed!\n";
 			}
@@ -256,7 +257,7 @@ namespace Engine {
 		return ret;
 	}
 
-	std::pair<vec3, vec3> CalculateBinomal(const vec3& p1, const vec3& p2, const vec3& p3, 
+	std::pair<vec3, vec3> CalculateBinomal(const vec3& p1, const vec3& p2, const vec3& p3,
 		const vec2& p1uv, const vec2& p2uv, const vec2& p3uv)
 	{
 		// Calculate the two vectors for this face.
@@ -276,10 +277,18 @@ namespace Engine {
 		tvVector.m[1] = p3uv.m[1] - p1uv.m[1];
 
 		// Calculate the denominator of the tangent/binormal equation.
+		vec3 tangent, binormal;
+		
 		float den = 1.0f / (tuVector.m[0] * tvVector.m[1] - tuVector.m[1] * tvVector.m[0]);
 
+		static int i = 0;
+		if (isnan(den) || isinf(den))
+		{
+			std::cout << "tangent binormal 0 " << i++ << "\n";
+			return { tangent, binormal };
+		}
+
 		// Calculate the cross products and multiply by the coefficient to get the tangent and binormal.
-		vec3 tangent, binormal;
 		tangent.m[0] = (tvVector.m[1] * vector1.m[0] - tvVector.m[0] * vector2.m[0]) * den;
 		tangent.m[1] = (tvVector.m[1] * vector1.m[1] - tvVector.m[0] * vector2.m[1]) * den;
 		tangent.m[2] = (tvVector.m[1] * vector1.m[2] - tvVector.m[0] * vector2.m[2]) * den;
@@ -297,6 +306,15 @@ namespace Engine {
 		binormal.m[0] = binormal.m[0] / length;
 		binormal.m[1] = binormal.m[1] / length;
 		binormal.m[2] = binormal.m[2] / length;
+
+		for (int i = 0; i < 3; ++i)
+		{
+			if (isnan(binormal.m[i]) || isnan(tangent.m[i]))
+			{
+				__debugbreak();
+			}
+		}
+
 
 		return { tangent, binormal };
 	}
@@ -343,26 +361,26 @@ namespace Engine {
 				for (int k = 0; k < 4; ++k)
 				{
 					vertex[j].BoneWeight.m[k] = ControlPoints[controlIndex].BoneWeight.m[k];
+					vertex[j].BoneWeightr.m[k] = ControlPoints[controlIndex].BoneWeightr.m[k];
 					vertex[j].BoneIndex.m[k] = ControlPoints[controlIndex].BoneIndex.m[k];
+					vertex[j].BoneIndexr.m[k] = ControlPoints[controlIndex].BoneIndexr.m[k];
 				}
-				vertex[j].check();
-
 				index++;
 			}
 
 			if (!binormal || !tangent)
 			{
-				auto[binormal, tangent] = CalculateBinomal(vertex[0].Position, vertex[1].Position, vertex[2].Position,
+				auto[binorm, tan] = CalculateBinomal(vertex[0].Position, vertex[1].Position, vertex[2].Position,
 					vertex[0].UV, vertex[1].UV, vertex[2].UV);
+
 				for (int k = 0; k < 3; ++k)
 				{
-					vertex[k].Tangent = tangent;
-					vertex[k].BiNormal = binormal;
-					
+					vertex[k].Tangent = binorm;
+					vertex[k].BiNormal = tan;
+					vertex[k].check();
 					Vertices.push_back(vertex[k]);
 				}
 			}
-			
 		}
 		std::cout << "Complete!\n";
 	}

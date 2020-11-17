@@ -28,8 +28,12 @@ struct Input
 	float3 binormal : BINORMAL;
 	float3 tangent : TANGENT;
 
-	float4 boneWeight : WEIGHT;
-	uint4 boneIndices : BONEINDICES;
+	float4 boneWeight :   WEIGHT;
+	float4 boneWeightr :   WEIGHTR;
+	uint4 boneIndices :   BONEINDICES;
+	uint4 boneIndicesr :   BONEINDICESR;
+
+	int materialIndex : MATERERIALIDX;
 };
 
 struct Output

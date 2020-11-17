@@ -113,7 +113,9 @@ namespace Engine {
 			ar & Tangent;
 
 			ar & BoneWeight;
+			ar & BoneWeightr;
 			ar & BoneIndex;
+			ar & BoneIndexr;
 		}
 		vec3 Position;
 		vec2 UV;
@@ -123,7 +125,11 @@ namespace Engine {
 		vec3 Tangent;
 
 		vec4 BoneWeight;
+		vec4 BoneWeightr;
+
 		uvec4 BoneIndex;
+		uvec4 BoneIndexr;
+		int MaterialIndex = 0;
 
 		bool check()
 		{
@@ -157,10 +163,17 @@ namespace Engine {
 				{
 					__debugbreak();
 				}
+				if (!(-1000.0f <= BoneWeightr.m[i] && BoneWeightr.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
+				if (!(-1000.0f <= BoneIndexr.m[i] && BoneIndexr.m[i] <= 1000.0f))
+				{
+					__debugbreak();
+				}
 			}
 			return true;
 		}
-		//int MaterialIndex = 0;
 	};
 
 	struct ControlPoint
@@ -169,12 +182,20 @@ namespace Engine {
 		void serialize(Archive & ar, const unsigned int version)
 		{
 			ar & Position;
+
 			ar & BoneWeight;
+			ar & BoneWeightr;
+
 			ar & BoneIndex;
+			ar & BoneIndexr;
 		}
 		vec3 Position;
+
 		vec4 BoneWeight;
+		vec4 BoneWeightr;
+
 		uvec4 BoneIndex;
+		uvec4 BoneIndexr;
 
 		uint8_t i = 0;
 		inline void push(float weight, uint32_t index)
@@ -182,6 +203,8 @@ namespace Engine {
 			if (i >= 4)
 			{
 				std::cout << "Bone Weight have over 4\n";
+				BoneWeightr.m[i % 4] = weight;
+				BoneIndexr.m[i % 4] = index;
 				return;
 			}
 			BoneWeight.m[i] = weight;
