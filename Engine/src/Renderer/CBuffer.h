@@ -37,8 +37,9 @@ namespace Engine::CBuffer {
 		DirectX::XMFLOAT4 Position;
 		DirectX::XMFLOAT4 Direction;
 		DirectX::XMFLOAT4 Color;
-		int type;
-		int padding[3];
+		int Type;
+		float Intensity;
+		int padding[2];
 
 		void Upload(const Engine::Light& other);
 	};
@@ -58,16 +59,17 @@ namespace Engine::CBuffer {
 
 	struct Material
 	{
-		int MMode;
-		DirectX::XMFLOAT3 Ambient;
+		DirectX::XMFLOAT4 Ambient;
 		DirectX::XMFLOAT4 Diffuse;
-		DirectX::XMFLOAT3 Emissive;
-		DirectX::XMFLOAT3 Specular;
-		DirectX::XMFLOAT3 Fresnel;
+		DirectX::XMFLOAT4 Specular;
+		DirectX::XMFLOAT4 Emissive;
+		DirectX::XMFLOAT4 Fresnel;
 		float Shiness;
-		int padding[2];
+		int MMode;
+		int Padding[2];
 
 		void Upload(const Engine::Material& other);
+		void Upload(const Engine::MaterialSet& other);
 	};
 
 	namespace detail {

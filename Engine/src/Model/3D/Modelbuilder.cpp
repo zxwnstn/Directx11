@@ -31,7 +31,8 @@ namespace Engine {
 		if (!myModel->m_Skeleton)
 		{
 			std::cout << "There is no Skeleton : " << skeletonName << "\n";
-			return FinalModelBuilder(myModel);
+			delete myModel;
+			return FinalModelBuilder(nullptr);
 		}
 
 		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
@@ -48,6 +49,13 @@ namespace Engine {
 
 		auto& animList = SkeletalAnimationArchive::GetAnimList(skeletonName);
 		myModel->m_Animation->AnimList = animList;
+
+		if (myModel->m_Animation->AnimList.empty())
+		{
+			std::cout << "There is no any Animations! : " << skeletonName << "\n";
+			return FinalModelBuilder(myModel);
+		}
+
 		myModel->SetAnimation(myModel->m_Animation->AnimList[0], true);
 
 		return FinalModelBuilder(myModel);

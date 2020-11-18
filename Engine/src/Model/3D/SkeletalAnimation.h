@@ -75,13 +75,14 @@ namespace Engine {
 	{
 	public:
 		static bool Add(const std::string& skeletonName, const std::string& animName);
+		static void Delete(const std::string& skeletonName, const std::string& animName);
 		static std::vector<std::string>& GetAnimList(const std::string& skeletonName);
-		static SkeletalAnimtion* GetAnimation(const std::string& skeletonName, const std::string& animName);
+		static std::shared_ptr<SkeletalAnimtion> GetAnimation(const std::string& skeletonName, const std::string& animName);
 		static float GetAnimationDuration(const std::string& skeletonName, const std::string& animName);
 		static float GetKeyInterval(const std::string& skeletonName, const std::string& animName);
 		static bool Has(const std::string& skeletonName, const std::string& animName);
 		static bool Has(const std::string& fullName);
-		static void Shudown();
+		static void Shutdown();
 
 	private:
 		static std::vector<KeyFramePair> GetAnimationKeys(const std::string& skeltonName, const std::string& animName, float elapsedTime);
@@ -89,7 +90,7 @@ namespace Engine {
 
 		//Save as full name which combine SkeletonName + AnimationName
 		//Eg. i fskeleton name is 'human' and animation name is 'idle' then animtion name is human/idle
-		static std::unordered_map<std::string, SkeletalAnimtion*> s_Animations;
+		static std::unordered_map<std::string, std::shared_ptr<SkeletalAnimtion>> s_Animations;
 
 		//Save names sperated which SkeletonName and vector AnimationNames
 		//Eg. if skeleton name is 'human' and animation name is 'idle' then key human and push idle as a value vector

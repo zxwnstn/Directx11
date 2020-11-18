@@ -40,11 +40,11 @@ namespace Engine {
 	void Renderer::Enque(std::shared_ptr<Model3D> model)
 	{
 		RendererShaders[model->m_Shader].Bind();
-		//RendererShaders[model->m_Shader].SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
 		RendererShaders[model->m_Shader].SetParam<CBuffer::Transform>(model->m_Transform);
-		//RendererShaders[model->m_Shader].SetParam<CBuffer::Material>(*model->m_Material);
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Material>(*model->m_Material);
 
-		//Texture::MultipleBind(model->m_Textures);
+		Texture::MultipleBind(model->m_Textures);
 		model->m_ModelBuffer->Bind();
 
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);

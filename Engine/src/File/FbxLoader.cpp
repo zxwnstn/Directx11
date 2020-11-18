@@ -26,6 +26,17 @@ namespace Engine {
 		SkeletonArchive::Get(m_SkeletonName)->ControlPoints.clear();
 	}
 
+	void printJoint(const std::string& skeletonName)
+	{
+		auto joints = SkeletonArchive::Get(skeletonName)->Joints;
+		std::cout << "print skelton hierachy!\n";
+		int idx = 0;
+		for (auto it = joints.begin(); it != joints.end(); ++it)
+		{
+			std::cout << idx++ << " : " << it->Name << "\n";
+		}
+	}
+
 	bool FBXLoader::Init(const std::string & skeletonName)
 	{
 		if (!s_FbxManager)
@@ -33,6 +44,7 @@ namespace Engine {
 			s_FbxManager = FbxManager::Create();
 
 			FbxIOSettings* pIOsettings = FbxIOSettings::Create(s_FbxManager, IOSROOT);
+			pIOsettings->SetBoolProp(IMP_FBX_ANIMATION, true);
 			s_FbxManager->SetIOSettings(pIOsettings);
 		}
 
@@ -50,136 +62,132 @@ namespace Engine {
 	void FBXLoader::Extract(const std::string & path, const std::filesystem::path &file)
 	{
 		//Initiate Scene
+#pragma region 0. Initiate Scene
 		FbxImporter* importer = FbxImporter::Create(s_FbxManager, "");
 		FbxScene* scene = FbxScene::Create(s_FbxManager, "");
 
 		m_FileName = file.stem().string();
 		auto fullpath = path + file.filename().string();
 
-		std::cout << "\nFBXLoad::Extract with \"" << m_FileName << "\"\n";
+		Timestep::SetTimePoint();
+		loadedAnimation = false;
+		std::cout << "\nFBXLoad::Extract with \"" << m_SkeletonName << "/" << m_FileName << "\"\n";
 		importer->Initialize(fullpath.c_str(), -1, s_FbxManager->GetIOSettings());
 		importer->Import(scene);
 		importer->Destroy();
-
 		FbxNode* root = scene->GetRootNode();
+
+		TryImport(Type::Material);
+		TryImport(Type::Vertices);
+		if (loadedMaterial && loadedVert) //not nessessary control points and links
+			loadedMesh = true;
+
 		if (!loadedMesh)
 		{
 			FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
 			FbxAxisSystem::MayaYUp.ConvertScene(scene);
 			FbxGeometryConverter geometryConverter(s_FbxManager);
 
-			Timestep::SetTimePoint();
 			std::cout << "Process Triangulate... ";
 			geometryConverter.Triangulate(scene, true);
 			std::cout << "Completed : " << Timestep::Elapse() << "sec\n";
 		}
 		SkeletalAnimationArchive::Add(m_SkeletonName, m_FileName);
+#pragma endregion
 
-		//Extract
-		auto nodeCount = root->GetChildCount();
-		if (loadedMesh)
+#pragma region 1. Construct Skeleton
+		std::cout << "Construct Skeleton Hierachy!... ";
+		TryImport(Type::Joints);
+		bool isConstructed = false;
+		if (!loadedSkeleton)
 		{
-			for (int i = 0; i < nodeCount; ++i)
+			for (int i = 0; i < root->GetChildCount(); ++i)
+			{
+				FbxNode* node = root->GetChild(i);
+				FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
+				if (nodeType == fbxsdk::FbxNodeAttribute::eSkeleton)
+				{
+					getJoints(root);
+					isConstructed = true;
+				}
+			}
+			if (isConstructed)
+			{
+				std::cout << "Completed!\n";
+			}
+			else
+			{
+				std::cout << "Therer is no Skeleton!\n";
+				__debugbreak();
+			}
+		}
+
+#pragma endregion
+
+#pragma region 2. Extract Mesh
+		if (!loadedMesh)
+		{
+			std::cout << "******   Start Geometry prcoess   ******\n";
+			Timestep::Update();
+			std::cout << "Extract mesh data!...\n";
+
+
+			for (int i = 0; i < root->GetChildCount(); ++i)
 			{
 				FbxNode* node = root->GetChild(i);
 				FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
 
-				switch (nodeType)
+				if (nodeType == fbxsdk::FbxNodeAttribute::eMesh)
 				{
-				case fbxsdk::FbxNodeAttribute::eMesh:
-					getAnimation(node);
-					break;
+					auto name = node->GetName();
+					std::cout << "==== Processing " << name << "....\n";
+
+					getMaterial(node);
+					getControlPoint(node);
+					getLinks(node);
+					getVertices(node);
 				}
 			}
-		}
-		else
-		{
-			std::cout << "***Start Geometry proess***\n";
-#pragma region 1. Construct Skeleton
-			std::cout << "Construct Skeleton Hierachy!... ";
-			if (isExistCache(Type::Joints))
-			{
-				loadedSkeleton = true;
-				ImportCache(Type::Joints);
-				std::cout << "Completed by cache!\n";
-			}		
-			bool isConstructed = false;
-			if (!loadedSkeleton)
-			{
-				for (int i = 0; i < nodeCount; ++i)
-				{
-					FbxNode* node = root->GetChild(i);
-					FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
-					if (nodeType == fbxsdk::FbxNodeAttribute::eSkeleton)
-					{
-						isConstructed = true;
-						getJoints(root);
-					}
-				}
-				if (isConstructed)
-				{
-					std::cout << "Completed!\n";
-				}
-				else
-				{
-					std::cout << "Therer is no Skeleton!\n";
-					__debugbreak();
-				}
-			}
-			
-#pragma endregion
-
-#pragma region 2. Extract Mesh
-			Timestep::Update();
-			std::cout << "Extract mesh data!...\n";
-			
-			TryImport(Type::Material);
-			TryImport(Type::Vertices);
-			TryImport(Type::ControlPoints);
-
-			if (!loadedControlPoint || !loadedVert || !loadedMaterial)
-			{
-				for (int i = 0; i < nodeCount; ++i)
-				{
-					FbxNode* node = root->GetChild(i);
-					FbxNodeAttribute::EType nodeType = node->GetNodeAttribute()->GetAttributeType();
-
-					if (nodeType == fbxsdk::FbxNodeAttribute::eMesh)
-					{
-						auto name = node->GetName();
-						std::cout << "==== Processing " << name << "....\n";
-
-						getMaterial(node);
-						getControlPoint(node);
-						getLinks(node);
-						getVertices(node);
-					}
-				}
-			}
-
-			std::cout << "Processing Indices!...";
-			{
-				auto& indices = SkeletonArchive::Get(m_SkeletonName)->Indices;
-				auto& vertices = SkeletonArchive::Get(m_SkeletonName)->Vertices;
-				indices.resize(vertices.size());
-				for (unsigned int i = 0; i < indices.size(); ++i)
-				{
-					indices[i] = i;
-					vertices[i].check();
-				}
-				std::cout << "Completed!\n";
-			}
-			std::cout << "***Complete "<< m_SkeletonName << " geometry process! : " << Timestep::Elapse() << "sec ***\n";
+			std::cout << "******  Complete " << m_SkeletonName << " geometry process! : " << Timestep::TotalElapse() << "sec    ******\n";
 			loadedMesh = true;
-#pragma endregion
+			loadedVert = true;
+			loadedLink = true;
+			loadedControlPoint = true;
+			loadedMaterial = true;
+			loadedSkeleton = true;
 
+			TryExport(Type::Joints);
 			TryExport(Type::Material);
 			TryExport(Type::Vertices);
 			TryExport(Type::ControlPoints);
-
-			//getAnimation(node);
-			//loadedAnimation = true;
 		}
+		std::cout << "Processing Indices!...";
+		{
+			auto& indices = SkeletonArchive::Get(m_SkeletonName)->Indices;
+			auto& vertices = SkeletonArchive::Get(m_SkeletonName)->Vertices;
+			indices.resize(vertices.size());
+			for (unsigned int i = 0; i < indices.size(); ++i)
+			{
+				indices[i] = i;
+				vertices[i].check();
+			}
+			std::cout << "Completed!\n";
+		}
+#pragma endregion
+
+#pragma region 3. Extract Animation
+		std::cout << "******   Start Animation process   ******\n";
+		Timestep::Update();
+		TryImport(Type::Animation);
+		if (!loadedAnimation)
+		{
+			getAnimation(root);
+		}
+		TryExport(Type::Animation);
+		std::cout << "******  Complete " << m_FileName << " animation process! : " << Timestep::Elapse() << "sec    ******\n";
+
+		std::cout << "FBXLoad::Extract \"" << m_SkeletonName << "/" << m_FileName << "\" Complete " << Timestep::TotalElapse() << "sec\n\n";
+#pragma endregion
 	}
 
 	void FBXLoader::getControlPoint(FbxNode* node)
@@ -198,10 +206,9 @@ namespace Engine {
 		{
 			for (uint32_t j = 0; j < 3; ++j)
 			{
-				curControlPoints[i].Position.m[j] = static_cast<float>(mesh->GetControlPointAt(i).mData[j]) * 0.01f;
+				curControlPoints[i].Position.m[j] = static_cast<float>(mesh->GetControlPointAt(i).mData[j]);
 			}
 		}
-
 		auto& ControlPoints = SkeletonArchive::Get(m_SkeletonName)->ControlPoints;
 		std::string name = node->GetName();
 		ControlPoints[name] = curControlPoints;
@@ -278,7 +285,7 @@ namespace Engine {
 
 		// Calculate the denominator of the tangent/binormal equation.
 		vec3 tangent, binormal;
-		
+
 		float den = 1.0f / (tuVector.m[0] * tvVector.m[1] - tuVector.m[1] * tvVector.m[0]);
 
 		static int i = 0;
@@ -332,7 +339,7 @@ namespace Engine {
 		int count = mesh->GetPolygonCount();
 
 		auto skeleton = SkeletonArchive::Get(m_SkeletonName);
-		
+
 		auto& ControlPoints = skeleton->ControlPoints[nodeName];
 		auto& Vertices = skeleton->Vertices;
 
@@ -347,7 +354,7 @@ namespace Engine {
 			Vertex vertex[3];
 			for (int j = 0; j < 3; ++j)
 			{
-				
+
 				int controlIndex = mesh->GetPolygonVertex(i, j);
 				vertex[j].Position = ControlPoints[controlIndex].Position;
 				vertex[j].UV = getElement<detail::Type2>(uv, index, controlIndex);
@@ -403,19 +410,12 @@ namespace Engine {
 
 	void FBXLoader::getJoints(FbxNode* node)
 	{
-		if (isExistCache(Type::Joints))
-		{
-			ImportCache(Type::Joints);
-			return;
-		}
-
 		auto& joints = SkeletonArchive::Get(m_SkeletonName)->Joints;
 		for (int child = 0; child < node->GetChildCount(); ++child)
 		{
 			FbxNode* cur = node->GetChild(child);
 			getJoints(cur, 0, -1, joints);
 		}
-		ExportCache(Type::Joints);
 	}
 
 	void FBXLoader::getLinks(FbxNode * node)
@@ -649,42 +649,54 @@ namespace Engine {
 		std::cout << "Complete!\n";
 	}
 
-	void FBXLoader::getAnimation(FbxNode* node)
+	void FBXLoader::getAnimation(FbxNode* root)
 	{
-		FbxMesh* mesh = node->GetMesh();
-		unsigned int numOfDeformers = mesh->GetDeformerCount();
-		FbxAMatrix geometryTransform;
-		geometryTransform.SetIdentity();
+		//getAnim(root->GetScene());
+		std::cout << "\tProcessing Animation... ";
+		if (loadedAnimation)
+		{
+			std::cout << "Completed by cache...\n";
+		}
 
 		auto skeleton = SkeletonArchive::Get(m_SkeletonName);
 		auto& JointAnimations = SkeletalAnimationArchive::GetAnimation(m_SkeletonName, m_FileName)->JointAnimations;
 		auto& Joints = skeleton->Joints;
-		auto& ControlPoints = skeleton->ControlPoints;
+		JointAnimations.resize(Joints.size());
 
-		//Extract
-		for (unsigned int deformerIndex = 0; deformerIndex < numOfDeformers; ++deformerIndex)
+		for (int i = 0; i < root->GetChildCount(); ++i)
 		{
-			FbxSkin* skin = reinterpret_cast<FbxSkin*>(mesh->GetDeformer(deformerIndex, FbxDeformer::eSkin));
-			if (!skin) continue;
+			FbxNode* node = root->GetChild(i);
+			FbxMesh* mesh = node->GetMesh();
+			if (mesh == nullptr)
+				continue;
 
-			unsigned int numOfClusters = skin->GetClusterCount();
-			JointAnimations.resize(numOfClusters);
+			int count = mesh->GetDeformerCount();
+			FbxAMatrix geometryTransform;
+			geometryTransform.SetIdentity();
 
-			//for each Cluster (that contains link)
-			for (unsigned int clusterIndex = 0; clusterIndex < numOfClusters; ++clusterIndex)
+			//Extract
+			for (int deformerIndex = 0; deformerIndex < mesh->GetDeformerCount(); ++deformerIndex)
 			{
-				FbxCluster* cluster = skin->GetCluster(clusterIndex);
+				FbxSkin* skin = reinterpret_cast<FbxSkin*>(mesh->GetDeformer(deformerIndex, FbxDeformer::eSkin));
+				if (!skin) continue;
 
-				//0. Get JointIdex
-				std::string jointName = cluster->GetLink()->GetName();
-				unsigned int jointIndex;
-				for (jointIndex = 0; jointIndex < Joints.size(); ++jointIndex)
-					if (jointName == Joints[jointIndex].Name)
-						break;
-
-				//Anim
-				//Todo : Supply multiple Animation of one fbx file
+				unsigned int numOfClusters = skin->GetClusterCount();
+				//for each Cluster (that contains link)
+				for (unsigned int clusterIndex = 0; clusterIndex < numOfClusters; ++clusterIndex)
 				{
+					FbxCluster* cluster = skin->GetCluster(clusterIndex);
+
+					//0. Get JointIdex
+					std::string jointName = cluster->GetLink()->GetName();
+					unsigned int jointIndex;
+					for (jointIndex = 0; jointIndex < Joints.size(); ++jointIndex)
+						if (jointName == Joints[jointIndex].Name)
+							break;
+
+					if (!JointAnimations[jointIndex].KeyFrames.empty())
+						continue;
+
+					//1. Anim
 					FbxTime::EMode frameRate = FbxTime::EMode::eFrames30;
 					uint32_t timePoint = 0;
 					float lastStart = 0.0f;
@@ -697,8 +709,7 @@ namespace Engine {
 						curTime.SetFrame(timePoint, frameRate);
 						keyFrame.Start = (float)curTime.GetSecondDouble();
 
-
-						FbxAMatrix currentTransformOffset = node->EvaluateGlobalTransform(curTime) * geometryTransform;
+						FbxAMatrix currentTransformOffset = root->EvaluateGlobalTransform(curTime) * geometryTransform;
 						auto globalTransform = currentTransformOffset.Inverse() * cluster->GetLink()->EvaluateGlobalTransform(curTime);
 
 						FbxVector4 TS = globalTransform.GetT();
@@ -719,20 +730,64 @@ namespace Engine {
 							static_cast<float>(Q.mData[2]) ,
 							static_cast<float>(Q.mData[3]) };
 
-						if (!JointAnimations[clusterIndex].KeyFrames.empty())
+						if (!JointAnimations[jointIndex].KeyFrames.empty())
 						{
-							if (keyFrame == JointAnimations[clusterIndex].KeyFrames.back())
+							if (keyFrame == JointAnimations[jointIndex].KeyFrames.back())
 								break;
 						}
 
 						lastStart = keyFrame.Start;
 						++timePoint;
-						JointAnimations[clusterIndex].KeyFrames.push_back(keyFrame);
+						JointAnimations[jointIndex].KeyFrames.push_back(keyFrame);
 					}
-					JointAnimations[clusterIndex].Duration = lastStart;
+					JointAnimations[jointIndex].Duration = lastStart;
 				}
 			}
 		}
+		if (postProcessingAnimation(JointAnimations))
+		{
+			loadedAnimation = true;
+			std::cout << "Complete!\n";
+		}
+	}
+
+	bool FBXLoader::postProcessingAnimation(std::vector<JointAnimation>& animation)
+	{
+		std::vector<Engine::KeyFrame> refKeyFrames;
+		for (int i = 0; i < animation.size(); ++i)
+		{
+			if (!animation[i].KeyFrames.empty())
+			{
+				refKeyFrames = animation[i].KeyFrames;
+				break;
+			}
+		}
+
+		if (refKeyFrames.empty())
+		{
+			std::cout << "Failed!\n";
+			std::cout << "Can't Find " << m_SkeletonName << "/" << m_FileName << "animations!\n";
+
+			SkeletalAnimationArchive::Delete(m_SkeletonName, m_FileName);
+			return false;
+		}
+
+		KeyFrame defualt;
+		defualt.Translation = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
+		defualt.RotationQuat = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		defualt.Scale = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+		for (int i = 0; i < animation.size(); ++i)
+		{
+			if (animation[i].KeyFrames.empty())
+			{
+				for (int j = 0; j < refKeyFrames.size(); ++j)
+				{
+					defualt.Start = refKeyFrames[j].Start;
+					animation[i].KeyFrames.push_back(defualt);
+				}
+			}
+		}
+		return true;
 	}
 
 	bool FBXLoader::isExistCache(Type type)
@@ -786,8 +841,8 @@ namespace Engine {
 		break;
 		case FBXLoader::Type::Animation:
 		{
-			auto& Animation = SkeletalAnimationArchive::GetAnimation(m_SkeletonName, m_FileName)->JointAnimations;
-			Serializer::Write(path, Animation);
+			auto& animation = SkeletalAnimationArchive::GetAnimation(m_SkeletonName, m_FileName)->JointAnimations;
+			Serializer::Write(path, animation);
 		}
 		break;
 		}
@@ -830,8 +885,8 @@ namespace Engine {
 		break;
 		case FBXLoader::Type::Animation:
 		{
-			auto& Animation = SkeletalAnimationArchive::GetAnimation(m_SkeletonName, m_FileName)->JointAnimations;
-			Serializer::Read(path, Animation);
+			auto& animation = SkeletalAnimationArchive::GetAnimation(m_SkeletonName, m_FileName)->JointAnimations;
+			Serializer::Read(path, animation);
 		}
 		break;
 		}
@@ -852,14 +907,15 @@ namespace Engine {
 
 	void Engine::FBXLoader::TryImport(Type type)
 	{
-		if (isExistCache(Type::Material))
+		if (isExistCache(type))
 		{
 			switch (type)
 			{
-			case Engine::FBXLoader::Type::Vertices: loadedVert = true;
-			case Engine::FBXLoader::Type::ControlPoints: loadedControlPoint = true;
-			case Engine::FBXLoader::Type::Joints: loadedLink = true;
-			case Engine::FBXLoader::Type::Material: loadedMaterial = true;
+			case Engine::FBXLoader::Type::Vertices: loadedVert = true; loadedLink = true; break;
+			case Engine::FBXLoader::Type::ControlPoints: loadedControlPoint = true; break;
+			case Engine::FBXLoader::Type::Joints: loadedSkeleton = true;  loadedLink = true; break;
+			case Engine::FBXLoader::Type::Material: loadedMaterial = true; break;
+			case Engine::FBXLoader::Type::Animation: loadedAnimation = true; break;
 			}
 			Timestep::Update();
 			std::cout << "Import " << m_SkeletonName << " " << ToString(type) << " cache!...";
@@ -870,9 +926,17 @@ namespace Engine {
 
 	void Engine::FBXLoader::TryExport(Type type)
 	{
+		switch (type)
+		{
+		case Engine::FBXLoader::Type::Vertices: if (!loadedVert) return; break;
+		case Engine::FBXLoader::Type::ControlPoints: if (!loadedControlPoint) return; break;
+		case Engine::FBXLoader::Type::Joints: if (!loadedSkeleton || !loadedLink) return; break;
+		case Engine::FBXLoader::Type::Material: if (!loadedMaterial) return; break;
+		case Engine::FBXLoader::Type::Animation: if (!loadedAnimation) return; break;
+		}
+
 		if (!isExistCache(type))
 		{
-			loadedMaterial = true;
 			Timestep::Update();
 			std::cout << "Export " << m_SkeletonName << " " << ToString(type) << " cache!...";
 			ExportCache(type);

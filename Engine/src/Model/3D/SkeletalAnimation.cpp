@@ -30,13 +30,18 @@ namespace Engine {
 
 		std::vector<KeyFramePair> ret;
 		for (auto& jointAnimation : JointAnimations)
+		{
+			if (jointAnimation.KeyFrames.empty()) 
+				continue;
+
 			ret.push_back(jointAnimation.GetKeyFramePair(elapsedTime));
+		}
 
 		return ret;
 	}
 
 
-	std::unordered_map<std::string, SkeletalAnimtion*> SkeletalAnimationArchive::s_Animations;
+	std::unordered_map<std::string, std::shared_ptr<SkeletalAnimtion>> SkeletalAnimationArchive::s_Animations;
 	std::unordered_map<std::string, std::vector<std::string>> SkeletalAnimationArchive::s_AnimList;
 
 	bool SkeletalAnimationArchive::Add(const std::string & skeletonName, const std::string & animName)
@@ -44,11 +49,23 @@ namespace Engine {
 		std::string fullName = skeletonName + "/" + animName;
 		if (Has(fullName)) return false;
 
-		SkeletalAnimtion* animation = new SkeletalAnimtion;
+		std::shared_ptr<SkeletalAnimtion> animation(new SkeletalAnimtion);
 		s_Animations[fullName] = animation;
 		s_AnimList[skeletonName].push_back(animName);
 
 		return true;
+	}
+
+	void SkeletalAnimationArchive::Delete(const std::string & skeletonName, const std::string & animName)
+	{
+		std::string fullName = skeletonName + "/" + animName;
+		if (!Has(fullName)) return;
+
+		auto animation = s_Animations.find(fullName);
+		s_Animations.erase(animation);
+
+		auto listItem = std::find(s_AnimList[skeletonName].begin(), s_AnimList[skeletonName].end(), animName);
+		s_AnimList[skeletonName].erase(listItem);
 	}
 
 	bool SkeletalAnimationArchive::Has(const std::string & skeletonName, const std::string & animName)
@@ -63,7 +80,7 @@ namespace Engine {
 		return find != s_Animations.end();
 	}
 
-	void SkeletalAnimationArchive::Shudown()
+	void SkeletalAnimationArchive::Shutdown()
 	{
 		s_Animations.clear();
 	}
@@ -96,7 +113,7 @@ namespace Engine {
 		return s_AnimList[skeletonName];
 	}
 
-	SkeletalAnimtion * SkeletalAnimationArchive::GetAnimation(const std::string & skeletonName, const std::string & animName)
+	std::shared_ptr<SkeletalAnimtion> SkeletalAnimationArchive::GetAnimation(const std::string & skeletonName, const std::string & animName)
 	{
 		std::string fullName = skeletonName + "/" + animName;
 		if (!Has(fullName))
@@ -185,7 +202,6 @@ namespace Engine {
 			skinnedTransform *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
 			XMStoreFloat4x4(&inform->MySkinnedTransforms[i], XMMatrixTranspose(skinnedTransform));
 		}
-
 	}
 
 }

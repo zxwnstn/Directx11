@@ -18,7 +18,7 @@ namespace Engine {
 
 	void Model3D::Update(float dt)
 	{
-		//animationUpdate(dt);
+		animationUpdate(dt);
 	}
 
 	bool Model3D::SetAnimation(const std::string & animationName, bool loop)

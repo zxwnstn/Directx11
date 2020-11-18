@@ -116,6 +116,8 @@ namespace Engine {
 			ar & BoneWeightr;
 			ar & BoneIndex;
 			ar & BoneIndexr;
+
+			ar & MaterialIndex;
 		}
 		vec3 Position;
 		vec2 UV;
@@ -129,6 +131,7 @@ namespace Engine {
 
 		uvec4 BoneIndex;
 		uvec4 BoneIndexr;
+
 		int MaterialIndex = 0;
 
 		bool check()
@@ -202,9 +205,9 @@ namespace Engine {
 		{
 			if (i >= 4)
 			{
-				std::cout << "Bone Weight have over 4\n";
 				BoneWeightr.m[i % 4] = weight;
 				BoneIndexr.m[i % 4] = index;
+				++i;
 				return;
 			}
 			BoneWeight.m[i] = weight;

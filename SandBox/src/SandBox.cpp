@@ -28,8 +28,8 @@ void SandBox::OnAttach()
 	//	.CreateCompotibleBuffer()
 	//	.SetBuffer(vertices, indices, 3);
 
-	model = Engine::Model3D::Create(Engine::RenderingShader::Skinned)
-		.buildFromFBX().SetSkeleton("lucy");
+	model = Engine::Model3D::Create(Engine::RenderingShader::Lighting)
+		.buildFromFBX().SetSkeleton("James");
 
 	float filedOfView = 3.141592f / 3.0f;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
@@ -88,6 +88,21 @@ void SandBox::controlUpdate(float dt)
 	{
 		transform.AddRotate(0.0f, -0.02f, 0.0f);
 	}
+
+	if (GetAsyncKeyState('N') & 0x8000)
+	{
+		light.m_Intensity += 0.01f;
+	}
+
+	if (GetAsyncKeyState('M') & 0x8000)
+	{
+		light.m_Intensity -= 0.01f;
+		if (light.m_Intensity < 0.0f)
+		{
+			light.m_Intensity = 0.0f;
+		}
+	}
+
 
 	/*if (GetAsyncKeyState(VK_NUMPAD1) & 0x8000)
 	{

@@ -27,8 +27,13 @@ struct Input
 	float3 normal : NORMAL;
 	float3 binormal : BINORMAL;
 	float3 tangent : TANGENT;
-	float4 boneWeight : WEIGHT;
-	uint4 boneIndices : BONEINDICES;
+
+	float4 boneWeight  : WEIGHT;
+	float4 boneWeightr : WEIGHTR;
+	uint4 boneIndices  : BONEINDICES;
+	uint4 boneIndicesr : BONEINDICESR;
+
+	int MaterialIndex : MATERIALIDX;
 };
 
 struct Output
@@ -51,8 +56,13 @@ Output main(Input input)
 	skinTransform += FinalTransform[input.boneIndices.y] * input.boneWeight.y;
 	skinTransform += FinalTransform[input.boneIndices.z] * input.boneWeight.z;
 	skinTransform += FinalTransform[input.boneIndices.w] * input.boneWeight.w;
+	skinTransform += FinalTransform[input.boneIndicesr.x] * input.boneWeightr.x;
+	skinTransform += FinalTransform[input.boneIndicesr.y] * input.boneWeightr.y;
+	skinTransform += FinalTransform[input.boneIndicesr.z] * input.boneWeightr.z;
+	skinTransform += FinalTransform[input.boneIndicesr.w] * input.boneWeightr.w;
 
-	output.position = mul(float4(input.position, 1.0f), skinTransform);
+	float4 pos = float4(input.position, 1.0f);
+	output.position = mul(pos, skinTransform);
 
 	output.position = mul(output.position, Scale);
 	output.position = mul(output.position, Rotate);
@@ -64,9 +74,9 @@ Output main(Input input)
 
 	//Pixel Inputs
 	output.tex = input.tex;
-	output.normal = mul(input.normal, mul(skinTransform, Rotate));
-	output.binormal = mul(input.binormal, mul(skinTransform, Rotate));
-	output.tangent = mul(input.tangent, mul(skinTransform, Rotate));
+	output.normal =		mul(input.normal, mul(skinTransform, Rotate));
+	output.binormal =	mul(input.binormal, mul(skinTransform, Rotate));
+	output.tangent =	mul(input.tangent,	mul(skinTransform, Rotate));
 
 	return output;
 }

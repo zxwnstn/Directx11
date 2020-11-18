@@ -8,7 +8,7 @@
 
 namespace Engine {
 
-	uint32_t GetCBSize(CBuffer::Type type)
+	constexpr uint32_t GetCBSize(CBuffer::Type type)
 	{
 		switch (type)
 		{

@@ -52,16 +52,20 @@ Output main(Input input)
 	Output output;
 
 	//Transform
-	//matrix skinTransform = 0;
-	//skinTransform += FinalTransform[input.boneIndices.x] * input.boneWeight.x;
-	//skinTransform += FinalTransform[input.boneIndices.y] * input.boneWeight.y;
-	//skinTransform += FinalTransform[input.boneIndices.z] * input.boneWeight.z;
-	//skinTransform += FinalTransform[input.boneIndices.w] * input.boneWeight.w;
-	//
-	//output.position = mul(float4(input.position, 1.0f), skinTransform);
+	matrix skinTransform = 0;
+	skinTransform += FinalTransform[input.boneIndices.x] * input.boneWeight.x;
+	skinTransform += FinalTransform[input.boneIndices.y] * input.boneWeight.y;
+	skinTransform += FinalTransform[input.boneIndices.z] * input.boneWeight.z;
+	skinTransform += FinalTransform[input.boneIndices.w] * input.boneWeight.w;
+	skinTransform += FinalTransform[input.boneIndicesr.x] * input.boneWeightr.x;
+	skinTransform += FinalTransform[input.boneIndicesr.y] * input.boneWeightr.y;
+	skinTransform += FinalTransform[input.boneIndicesr.z] * input.boneWeightr.z;
+	skinTransform += FinalTransform[input.boneIndicesr.w] * input.boneWeightr.w;
+	
 	float4 pos = float4(input.position, 1.0f);
+	output.position = mul(pos, skinTransform);
 
-	output.position = mul(pos, Scale);
+	output.position = mul(output.position, Scale);
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);
 

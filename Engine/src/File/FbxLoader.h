@@ -31,8 +31,13 @@ namespace Engine {
 		void getJoints(FbxNode* node, int index, int parent, std::vector<Joint>& joints);
 		void getJoints(FbxNode* node);
 		void getLinks(FbxNode* node);
-		void getAnimation(FbxNode* node);
 		void getMaterial(FbxNode* node);
+
+		bool postProcessingAnimation(std::vector<struct JointAnimation>& animation);
+		void getAnimation(FbxNode* root);
+
+		//this func is in experiment
+		//void getAnimation(FbxNode* root, FbxNode* node, class FbxAnimLayer* animLayer);
 
 	private:
 		bool isExistCache(Type type);
@@ -50,7 +55,7 @@ namespace Engine {
 		std::string m_SkeletonName;
 		std::string m_FileName;
 
-		bool loadedMesh = false;
+		bool loadedMesh			= false;
 
 		bool loadedSkeleton		= false;
 		bool loadedVert			= false;
