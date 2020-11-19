@@ -70,6 +70,7 @@ namespace Engine {
 
 	private:
 		std::string Path;
+		std::string Name;
 		uint8_t TypeKey = 0;
 		InputLayout InputLayout;
 

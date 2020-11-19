@@ -48,18 +48,14 @@ namespace Engine {
 
 		ID3D11Texture2D* backBuffer;
 		SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
-
-		if (!backBuffer)
-		{
-			std::cout << "Some errors ocurpy!\n";
-			return;
-		}
+		ASSERT(backBuffer, "Dx11Core::Can't get backBuffer");
 
 		WinProp->Width = width;
 		WinProp->Height = height;
 
 		Device->CreateRenderTargetView(backBuffer, NULL, &RenderTargetView);
 		backBuffer->Release();
+		ASSERT(RenderTargetView, "Dx11Core::Re-create RenderTargetView failed");
 
 		SetViewPort();
 	}
@@ -101,10 +97,11 @@ namespace Engine {
 		LocalSpec.VideoCardMemory = (size_t)adapterDesc.DedicatedVideoMemory / 1024 / 1024;
 		LocalSpec.Vendor += adapterDesc.Description;
 
-		std::wcout << LocalSpec.Vendor << "\n";
-		std::cout << "Memory capacity : " << LocalSpec.VideoCardMemory << "MB\n";
-
 		factory->MakeWindowAssociation((HWND)WinProp->hWnd, 0);
+		LOG_INFO("Dx11Core::Graphic card vendor : {0}", std::string(LocalSpec.Vendor.begin(), LocalSpec.Vendor.end()));
+		LOG_INFO("Dx11Core::Memory capacity : {0}MB", LocalSpec.VideoCardMemory);
+		LOG_INFO("Dx11Core::DirectX Associate window : On");
+		LOG_INFO("Dx11Core::DirectX vsink: On");
 
 		delete[] displayModeList;
 		adapterOutput->Release();
@@ -140,6 +137,9 @@ namespace Engine {
 			&featureLevel, 1, D3D11_SDK_VERSION, &swapChainDesc, &SwapChain, &Device, NULL
 			, &Context
 		);
+		ASSERT(SwapChain,	"Dx11Core::Create directX swapchain fail");
+		ASSERT(Device,		"Dx11Core::Create directX device fail");
+		ASSERT(Context,		"Dx11Core::Create directX context fail");
 
 		//Set BackBuffer
 		ID3D11Texture2D* backBuffer = nullptr;
@@ -160,6 +160,7 @@ namespace Engine {
 
 		// Create the texture
 		Device->CreateBuffer(&textureDesc, NULL, &RenderTargetBuffer);
+		ASSERT(RenderTargetBuffer, "Dx11Core::Create directX render target buffer fail");
 	}
 
 	void Dx11Core::SetViewPort()
@@ -177,8 +178,7 @@ namespace Engine {
 
 	void Dx11Core::ErrorMessage(ID3D10Blob * msg)
 	{
-		std::cout << reinterpret_cast<const char*>(msg->GetBufferPointer()) << std::endl;
+		LOG_ERROR("Dx11Core::On DirectX Error : {0}", reinterpret_cast<const char*>(msg->GetBufferPointer()));
 		msg->Release();
 	}
-
 }

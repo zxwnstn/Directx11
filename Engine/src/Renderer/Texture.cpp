@@ -10,6 +10,8 @@ namespace Engine {
 		: MySlot(mySlot)
 		, type(type)
 	{
+		LOG_MISC("Texture::Create {0} texture", path);
+
 		stbi_set_flip_vertically_on_load(1);
 
 		stbi_uc* data = nullptr;
@@ -30,6 +32,7 @@ namespace Engine {
 		textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
 		Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &Buffer);
+		ASSERT(Buffer, "Texture::Create texture failed");
 
 		Dx11Core::Get().Context->UpdateSubresource(Buffer, 0, NULL, data, rowPitch, 0);
 
@@ -41,6 +44,9 @@ namespace Engine {
 
 		Dx11Core::Get().Device->CreateShaderResourceView(Buffer, &srvDesc, &View);
 		Dx11Core::Get().Context->GenerateMips(View);
+		ASSERT(View, "Texture::Create texture view failed");
+
+		LOG_MISC("Texture::Create texture done", path);
 	}
 
 	void Texture::Bind(int slot) const

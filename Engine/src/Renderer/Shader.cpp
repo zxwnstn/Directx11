@@ -117,24 +117,28 @@ namespace Engine {
 	}
 
 	Shader::Shader(const std::string & path)
+		: Path(path)
 	{
-		Path = path;
 		std::filesystem::directory_iterator	dirIter(path);
+		auto i = path.rfind('/');
+		Name = path.substr(i);
 
-		std::cout << "\nShader Set : " << path << "\n";
-		for (auto& file : dirIter)
-		{
-			Type type = GetShaderType(file.path().filename().string());
+		LOG_INFO("Create {0} Shader", Name) {
+			for (auto& file : dirIter)
+			{
+				Type type = GetShaderType(file.path().filename().string());
 
-			if (type == Type::None || TypeKey & type) continue;
+				if (type == Type::None || TypeKey & type) continue;
 
-			TypeKey |= type;
+				TypeKey |= type;
 
-			AddCBuffer(file.path());
-			auto binary = CompileShader(file.path(), type);
-			CreateShader(binary, type);
+				AddCBuffer(file.path());
+				ID3D10Blob* binary = CompileShader(file.path(), type);
+				ASSERT(binary, "Shader::Create shader binary failed");
 
-			std::cout << "\tCompile Success : " << file.path().filename() << "\n";
+				CreateShader(binary, type);
+				LOG_MISC("Compile Success : {0}", file.path().filename().string());
+			}
 		}
 	}
 
@@ -229,6 +233,7 @@ namespace Engine {
 		{
 			ID3D11VertexShader* shader;
 			Dx11Core::Get().Device->CreateVertexShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			ASSERT(shader, "Shader::Create Shader failed");
 			Shaders.emplace(type, shader);
 		}
 		break;
@@ -236,6 +241,7 @@ namespace Engine {
 		{
 			ID3D11HullShader* shader;
 			Dx11Core::Get().Device->CreateHullShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			ASSERT(shader, "Shader::Create Shader failed");
 			Shaders.emplace(type, shader);
 		}
 		break;
@@ -243,6 +249,7 @@ namespace Engine {
 		{
 			ID3D11DomainShader* shader;
 			Dx11Core::Get().Device->CreateDomainShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			ASSERT(shader, "Shader::Create Shader failed");
 			Shaders.emplace(type, shader);
 		}
 		break;
@@ -250,6 +257,7 @@ namespace Engine {
 		{
 			ID3D11GeometryShader* shader;
 			Dx11Core::Get().Device->CreateGeometryShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			ASSERT(shader, "Shader::Create Shader failed");
 			Shaders.emplace(type, shader);
 		}
 		break;
@@ -257,6 +265,7 @@ namespace Engine {
 		{
 			ID3D11PixelShader* shader;
 			Dx11Core::Get().Device->CreatePixelShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			ASSERT(shader, "Shader::Create Shader failed");
 			Shaders.emplace(type, shader);
 		}
 		break;

@@ -7,3 +7,6 @@
 [submodule "vendor/Qt5_MSVC"]
 	path = vendor/Qt5_MSVC
 	url = https://github.com/zxwnstn/Qt5_MSVC
+[submodule "vendor/spdlog"]
+	path = vendor/spdlog
+	url = https://github.com/gabime/spdlog

@@ -69,6 +69,7 @@ namespace Engine {
 
 	void Renderer::Resize(uint32_t width, uint32_t height)
 	{
+		LOG_MISC("Renderer::Resize window {0} {1}", width, height);
 		Dx11Core::Get().Resize(width, height);
 		s_PLController->Resize();
 	}

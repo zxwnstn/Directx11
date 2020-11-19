@@ -57,7 +57,7 @@ namespace Engine {
 
 		bool loadedMesh			= false;
 
-		bool loadedSkeleton		= false;
+		bool loadedJoints		= false;
 		bool loadedVert			= false;
 		bool loadedControlPoint = false;
 		bool loadedLink			= false;

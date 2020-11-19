@@ -33,6 +33,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <string>
+#include <sstream>
 #include <set>
 #include <variant>
 #include <any>
@@ -42,6 +43,11 @@
 #include <queue>
 #include <algorithm>
 #include <thread>
+#include <ctime>
+
+#include "Common/Timestep.h"
+#include "Core/Log.h"
+#include "Core/Base.h"
 
 //vendor
 #include "stb_image.h"

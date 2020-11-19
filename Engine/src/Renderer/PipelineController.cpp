@@ -42,8 +42,10 @@ namespace Engine {
 	{
 		switch (opt)
 		{
-		case DepthStencilOpt::Enable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Enable, 1); break;
-		case DepthStencilOpt::Disable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Disable, 1); break;
+		case DepthStencilOpt::Enable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Enable, 1); 
+			LOG_MISC("Renderer::Set depthstencil enable"); break;
+		case DepthStencilOpt::Disable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Disable, 1); 
+			LOG_MISC("Renderer::Set depthstencil disable"); break;
 		}
 
 		m_DepthStencil.opt = opt;
@@ -54,8 +56,10 @@ namespace Engine {
 	{
 		switch (opt)
 		{
-		case BlendOpt::Alpha: Dx11Core::Get().Context->OMSetBlendState(m_Blend.AlphaBlend, m_Blend.BlendFactor, 1); break;
-		case BlendOpt::None: Dx11Core::Get().Context->OMSetBlendState(m_Blend.None, m_Blend.BlendFactor, 0xffffffff); break;
+		case BlendOpt::Alpha: Dx11Core::Get().Context->OMSetBlendState(m_Blend.AlphaBlend, m_Blend.BlendFactor, 1);
+			LOG_MISC("Renderer::Set Blend state Alpha");  break;
+		case BlendOpt::None: Dx11Core::Get().Context->OMSetBlendState(m_Blend.None, m_Blend.BlendFactor, 0xffffffff); 
+			LOG_MISC("Renderer::Set Blend state none"); break;
 		}
 		m_Blend.opt = opt;
 		return *this;
@@ -65,8 +69,10 @@ namespace Engine {
 	{
 		switch (opt)
 		{
-		case RasterlizerOpt::Solid: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Solid); break;
-		case RasterlizerOpt::Wire: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Wire); break;
+		case RasterlizerOpt::Solid: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Solid); 
+			LOG_MISC("Renderer::Set Rasterize state Fill solid"); break;
+		case RasterlizerOpt::Wire: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Wire); 
+			LOG_MISC("Renderer::Set Rasterize state Fill wire"); break;
 		}
 		m_Rasterlizer.opt;
 		return *this;
@@ -100,6 +106,7 @@ namespace Engine {
 		DepthBufferDecs.CPUAccessFlags = 0;
 		DepthBufferDecs.MiscFlags = 0;
 		Dx11Core::Get().Device->CreateTexture2D(&DepthBufferDecs, NULL, &Buffer);
+		ASSERT(Buffer, "Renderer::Create DepthBuffer failed");
 
 		//Depth/Stencil View
 		ZeroMemory(&DepthStencilViewDesc, sizeof(DepthStencilViewDesc));
@@ -109,6 +116,7 @@ namespace Engine {
 		DepthStencilViewDesc.Texture2D.MipSlice = 0;
 
 		Dx11Core::Get().Device->CreateDepthStencilView(Buffer, &DepthStencilViewDesc, &View);
+		ASSERT(View, "Renderer::Create DepthStencilViewDesc failed");
 
 		//Depth/Stencil State
 		D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
