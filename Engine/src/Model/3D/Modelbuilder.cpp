@@ -30,7 +30,7 @@ namespace Engine {
 		myModel->m_Skeleton = SkeletonArchive::Get(skeletonName);
 		if (!myModel->m_Skeleton)
 		{
-			std::cout << "There is no Skeleton : " << skeletonName << "\n";
+			LOG_WARN("There is no Skeleton : {0}", skeletonName);
 			delete myModel;
 			return FinalModelBuilder(nullptr);
 		}
@@ -39,12 +39,8 @@ namespace Engine {
 			.CreateCompotibleBuffer()
 			.SetBuffer(myModel->m_Skeleton->Vertices.data(), myModel->m_Skeleton->Indices.data(), (uint32_t)myModel->m_Skeleton->Indices.size());
 
-		myModel->m_Material = MaterialArchive::GetSet(skeletonName);
-		for (auto texture : myModel->m_Material->MaterialTextures)
-		{
-			myModel->m_Textures.emplace_back(TextureArchive::Get(texture.Name));
-		}
-
+		myModel->m_Texture = TextureArchive::Get(skeletonName);
+		myModel->m_MaterialSet = MaterialArchive::GetSet(skeletonName);
 		myModel->m_Animation.reset(new AnimationInform);
 
 		auto& animList = SkeletalAnimationArchive::GetAnimList(skeletonName);
@@ -52,7 +48,7 @@ namespace Engine {
 
 		if (myModel->m_Animation->AnimList.empty())
 		{
-			std::cout << "There is no any Animations! : " << skeletonName << "\n";
+			LOG_WARN("There is no any Animations : {0}", skeletonName);
 			return FinalModelBuilder(myModel);
 		}
 

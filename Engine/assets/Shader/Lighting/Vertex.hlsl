@@ -44,6 +44,8 @@ struct Output
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
+
+	int MaterialIndex : MATERIALIDX;
 };
 
 Output main(Input input)
@@ -73,6 +75,7 @@ Output main(Input input)
 	output.position = mul(output.position, Projection);
 
 	//Pixel Inputs
+	output.MaterialIndex = input.MaterialIndex;
 	output.tex = input.tex;
 	output.normal =		mul(input.normal, mul(skinTransform, Rotate));
 	output.binormal =	mul(input.binormal, mul(skinTransform, Rotate));

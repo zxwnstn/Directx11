@@ -31,11 +31,12 @@ namespace Engine {
 		void CreateDeviceContext();
 		void SetViewPort();
 
+	public:
+		ID3D11DeviceContext* Context;
+		ID3D11Device* Device;
 	private:
 		LocalDeviceSpec LocalSpec;
 
-		ID3D11Device* Device;
-		ID3D11DeviceContext* Context;
 		ID3D11RenderTargetView* RenderTargetView;
 		ID3D11Buffer* RenderTargetBuffer;
 		IDXGISwapChain* SwapChain;

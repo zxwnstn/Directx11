@@ -22,7 +22,7 @@ namespace Engine {
 		void Update(float dt);
 		bool SetAnimation(const std::string& animationName, bool loop);
 		void SetShader(const std::string& shader);
-		std::shared_ptr<struct MaterialSet> m_Material;
+		std::shared_ptr<struct MaterialSet> m_MaterialSet;
 
 	public:
 		static ModelBuilder Create(RenderingShader type, std::string&& ShaderName = "");
@@ -39,7 +39,7 @@ namespace Engine {
 		//Can be Shared
 		std::shared_ptr<struct Skeleton> m_Skeleton;
 		std::shared_ptr<class ModelBuffer> m_ModelBuffer;
-		std::vector<std::shared_ptr<class Texture>> m_Textures;
+		std::shared_ptr<class Texture> m_Texture;
 		//std::shared_ptr<class Controller> m_Controler;
 
 		std::string m_Shader;

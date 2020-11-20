@@ -200,7 +200,9 @@ namespace Engine {
 		uvec4 BoneIndex;
 		uvec4 BoneIndexr;
 
+		int MaterialIndex = 0;
 		uint8_t i = 0;
+
 		inline void push(float weight, uint32_t index)
 		{
 			if (i >= 4)

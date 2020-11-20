@@ -1,10 +1,11 @@
 #pragma once
 
 #define MAXIMUM_JOINTS 100
+#define MAXIMUM_PART   12
 
 //TODO create option cmake
 #define ASSERT_ENABLE
-//#define LOGGING_MISC
+#define LOGGING_MISC
 #ifdef _DEBUG
 	#define DEBUG_FEATURE
 #endif

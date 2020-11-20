@@ -6,35 +6,27 @@ namespace Engine {
 
 	class Texture
 	{
-	public:
-		enum UsageType : int
-		{
-			eDiffuse = BIT(0),
-			eNormal = BIT(1),
-			eSpecular = BIT(2),
-			eCustom = eSpecular + 1,
-		};
+	private:
+		Texture(const std::string& path, int mySlot);
+		Texture(const std::vector<std::string>& paths, int mySlot);
 
 	public:
-		Texture(const std::string& path, UsageType type, int mySlot);
-
 		void Bind(int slot) const;
 		void Bind() const;
 
-		static void MultipleBind(const std::vector<std::shared_ptr<Texture>>& textures);
-
-		inline const UsageType Type() const { return type; }
+		static void MultipleTextureBind(const std::vector<std::string>& textures, int slot = 0);
 
 	private:
 		int32_t Width;
 		int32_t Height;
 		int32_t Channels;
 
-		int MySlot;
-		UsageType type = eCustom;
+		uint32_t MySlot = 0;
+		uint32_t TextureArrayMax;
+		bool isTextureArray;
 
-		ID3D11Texture2D* Buffer;
-		ID3D11ShaderResourceView* View;
+		ID3D11Texture2D* Buffer = nullptr;
+		ID3D11ShaderResourceView* View = nullptr;
 
 		friend class TextureArchive;
 		friend class Renderer;
@@ -43,7 +35,8 @@ namespace Engine {
 	class TextureArchive
 	{
 	public:
-		static void Add(const std::string& path, const std::string& name, Texture::UsageType type = Texture::eCustom, int slot = 0);
+		static void Add(const std::string& path, const std::string& name, int slot = 0);
+		static void Add(const std::vector<std::string>& paths, const std::string& name, int slot = 0);
 		static bool Has(const std::string& name);
 		static std::shared_ptr<Texture> Get(const std::string& name);
 		static void Shudown();

@@ -18,6 +18,7 @@ namespace Engine {
 		case CBuffer::Type::Bone: return sizeof(CBuffer::Bone);
 		case CBuffer::Type::Environment: return sizeof(CBuffer::Environment);
 		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
+		case CBuffer::Type::Materials: return sizeof(CBuffer::Materials);
 		}
 		return 0;
 	}
@@ -30,6 +31,7 @@ namespace Engine {
 		if (name == "Bone") return CBuffer::Type::Bone;
 		if (name == "Environment") return CBuffer::Type::Environment;
 		if (name == "Material") return CBuffer::Type::Material;
+		if (name == "Materials") return CBuffer::Type::Materials;
 		return CBuffer::Type::None;
 	}
 
@@ -46,11 +48,11 @@ namespace Engine {
 
 	uint32_t GetDxDataSize(const std::string& dataFormat)
 	{
+		if (dataFormat == "int") return 4;
 		if (dataFormat == "float") return 4;
 		if (dataFormat == "float2") return 8;
 		if (dataFormat == "float3") return 12;
 		if (dataFormat == "float4") return 16;
-		if (dataFormat == "int") return 4;
 		if (dataFormat == "uint4") return 16;
 		return 0;
 	}
@@ -289,8 +291,8 @@ namespace Engine {
 		case Shader::GeometryShader: compilerName = "gs"; break;
 		case Shader::PixelShader: compilerName = "ps"; break;
 		}
-
 		compilerName += "_5_0";
+
 		//Complie and Create
 		result = D3DCompileFromFile(
 			path.wstring().data(),

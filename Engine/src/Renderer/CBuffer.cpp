@@ -1,3 +1,4 @@
+#include "CBuffer.h"
 #include "pch.h"
 
 #include "CBuffer.h"
@@ -59,45 +60,61 @@ namespace Engine::CBuffer {
 
 	void Material::Upload(const Engine::Material& other)
 	{
-		//MMode = 0b1110;
-		/*Ambient = other.Ambient;
-		Diffuse = other.Diffuse;
-		Specular = other.Specular;
-		Fresnel = other.Fresnel;
-		Emissive = other.Emissive;
-		Shiness = other.Shiness;*/
-	}
-
-	void Material::Upload(const Engine::MaterialSet & other)
-	{
-		auto mat = other.materials.begin()->second;
-		Ambient.x = mat.Ambient.x;
-		Ambient.y = mat.Ambient.y;
-		Ambient.z = mat.Ambient.z;
+		Ambient.x = other.Ambient.x;
+		Ambient.y = other.Ambient.y;
+		Ambient.z = other.Ambient.z;
 		Ambient.w = 1.0f;
-
-		Diffuse.x = mat.Diffuse.x;
-		Diffuse.y = mat.Diffuse.y;
-		Diffuse.w = mat.Diffuse.z;
-		Diffuse.z = 1.0f;
-
-		Specular.x = mat.Specular.x;
-		Specular.y = mat.Specular.y;
-		Specular.z = mat.Specular.z;
+		Diffuse.x = other.Diffuse.x;
+		Diffuse.y = other.Diffuse.y;
+		Diffuse.z = other.Diffuse.z;
+		Diffuse.w = 1.0f;
+		Specular.x = other.Specular.x;
+		Specular.y = other.Specular.y;
+		Specular.z = other.Specular.z;
 		Specular.w = 1.0f;
-
-		Emissive.x = mat.Emissive.x;
-		Emissive.y = mat.Emissive.y;
-		Emissive.z = mat.Emissive.z;
+		Emissive.x = other.Emissive.x;
+		Emissive.y = other.Emissive.y;
+		Emissive.z = other.Emissive.z;
 		Emissive.w = 1.0f;
-
-		Fresnel.x = mat.Fresnel.x;
-		Fresnel.y = mat.Fresnel.y;
-		Fresnel.z = mat.Fresnel.z;
+		Fresnel.x = other.Fresnel.x;
+		Fresnel.z = other.Fresnel.z;
 		Fresnel.w = 1.0f;
-
-		Shiness = mat.Shiness;
-		MMode = 0b1110;
+		Fresnel.y = other.Fresnel.y;
+		Shiness = other.Shiness;
+		MMode = other.MMode;
 	}
+
+	void Materials::Upload(const Engine::MaterialSet & other)
+	{
+		auto& mat = other.Materials;
+		size_t i;
+		for (i = 0; i < mat.size(); ++i)
+		{
+			auto curMat = mat.find(int(i))->second;
+			MMode[i] = 7;
+			Shiness[i] = curMat.Shiness;
+
+			Ambient[i].x = curMat.Ambient.x;
+			Diffuse[i].x = curMat.Diffuse.x;
+			Diffuse[i].y = curMat.Diffuse.y;
+			Diffuse[i].z = curMat.Diffuse.z;
+			Diffuse[i].w = 1.0f;
+			Specular[i].x = curMat.Specular.x;
+			Specular[i].y = curMat.Specular.y;
+			Specular[i].z = curMat.Specular.z;
+			Specular[i].w = 1.0f;
+			Emissive[i].x = curMat.Emissive.x;
+			Emissive[i].y = curMat.Emissive.y;
+			Emissive[i].z = curMat.Emissive.z;
+			Emissive[i].w = 1.0f;
+			Fresnel[i].x = curMat.Fresnel.x;
+			Fresnel[i].y = curMat.Fresnel.y;
+			Fresnel[i].z = curMat.Fresnel.z;
+			Fresnel[i].w = 1.0f;
+		}
+	}
+
+	
 
 }
+

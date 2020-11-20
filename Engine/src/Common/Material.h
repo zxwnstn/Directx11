@@ -11,11 +11,9 @@ namespace Engine {
 		{
 			ar & Path;
 			ar & Name;
-			ar & UsageType;
 		}
 		std::string Path;
 		std::string	Name;
-		int UsageType;
 	};
 
 	struct Material
@@ -25,17 +23,18 @@ namespace Engine {
 		{
 			ar & Ambient.x; ar & Ambient.y; ar & Ambient.z;
 			ar & Diffuse.x; ar & Diffuse.y; ar & Diffuse.z; ar & Diffuse.w;
-			ar & Fresnel.x; ar & Fresnel.y; ar & Fresnel.z;
 			ar & Specular.x; ar & Specular.y; ar & Specular.z;
 			ar & Emissive.x; ar & Emissive.y; ar & Emissive.z;
-			ar & Shiness;
+			ar & Fresnel.x; ar & Fresnel.y; ar & Fresnel.z;
+			ar & Shiness; ar & MMode;
 		}
-		DirectX::XMFLOAT3 Ambient;
+		DirectX::XMFLOAT4 Ambient;
 		DirectX::XMFLOAT4 Diffuse;
-		DirectX::XMFLOAT3 Specular;
-		DirectX::XMFLOAT3 Fresnel;
-		DirectX::XMFLOAT3 Emissive;
+		DirectX::XMFLOAT4 Specular;
+		DirectX::XMFLOAT4 Emissive;
+		DirectX::XMFLOAT4 Fresnel;
 		float Shiness;
+		int MMode = 0;
 	};
 
 	struct MaterialSet
@@ -43,15 +42,13 @@ namespace Engine {
 		template<class Archive>
 		void serialize(Archive & ar, const unsigned int version)
 		{
-			ar & MMode;
-			ar & materials;
+			ar & Materials;
 			ar & MaterialTextures;
 		}
 
-		//for fbx model(if they has multiple materials)
-		int MMode = 0;
-		std::unordered_map<std::string, Material> materials;
-		std::vector<MaterialTextureInfo> MaterialTextures;
+		//MaterialIndex, Material
+		std::unordered_map<int, Material> Materials;
+		std::unordered_map<int, std::vector<MaterialTextureInfo>> MaterialTextures;
 	};
 
 	class MaterialArchive

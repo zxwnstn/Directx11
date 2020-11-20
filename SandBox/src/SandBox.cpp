@@ -29,7 +29,7 @@ void SandBox::OnAttach()
 	//	.SetBuffer(vertices, indices, 3);
 
 	model = Engine::Model3D::Create(Engine::RenderingShader::Lighting)
-		.buildFromFBX().SetSkeleton("James");
+		.buildFromFBX().SetSkeleton("Pearl");
 
 	float filedOfView = 3.141592f / 3.0f;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
@@ -62,13 +62,13 @@ void SandBox::controlUpdate(float dt)
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
 		std::cout << perspectiveTransform.GetTranslateValue().z << std::endl;
-		perspectiveTransform.AddTranslate(0.0f, 0.0f, 0.5f);
+		perspectiveTransform.AddTranslate(0.0f, 0.0f, 0.1f);
 	}
 
 	if (GetAsyncKeyState('S') & 0x8000)
 	{
 		std::cout << perspectiveTransform.GetTranslateValue().z << std::endl;
-		perspectiveTransform.AddTranslate(0.0f, 0.0f, -0.5f);
+		perspectiveTransform.AddTranslate(0.0f, 0.0f, -0.1f);
 	}
 	if (GetAsyncKeyState(VK_UP) & 0x8000)
 	{
@@ -102,7 +102,6 @@ void SandBox::controlUpdate(float dt)
 			light.m_Intensity = 0.0f;
 		}
 	}
-
 
 	/*if (GetAsyncKeyState(VK_NUMPAD1) & 0x8000)
 	{

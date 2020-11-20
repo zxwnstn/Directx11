@@ -42,9 +42,19 @@ namespace Engine {
 		RendererShaders[model->m_Shader].Bind();
 		RendererShaders[model->m_Shader].SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
 		RendererShaders[model->m_Shader].SetParam<CBuffer::Transform>(model->m_Transform);
-		RendererShaders[model->m_Shader].SetParam<CBuffer::Material>(*model->m_Material);
-
-		Texture::MultipleBind(model->m_Textures);
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Materials>(*model->m_MaterialSet);
+		
+		auto& textures = model->m_MaterialSet->MaterialTextures;
+		std::vector<std::string> names;
+		for (int i = 0; i < textures.size(); ++i)
+		{
+			auto& textureSet = textures.find(i)->second;
+			for (int j = 0; j < textureSet.size(); ++j)
+			{
+				names.push_back(textureSet[j].Name);
+			}
+		}
+		Texture::MultipleTextureBind(names, 0);
 		model->m_ModelBuffer->Bind();
 
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);

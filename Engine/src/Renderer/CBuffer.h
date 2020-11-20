@@ -10,7 +10,7 @@ namespace Engine::CBuffer {
 	{
 		Camera, Transform, Bone, 
 		Environment, Light, Material,
-		None
+		Materials, None
 	};
 
 	struct Camera
@@ -37,8 +37,8 @@ namespace Engine::CBuffer {
 		DirectX::XMFLOAT4 Position;
 		DirectX::XMFLOAT4 Direction;
 		DirectX::XMFLOAT4 Color;
-		int Type;
 		float Intensity;
+		int Type;
 		int padding[2];
 
 		void Upload(const Engine::Light& other);
@@ -64,11 +64,24 @@ namespace Engine::CBuffer {
 		DirectX::XMFLOAT4 Specular;
 		DirectX::XMFLOAT4 Emissive;
 		DirectX::XMFLOAT4 Fresnel;
+
 		float Shiness;
 		int MMode;
-		int Padding[2];
 
 		void Upload(const Engine::Material& other);
+	};
+
+	struct Materials
+	{
+		DirectX::XMFLOAT4 Ambient[MAXIMUM_PART];
+		DirectX::XMFLOAT4 Diffuse[MAXIMUM_PART];
+		DirectX::XMFLOAT4 Specular[MAXIMUM_PART];
+		DirectX::XMFLOAT4 Emissive[MAXIMUM_PART];
+		DirectX::XMFLOAT4 Fresnel[MAXIMUM_PART];
+		
+		float Shiness[MAXIMUM_PART];
+		unsigned int MMode[MAXIMUM_PART]{0, };
+
 		void Upload(const Engine::MaterialSet& other);
 	};
 
@@ -111,6 +124,10 @@ namespace Engine::CBuffer {
 		{
 			static const Type value = Type::Material;
 		};
-
+		template<>
+		struct GetType<CBuffer::Materials>
+		{
+			static const Type value = Type::Materials;
+		};
 	}
 }

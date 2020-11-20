@@ -17,12 +17,11 @@ namespace Engine {
 			Point,
 			Spot
 		};
-		Type m_Type = Type::Directional;
-
 		Transform m_Transform;
-		DirectX::XMFLOAT3 m_Direction{1.0f, 0.0f, 1.0f};
+		DirectX::XMFLOAT3 m_Direction{1.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_Color{1.0f, 1.0f, 1.0f};
 		float m_Intensity = 1;
+		Type m_Type = Type::Directional;
 	};
 
 }

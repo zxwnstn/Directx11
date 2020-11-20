@@ -15,7 +15,8 @@
 namespace Engine {
 
 	static FbxManager* s_FbxManager = nullptr;
-
+	void postProcessingMaterialTexture(const std::string& skeletonName, const std::unordered_map<int, std::vector<MaterialTextureInfo>>& textures);
+	
 	FBXLoader::FBXLoader()
 	{
 		if (!s_FbxManager)
@@ -132,6 +133,7 @@ namespace Engine {
 			{
 				LOG_MISC("FBXLoader::Start Geometry processing") {
 
+					int materialIndex = 0;
 					for (int i = 0; i < root->GetChildCount(); ++i)
 					{
 						FbxNode* node = root->GetChild(i);
@@ -141,13 +143,13 @@ namespace Engine {
 						if (nodeType == fbxsdk::FbxNodeAttribute::eMesh)
 						{
 							LOG_MISC("FBXLoader::Target Node -------------- {0}", nodeName);
-							getMaterial(node);
-							getControlPoint(node);
+							getMaterial(node, materialIndex);
+							getControlPoint(node, materialIndex);
 							getLinks(node);
 							getVertices(node);
+							++materialIndex;
 						}
 					}
-
 					loadedMesh = true;
 					loadedVert = true;
 					loadedLink = true;
@@ -190,7 +192,7 @@ namespace Engine {
 		LOG_ELAPSE;
 	}
 
-	void FBXLoader::getControlPoint(FbxNode* node)
+	void FBXLoader::getControlPoint(FbxNode* node, int materialIndex)
 	{
 		if (loadedControlPoint)
 		{
@@ -212,6 +214,7 @@ namespace Engine {
 				{
 					curControlPoints[i].Position.m[j] = static_cast<float>(mesh->GetControlPointAt(i).mData[j]);
 				}
+				curControlPoints[i].MaterialIndex = materialIndex;
 			}
 			auto& ControlPoints = SkeletonArchive::Get(m_SkeletonName)->ControlPoints;
 			std::string name = node->GetName();
@@ -365,6 +368,7 @@ namespace Engine {
 
 					int controlIndex = mesh->GetPolygonVertex(i, j);
 					vertex[j].Position = ControlPoints[controlIndex].Position;
+					vertex[j].MaterialIndex = ControlPoints[controlIndex].MaterialIndex;
 					vertex[j].UV = getElement<detail::Type2>(uv, index, controlIndex);
 					vertex[j].Normal = getElement<detail::Type3>(normal, index, controlIndex);
 
@@ -517,12 +521,17 @@ namespace Engine {
 		}
 	}
 
-	void getMaterialTexture(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
+	std::vector<MaterialTextureInfo> getMaterialTexture(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
 	{
 		unsigned int textureIndex = 0;
 		FbxProperty property;
 
-		auto& matTextures = MaterialArchive::GetSet(skeltonName)->MaterialTextures;
+		std::vector<MaterialTextureInfo> materialTexture;
+		bool findD = false;
+		bool findN = false;
+		bool findS = false;
+		materialTexture.resize(3);
+
 		FBXSDK_FOR_EACH_TEXTURE(textureIndex)
 		{
 			property = pMaterial->FindProperty(FbxLayerElement::sTextureChannelNames[textureIndex]);
@@ -535,7 +544,7 @@ namespace Engine {
 					if (layeredTexture)
 					{
 						LOG_WARN("FBXLoader::Layered Texture is currently unsupported");
-						return;
+						return materialTexture;
 					}
 					else
 					{
@@ -549,29 +558,31 @@ namespace Engine {
 								auto path = fileTexture->GetFileName();
 								MaterialTextureInfo info;
 								info.Path = path;
-								if (textureType == "DiffuseColor")
+								std::string n(path);
+								LOG_WARN("path {0}", path);
+								if (textureType == "DiffuseColor" && !findD)
 								{
-									auto textureName = skeltonName + "_diffuse";
-									TextureArchive::Add(path, textureName, Texture::eDiffuse, 0);
+									auto k = n.rfind('/');
+									auto textureName = n.substr(k);
 									info.Name = textureName;
-									info.UsageType = Texture::eDiffuse;
-									matTextures.emplace_back(info);
+									materialTexture[0] = info;
+									findD = true;
 								}
-								if (textureType == "NormalMap")
+								if (textureType == "NormalMap" && !findN)
 								{
-									auto textureName = skeltonName + "_normal";
-									TextureArchive::Add(path, textureName, Texture::eNormal, 1);
+									auto k = n.rfind('/');
+									auto textureName = n.substr(k);
 									info.Name = textureName;
-									info.UsageType = Texture::eNormal;
-									matTextures.emplace_back(info);
+									materialTexture[1] = info;
+									findN = true;
 								}
-								if (textureType == "SpecularColor")
+								if (textureType == "SpecularColor" && !findS)
 								{
-									auto textureName = skeltonName + "_specular";
-									TextureArchive::Add(path, textureName, Texture::eSpecular, 2);
+									auto k = n.rfind('/');
+									auto textureName = n.substr(k);
 									info.Name = textureName;
-									info.UsageType = Texture::eSpecular;
-									matTextures.emplace_back(info);
+									materialTexture[2] = info;
+									findS = true;
 								}
 							}
 						}
@@ -579,6 +590,8 @@ namespace Engine {
 				}
 			}
 		}
+		
+		return materialTexture;
 	}
 
 	Material getMaterialAttribute(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
@@ -597,6 +610,7 @@ namespace Engine {
 			mat.Ambient.x = static_cast<float>(double3.mData[0]);
 			mat.Ambient.y = static_cast<float>(double3.mData[1]);
 			mat.Ambient.z = static_cast<float>(double3.mData[2]);
+			mat.Ambient.w = 1.0f;
 
 			// Diffuse Color
 			double4 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Diffuse;
@@ -614,45 +628,51 @@ namespace Engine {
 			mat.Fresnel.x = static_cast<float>(double3.mData[0]);
 			mat.Fresnel.y = static_cast<float>(double3.mData[1]);
 			mat.Fresnel.z = static_cast<float>(double3.mData[2]);
+			mat.Fresnel.z = 1.0f;
 
 			// Specular Color
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Specular;
 			mat.Specular.x = static_cast<float>(double3.mData[0]);
 			mat.Specular.y = static_cast<float>(double3.mData[1]);
 			mat.Specular.z = static_cast<float>(double3.mData[2]);
+			mat.Specular.w = 1.0f;
 
 			// Emissive Color
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Emissive;
 			mat.Emissive.x = static_cast<float>(double3.mData[0]);
 			mat.Emissive.y = static_cast<float>(double3.mData[1]);
 			mat.Emissive.z = static_cast<float>(double3.mData[2]);
+			mat.Emissive.w = 1.0f;
 		}
 		else if (pMaterial->GetClassId().Is(FbxSurfaceLambert::ClassId))
 		{
 			LOG_MISC("Material type is lambert");
 
 			// Amibent Color
-			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Ambient;
+			double4 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Ambient;
 			mat.Ambient.x = static_cast<float>(double3.mData[0]);
 			mat.Ambient.y = static_cast<float>(double3.mData[1]);
 			mat.Ambient.z = static_cast<float>(double3.mData[2]);
+			mat.Ambient.w = static_cast<float>(double3.mData[3]);
 
 			// Diffuse Color
 			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Diffuse;
 			mat.Diffuse.x = static_cast<float>(double3.mData[0]);
 			mat.Diffuse.y = static_cast<float>(double3.mData[1]);
 			mat.Diffuse.z = static_cast<float>(double3.mData[2]);
+			mat.Diffuse.w = 1.0f;
 
 			// Emissive Color
 			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Emissive;
 			mat.Emissive.x = static_cast<float>(double3.mData[0]);
 			mat.Emissive.y = static_cast<float>(double3.mData[1]);
 			mat.Emissive.z = static_cast<float>(double3.mData[2]);
+			mat.Emissive.z = 1.0f;
 		}
 		return mat;
 	}
 
-	void FBXLoader::getMaterial(FbxNode * node)
+	void FBXLoader::getMaterial(FbxNode * node, int materialIndex)
 	{
 		if (loadedMaterial)
 		{
@@ -677,12 +697,9 @@ namespace Engine {
 			for (int i = 0; i < count; ++i) 
 			{
 				FbxSurfaceMaterial* SurfaceMaterial = node->GetMaterial(i);
-				materialSets->materials[nodeName] = getMaterialAttribute(SurfaceMaterial, m_SkeletonName);
-				if (materialSets->MaterialTextures.empty())
-				{
-					getMaterialTexture(SurfaceMaterial, m_SkeletonName);
-				}
-			}
+				materialSets->Materials[materialIndex] = getMaterialAttribute(SurfaceMaterial, m_SkeletonName);
+				materialSets->MaterialTextures[materialIndex] = getMaterialTexture(SurfaceMaterial, m_SkeletonName);
+			}			
 			LOG_ELAPSE
 		}
 	}
@@ -690,7 +707,7 @@ namespace Engine {
 	void FBXLoader::getAnimation(FbxNode* root)
 	{
 		//getAnim(root->GetScene());
-		if (loadedMaterial)
+		if (loadedAnimation)
 		{
 			LOG_MISC("FBXLoader::Animation loaded by chache");
 			return;
@@ -855,6 +872,7 @@ namespace Engine {
 	void FBXLoader::ExportCache(Type type)
 	{
 		auto path = GetCachePath(type);
+		File::TryCreateFile(path);
 		auto skeleton = SkeletonArchive::Get(m_SkeletonName);
 
 		switch (type)
@@ -881,6 +899,13 @@ namespace Engine {
 		{
 			auto Material = MaterialArchive::GetSet(m_SkeletonName);
 			Serializer::Write(path, *Material);
+			for (auto&[n, v] : Material->MaterialTextures)
+			{
+				for (auto& texture : v)
+				{
+					TextureArchive::Add(texture.Path, texture.Name);
+				}
+			}
 		}
 		break;
 		case FBXLoader::Type::Animation:
@@ -921,10 +946,15 @@ namespace Engine {
 		{
 			auto Material = MaterialArchive::GetSet(m_SkeletonName);
 			Serializer::Read(path, *Material);
-			for (auto& texture : Material->MaterialTextures)
+
+			for (auto&[n, v] : Material->MaterialTextures)
 			{
-				TextureArchive::Add(texture.Path, texture.Name, Texture::UsageType(texture.UsageType));
+				for (auto& texture : v)
+				{
+					TextureArchive::Add(texture.Path, texture.Name);
+				}
 			}
+
 		}
 		break;
 		case FBXLoader::Type::Animation:
