@@ -15,7 +15,7 @@ namespace Engine {
 		bool Loop = true;
 		bool Reverse = false;
 
-		DirectX::XMFLOAT4X4 MySkinnedTransforms[100];
+		mat4 MySkinnedTransforms[100];
 	};
 
 	struct KeyFrame
@@ -24,22 +24,15 @@ namespace Engine {
 		void serialize(Archive & ar, const unsigned int version)
 		{
 			ar & Start;
-			ar & Translation.x;
-			ar & Translation.y;
-			ar & Translation.z;
-			ar & RotationQuat.x;
-			ar & RotationQuat.y;
-			ar & RotationQuat.z;
-			ar & RotationQuat.w;
-			ar & Scale.x;
-			ar & Scale.y;
-			ar & Scale.z;
+			ar & Translation;
+			ar & RotationQuat;
+			ar & Scale;
 		}
 
 		float Start;
-		DirectX::XMFLOAT3 Translation;
-		DirectX::XMFLOAT4 RotationQuat;
-		DirectX::XMFLOAT3 Scale;
+		vec3 Translation;
+		vec4 RotationQuat;
+		vec3 Scale;
 
 		bool operator==(const KeyFrame& rhs)
 		{

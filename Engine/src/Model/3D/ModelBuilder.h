@@ -26,6 +26,17 @@ namespace Engine {
 		Model3D* myModel;
 	};
 
+	class StaticModelBuilder
+	{
+	public:
+		StaticModelBuilder(Model3D* myModel);
+
+		FinalModelBuilder SetObject(const std::string& objectName);
+
+	private:
+		Model3D* myModel;
+	};
+
 	class NoneFbxModelBuilder
 	{
 	public:
@@ -49,6 +60,7 @@ namespace Engine {
 
 		FbxModelBuilder buildFromFBX();
 		NoneFbxModelBuilder buildCustum();
+		StaticModelBuilder buildFromOBJ();
 
 	private:
 		Model3D* myModel;

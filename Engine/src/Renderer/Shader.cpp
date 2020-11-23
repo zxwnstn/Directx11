@@ -80,7 +80,7 @@ namespace Engine {
 		BufferDesc.MiscFlags = 0;
 		BufferDesc.StructureByteStride = 0;
 		Dx11Core::Get().Device->CreateBuffer(&BufferDesc, NULL, &buffer);
-		assert(buffer);
+		ASSERT(buffer, "Create constant buffer failed");
 
 		CBuffers.emplace(cbtype, Shader::ContantBuffer{regNumber, shaderType, buffer});
 	}

@@ -26,6 +26,7 @@
 #include <thread>
 
 //For User
+#include "Core/Base.h"
 #include "Core/ModuleCore.h"
 #include "Renderer/Renderer.h"
 #include "Model/Model.h"

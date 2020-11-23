@@ -1,34 +1,40 @@
 #include <iostream>
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/unordered_map.hpp>
-
-#include <string>
-#include <sstream>
-
-std::unordered_map<std::string, std::vector<float>> v;
+#include <DirectXMath.h>
 
 int main()
 {
-	std::vector<float> f1;
-	f1.push_back(3);
-	std::vector<float> f2;
-	f2.push_back(1);
-	std::vector<float> f3;
-	f3.push_back(2);
+	float x = 0.1f;
+	float y = 0.1f;
+	float z = 0.1f;
 
-	v["asdf"] = f1;
-	v["ss"] = f2;
-	v["eres"] = f3;
-
-	std::stringstream ss;
-	boost::archive::text_oarchive oa(ss);
-	oa << v;
+	DirectX::XMVECTOR t, r, s, zero;
+	t.m128_f32[0] = 1.0f;
+	t.m128_f32[1] = 1.0f;
+	t.m128_f32[2] = 1.0f;
+	t.m128_f32[3] = 0.0f;
 	
-	std::unordered_map<std::string, std::vector<float>> v2;
-	boost::archive::text_iarchive ia(ss);
-	ia >> v2;
+	zero.m128_f32[0] = 0.0f;
+	zero.m128_f32[1] = 0.0f;
+	zero.m128_f32[2] = 0.0f;
+	zero.m128_f32[3] = 1.0f;
+
+	r = DirectX::XMQuaternionRotationRollPitchYaw(2.0f, 1.0f, 4.0f);
+	//r = DirectX::XMMatrixRotationRollPitchYaw(2.0f, 1.0f, 4.0f);
+	
+	s.m128_f32[0] = 1.0f;
+	s.m128_f32[1] = 1.0f;
+	s.m128_f32[2] = 1.0f;
+	s.m128_f32[3] = 0.0f;
+	auto v = DirectX::XMMatrixAffineTransformation(s, zero, r, t);
+
+
+	auto tm = DirectX::XMMatrixTranslationFromVector(t);
+	auto rm = DirectX::XMMatrixRotationRollPitchYaw(2.0f, 1.0f, 4.0f);
+	auto sm = DirectX::XMMatrixScalingFromVector(s);
+	auto transform = sm * rm * tm;
+
+	auto ret1 = DirectX::XMVector3TransformCoord(t, v);
+	auto ret2 = DirectX::XMVector3TransformCoord(t, transform);
+
 }

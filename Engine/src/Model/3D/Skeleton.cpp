@@ -2,6 +2,7 @@
 
 #include "Skeleton.h"
 #include "File/FbxLoader.h"
+#include "Util/Math.h"
 
 namespace Engine {
 
@@ -36,6 +37,11 @@ namespace Engine {
 	void SkeletonArchive::Shutdown()
 	{
 		s_Skeletons.clear();
+	}
+
+	Joint::Joint()
+	{
+		Offset = Util::Identity();
 	}
 
 }

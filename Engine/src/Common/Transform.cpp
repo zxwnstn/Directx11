@@ -1,131 +1,126 @@
 #include "pch.h"
 
 #include "Transform.h"
+#include "Util/Math.h"
 
 namespace Engine {
 
 	using namespace DirectX;
 
 	Transform::Transform()
-		: m_RotateValue(0.0f, 0.0f, 0.0f), m_ScaleValue(1.0f, 1.0f, 1.0f), m_TranslateValue(0.0f, 0.0f, 0.0f)
 	{
-		m_Translate = DirectX::XMMatrixIdentity();
-		m_Scale = DirectX::XMMatrixIdentity();
-		m_Rotate = DirectX::XMMatrixIdentity();
+		m_Scale.x = 1.0f;
+		m_Scale.y = 1.0f;
+		m_Scale.z = 1.0f;
 	}
 
-	Transform::Transform(const DirectX::XMMATRIX & translate, const DirectX::XMMATRIX & rotate, const DirectX::XMMATRIX & scale)
-		: m_Translate(translate), m_Rotate(rotate), m_Scale(scale), m_RotateValue(0.0f, 0.0f, 0.0f), m_ScaleValue(0.0f, 0.0f, 0.0f), m_TranslateValue(0.0f, 0.0f, 0.0f)
+	Transform::Transform(const vec3 & translate, const vec3 & rotate, const vec3 & scale)
 	{
+		m_Translate = translate;
+		m_Rotate = rotate;
+		m_Scale = scale;
 	}
 
 	void Transform::SetTranslate(float x, float y, float z)
 	{
-		m_TranslateValue.x = x;
-		m_TranslateValue.y = y;
-		m_TranslateValue.z = z;
-		SetTranslate();
+		m_Translate.x = x;
+		m_Translate.y = y;
+		m_Translate.z = z;
+	}
+
+	void Transform::SetTranslate(const vec3 & translate)
+	{
+		m_Translate = translate;
 	}
 
 	void Transform::SetRotate(float x, float y, float z)
 	{
-		m_RotateValue.x = x;
-		m_RotateValue.y = y;
-		m_RotateValue.z = z;
-		SetRotate();
+		m_Rotate.x = x;
+		m_Rotate.y = y;
+		m_Rotate.z = z;
+	}
+
+	void Transform::SetRotate(const vec3 & rotate)
+	{
+		m_Rotate = rotate;
 	}
 
 	void Transform::SetScale(float x, float y, float z)
 	{
-		m_ScaleValue.x = x;
-		m_ScaleValue.y = y;
-		m_ScaleValue.z = z;
-		SetScale();
+		m_Scale.x = x;
+		m_Scale.y = y;
+		m_Scale.z = z;
+	}
+
+	void Transform::SetScale(const vec3 & scale)
+	{
+		m_Scale = scale;
 	}
 
 	void Transform::AddTranslate(float x, float y, float z)
 	{
-		m_TranslateValue.x += x;
-		m_TranslateValue.y += y;
-		m_TranslateValue.z += z;
-		SetTranslate();
+		m_Translate.x += x;
+		m_Translate.y += y;
+		m_Translate.z += z;
+	}
+
+	void Transform::AddTranslate(const vec3 & position)
+	{
+		m_Translate.x += position.x;
+		m_Translate.y += position.y;
+		m_Translate.z += position.z;
 	}
 
 	void Transform::AddRotate(float x, float y, float z)
 	{
-		m_RotateValue.x += x;
-		m_RotateValue.y += y;
-		m_RotateValue.z += z;
-		SetRotate();
+		m_Rotate.x += x;
+		m_Rotate.y += y;
+		m_Rotate.z += z;
+	}
+
+	void Transform::AddRotate(const vec3 & rotation)
+	{
+		m_Rotate.x += rotation.x;
+		m_Rotate.y += rotation.y;
+		m_Rotate.z += rotation.z;
 	}
 
 	void Transform::AddScale(float x, float y, float z)
 	{
-		m_ScaleValue.x += x;
-		m_ScaleValue.y += y;
-		m_ScaleValue.z += z;
-		SetScale();
+		m_Scale.x += x;
+		m_Scale.y += y;
+		m_Scale.z += z;
+	}
+
+	void Transform::AddScale(const vec3 & scale)
+	{
+		m_Scale.x += scale.x;
+		m_Scale.y += scale.y;
+		m_Scale.z += scale.z;
 	}
 
 	void Transform::MoveForwad(float d)
 	{
-		DirectX::XMVECTOR lookAt = GetFowardVector();
+		vec3 lookAt = GetLookAtVector();
 
-		m_TranslateValue.x += lookAt.m128_f32[0] * d;
-		m_TranslateValue.y += lookAt.m128_f32[1] * d;
-		m_TranslateValue.z += lookAt.m128_f32[2] * d;
-
-		SetTranslate();
+		m_Translate.x += lookAt.x * d;
+		m_Translate.y += lookAt.y * d;
+		m_Translate.z += lookAt.z * d;
 	}
 
 	void Transform::MoveBack(float d)
 	{
-		DirectX::XMFLOAT3 lookAt;
-		DirectX::XMVECTOR lookVector;
-		lookAt.x = 0.0f;
-		lookAt.y = 0.0f;
-		lookAt.z = 1.0f;
-		lookVector = XMLoadFloat3(&lookAt);
+		vec3 lookAt = GetLookAtVector();
 
-		lookVector = XMVector3TransformCoord(lookVector, XMMatrixTranspose(m_Rotate));
-		DirectX::XMVector3Normalize(lookVector);
-
-		m_TranslateValue.x -= lookVector.m128_f32[0] * d;
-		m_TranslateValue.y -= lookVector.m128_f32[1] * d;
-		m_TranslateValue.z -= lookVector.m128_f32[2] * d;
-
-		SetTranslate();
+		m_Translate.x -= lookAt.x * d;
+		m_Translate.y -= lookAt.y * d;
+		m_Translate.z -= lookAt.z * d;
 	}
 
-	DirectX::XMVECTOR Transform::GetFowardVector() const
+	vec3 Transform::GetLookAtVector() const
 	{
-		DirectX::XMFLOAT3 lookAt;
-		DirectX::XMVECTOR lookVector;
-		lookAt.x = 0.0f;
-		lookAt.y = 0.0f;
-		lookAt.z = 1.0f;
-		lookVector = XMLoadFloat3(&lookAt);
-
-		lookVector = XMVector3TransformCoord(lookVector, XMMatrixTranspose(m_Rotate));
-		DirectX::XMVector3Normalize(lookVector);
-
-		return lookVector;
+		return Util::GetLookAt(m_Rotate);
 	}
 
-	void Transform::SetTranslate()
-	{
-		m_Translate = DirectX::XMMatrixTranslation(m_TranslateValue.x, m_TranslateValue.y, m_TranslateValue.z);
-		m_Translate = DirectX::XMMatrixTranspose(m_Translate);
-	}
-
-	void Transform::SetRotate()
-	{
-		m_Rotate = DirectX::XMMatrixRotationRollPitchYaw(m_RotateValue.x, m_RotateValue.y, m_RotateValue.z);
-	}
-
-	void Transform::SetScale()
-	{
-		m_Scale = DirectX::XMMatrixScaling(m_ScaleValue.x, m_ScaleValue.y, m_ScaleValue.z);
-	}
 
 }

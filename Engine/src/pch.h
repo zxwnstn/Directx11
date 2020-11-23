@@ -45,9 +45,11 @@
 #include <thread>
 #include <ctime>
 
-#include "Common/Timestep.h"
+#include "Util/MathType.h"
 #include "Core/Log.h"
 #include "Core/Base.h"
+
+#include "Common/Timestep.h"
 
 //vendor
 #include "stb_image.h"

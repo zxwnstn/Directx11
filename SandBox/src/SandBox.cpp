@@ -61,13 +61,13 @@ void SandBox::controlUpdate(float dt)
 
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
-		std::cout << perspectiveTransform.GetTranslateValue().z << std::endl;
+		std::cout << perspectiveTransform.GetTranslate().z << std::endl;
 		perspectiveTransform.AddTranslate(0.0f, 0.0f, 0.1f);
 	}
 
 	if (GetAsyncKeyState('S') & 0x8000)
 	{
-		std::cout << perspectiveTransform.GetTranslateValue().z << std::endl;
+		std::cout << perspectiveTransform.GetTranslate().z << std::endl;
 		perspectiveTransform.AddTranslate(0.0f, 0.0f, -0.1f);
 	}
 	if (GetAsyncKeyState(VK_UP) & 0x8000)

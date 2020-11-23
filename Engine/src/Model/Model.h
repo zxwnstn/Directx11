@@ -15,6 +15,13 @@ namespace Engine {
 
 	class Model3D
 	{
+	public:
+		enum class Type
+		{
+			Static,
+			Skeletal,
+			None
+		};
 	private:
 		Model3D(const std::string& ShaderName);
 
@@ -43,10 +50,12 @@ namespace Engine {
 		//std::shared_ptr<class Controller> m_Controler;
 
 		std::string m_Shader;
+		Type m_Type;
 
 		friend class NoneFbxModelBuilder;
 		friend class FbxModelBuilder;
 		friend class Renderer;
+		friend class StaticModelBuilder;
 	};
 
 }

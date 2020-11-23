@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Renderer/Texture.h"
+#include "Util/Math.h"
 
 namespace Engine {
 
@@ -22,19 +22,19 @@ namespace Engine {
 		void serialize(Archive & ar, const unsigned int version)
 		{
 			ar & Ambient.x; ar & Ambient.y; ar & Ambient.z;
-			ar & Diffuse.x; ar & Diffuse.y; ar & Diffuse.z; ar & Diffuse.w;
+			ar & Diffuse.x; ar & Diffuse.y; ar & Diffuse.z;
 			ar & Specular.x; ar & Specular.y; ar & Specular.z;
 			ar & Emissive.x; ar & Emissive.y; ar & Emissive.z;
 			ar & Fresnel.x; ar & Fresnel.y; ar & Fresnel.z;
-			ar & Shiness; ar & MMode;
+			ar & Shiness; ar & MapMode;
 		}
-		DirectX::XMFLOAT4 Ambient;
-		DirectX::XMFLOAT4 Diffuse;
-		DirectX::XMFLOAT4 Specular;
-		DirectX::XMFLOAT4 Emissive;
-		DirectX::XMFLOAT4 Fresnel;
+		vec4 Ambient;
+		vec4 Diffuse;
+		vec4 Specular;
+		vec4 Emissive;
+		vec4 Fresnel;
 		float Shiness;
-		int MMode = 0;
+		int MapMode = 7;
 	};
 
 	struct MaterialSet

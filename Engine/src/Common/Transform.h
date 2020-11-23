@@ -1,48 +1,49 @@
 #pragma once
 
+#include "Util/MathType.h"
+
 namespace Engine {
+
+	namespace CBuffer{}
 
 	class Transform
 	{
 	public:
 		Transform();
-		Transform(const DirectX::XMMATRIX& translate, const DirectX::XMMATRIX& rotate, const DirectX::XMMATRIX& scale);
+		Transform(const vec3& translate, const vec3& rotate, const vec3& scale);
 
 		void SetTranslate(float x, float y, float z);
+		void SetTranslate(const vec3& translate);
 		void SetRotate(float x, float y, float z);
+		void SetRotate(const vec3& rotate);
 		void SetScale(float x, float y, float z);
+		void SetScale(const vec3& scale);
 
 		void AddTranslate(float x, float y, float z);
+		void AddTranslate(const vec3& position);
 		void AddRotate(float x, float y, float z);
+		void AddRotate(const vec3& rotation);
 		void AddScale(float x, float y, float z);
+		void AddScale(const vec3& scale);
 
 		void MoveForwad(float d);
 		void MoveBack(float d);
 
-		inline const DirectX::XMMATRIX& GetTranslate() const { return m_Translate; }
-		inline const DirectX::XMMATRIX& GetRotate() const { return m_Rotate; }
-		inline const DirectX::XMMATRIX& GetScale() const { return m_Scale; }
+		inline const vec3& GetTranslate() const { return m_Translate; }
+		inline const vec3& GetRotate() const { return m_Rotate; }
+		inline const vec3& GetScale() const { return m_Scale; }
+		inline vec3& GetTranslate() { return m_Translate; }
+		inline vec3& GetRotate() { return m_Rotate; }
+		inline vec3& GetScale() { return m_Scale; }
 
-		inline const DirectX::XMFLOAT3 GetTranslateValue() const { return m_TranslateValue; }
-		inline const DirectX::XMFLOAT3 GetRotationValue() const { return m_RotateValue; }
-		inline const DirectX::XMFLOAT3 GetScaleValue() const { return m_ScaleValue; }
-
-		DirectX::XMVECTOR GetFowardVector() const;
-
-	private:
-		void SetTranslate();
-		void SetRotate();
-		void SetScale();
+		vec3 GetLookAtVector() const;
 
 	private:
+		bool isChanged = false;
 
-		DirectX::XMMATRIX m_Translate;
-		DirectX::XMMATRIX m_Rotate;
-		DirectX::XMMATRIX m_Scale;
-
-		DirectX::XMFLOAT3 m_TranslateValue;
-		DirectX::XMFLOAT3 m_RotateValue;
-		DirectX::XMFLOAT3 m_ScaleValue;
+		vec3 m_Translate;
+		vec3 m_Rotate;
+		vec3 m_Scale;
 	};
 
 }

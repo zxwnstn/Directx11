@@ -4,11 +4,6 @@
 Texture2D materialTexture[MaxPart * 3];
 SamplerState SampleType;
 
-cbuffer Environment : register(b0)
-{
-	float4 EAmbient;
-};
-
 cbuffer Light : register(b1)
 {
 	float4 LPosition;
@@ -16,7 +11,7 @@ cbuffer Light : register(b1)
 	float4 LColor;
 	float  LIntensity;
 	int    LType;	//0 Directional, 1 Point, 2 Spot
-	int2   Lpadding;
+	int    padding[2];
 };
 
 cbuffer Materials : register(b2)
@@ -34,6 +29,8 @@ cbuffer Materials : register(b2)
 
 struct Input
 {
+	float3 globalAmbient : AMBIENT;
+
 	float4 position : SV_POSITION;
 	float2 tex : TEXCOORD0;
 
@@ -104,12 +101,12 @@ float4 main(Input input) : SV_TARGET
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
 
 	//step 1. Get material mapping color
-	float4 diffuseMap  = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
-	float4 normalMap   = GetMaterialNormalMap(materialIndex, input.tex, mapMode);
-	float4 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode);
+	float3 diffuseMap  = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode).xyz;
+	float3 normalMap   = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
+	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
 
-	float4 Diffuse  = MDiffuse[materialIndex] * diffuseMap;
-	float4 Specular = MSpecular[materialIndex] * specularMap;
+	float3 Diffuse  = MDiffuse[materialIndex].xyz * diffuseMap;
+	float3 Specular = MSpecular[materialIndex].xyz * specularMap;
 	normalMap = normalMap * 2.0f - 1.0f;
 	input.normal = normalMap.x * input.tangent + normalMap.y * input.binormal + normalMap.z * input.normal;
 	input.normal = normalize(input.normal);
@@ -117,23 +114,31 @@ float4 main(Input input) : SV_TARGET
 	//Step 2. Calc Halfway Vector
 	float LightAttenuation = 1.0f; // no light decrease
 	float3 LightColor = LColor.xyz * LightAttenuation;
+	
 	float3 LightVector = -LDirection.xyz;
 	if (LType == 1)
-		LightVector = (input.position - LPosition).xyz; // Light type 1, SpotLight has posistion no direction!
-	LightVector = normalize(LightVector);
+		LightVector = input.position.xyz - LPosition; // Light type 1, SpotLight has posistion no direction!
 	
-	float3 pos = -input.position.xyz;
-	float3 CamVector = normalize(pos);
-	float3 HalfVector = normalize(CamVector + LightVector);
-	normalize(HalfVector);
+	LightVector = normalize(LightVector);
+	float3 CamVector = normalize(-input.position.xyz);
+	
+	float3 NormalProjection = max(dot(input.normal, LightVector), 0.0f) * input.normal;
+	float3 HalfVector = NormalProjection - LightVector;
+	float3 SpecularVector = normalize(2 * HalfVector + LightVector);
 
 	//Step3. Caclc diffuse, specular factor 
-	float df = max(dot(LightVector, input.normal), 0.0f);								//diffuse factor 			
-	float sf = pow(max(dot(input.normal, HalfVector), 0.0f), MShiness[materialIndex]);	//specular factor 
+	float df = max(dot(LightVector, input.normal), 0.0f);								//diffuse factor 	
+
+	//float sf = pow(max(dot(SpecularVector, CamVector), 0.0f), MShiness[materialIndex / 4][materialIndex % 4]);	//specular factor 
+	float shiness = MShiness[materialIndex / 4][materialIndex % 4];
+	float nn = max(dot(SpecularVector, CamVector), 0.0f);
+	float sf = pow(nn, shiness);
 
 	//Step4. Calc finale caculated phong blinn
-	float3 finalAmbient  = EAmbient * MAmbient[materialIndex];
+	float3 finalAmbient  = input.globalAmbient * MAmbient[materialIndex];
+	//return float4(finalAmbient, 1.0f);
 	float3 finalDiffuse  = df * (Diffuse.xyz * LIntensity * LightColor);
+	return float4(finalDiffuse, 1.0f);
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
 	float3 color = finalAmbient + finalDiffuse + finalSpecular;
 

@@ -14,15 +14,19 @@ namespace Engine {
 	class Camera
 	{
 	public:
+		//Create Perspective camera
 		Camera(float fov, float screenAspect);
-		Camera(float screenAspect);
+		//Create Orthographic camera
+		Camera(float magnification, float screenAspect, bool dummy);
 		~Camera();
 
-		void Resize(uint32_t width, uint32_t height);
-		Transform& GetTransform() { return m_Transform; }
+		void OnResize(uint32_t width, uint32_t height);
+		void SetFov(float fov);
+		void SetMagnification(float magnification);
 
-		const DirectX::XMMATRIX& GetViewMatrix();
-		const DirectX::XMMATRIX& GetProjectionMatrix();
+		Transform& GetTransform();
+		const mat4& GetViewMatrix();
+		const mat4& GetProjectionMatrix();
 
 	private:
 		void recalculateViewMatrix();
@@ -30,13 +34,14 @@ namespace Engine {
 	private:
 		CameraType m_Type = CameraType::None;
 
-		float m_Fov;
-		float m_ScreenAspect;
+		float m_Fov = 0.0f;
+		float m_ScreenAspect = 0.0f;
+		float m_Magnification = 0.0f; //only for Orthographic
 		bool isChangedView = false;
 
 		Transform m_Transform;
-		DirectX::XMMATRIX m_ViewMatrix;
-		DirectX::XMMATRIX m_ProjectionMatrix;
+		mat4 m_ViewMatrix;
+		mat4 m_ProjectionMatrix;
 	};
 
 }

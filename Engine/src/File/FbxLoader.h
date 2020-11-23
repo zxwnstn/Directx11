@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Model/3D/Skeleton.h"
+#include "Util/MeshInfo.h"
 
 namespace Engine {
 
@@ -29,7 +29,7 @@ namespace Engine {
 		void getControlPoint(class FbxNode* node, int materialIndex);
 		void getMaterial(FbxNode* node, int materialIndex);
 		void getVertices(FbxNode* node);
-		void getJoints(FbxNode* node, int index, int parent, std::vector<Joint>& joints);
+		void getJoints(FbxNode* node, int index, int parent, std::vector<struct Joint>& joints);
 		void getJoints(FbxNode* node);
 		void getLinks(FbxNode* node);
 

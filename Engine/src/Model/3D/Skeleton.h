@@ -1,6 +1,6 @@
 #pragma once
 
-#include "File/SerializedData.h"
+#include "Util/MeshInfo.h"
 
 namespace Engine {
 
@@ -11,15 +11,17 @@ namespace Engine {
 		{
 			ar & Parent;
 			ar & Name;
-			ar & Offset.r[0].m128_f32;
-			ar & Offset.r[1].m128_f32;
-			ar & Offset.r[2].m128_f32;
-			ar & Offset.r[3].m128_f32;
+			ar & Offset.m[0];
+			ar & Offset.m[1];
+			ar & Offset.m[2];
+			ar & Offset.m[3];
 		}
+
+		Joint();
 
 		int Parent;
 		std::string Name;
-		DirectX::XMMATRIX Offset = DirectX::XMMatrixIdentity();
+		mat4 Offset;
 	};
 
 	struct Skeleton

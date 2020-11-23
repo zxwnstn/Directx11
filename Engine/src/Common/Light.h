@@ -6,7 +6,9 @@ namespace Engine {
 
 	struct Environment
 	{
-		DirectX::XMFLOAT4 Ambient{ 0.0f, 0.0f, 0.0f, 1.0f };
+		vec3 Ambient{ 0.0f, 0.0f, 0.0f};
+		mat4 WorldMatrix;
+		Environment();
 	};
 
 	struct Light
@@ -18,10 +20,10 @@ namespace Engine {
 			Spot
 		};
 		Transform m_Transform;
-		DirectX::XMFLOAT3 m_Direction{1.0f, 0.0f, 0.0f};
-		DirectX::XMFLOAT3 m_Color{1.0f, 1.0f, 1.0f};
-		float m_Intensity = 1;
+		vec4 m_Direction{1.0f, 0.0f, 0.0f, 0.0f};
+		vec4 m_Color{1.0f, 1.0f, 1.0f, 1.0f};
 		Type m_Type = Type::Directional;
+		float m_Intensity = 1;
 	};
 
 }

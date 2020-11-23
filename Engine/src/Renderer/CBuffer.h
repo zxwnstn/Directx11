@@ -15,28 +15,28 @@ namespace Engine::CBuffer {
 
 	struct Camera
 	{
-		DirectX::XMMATRIX World;
-		DirectX::XMMATRIX View;
-		DirectX::XMMATRIX Projection;
-		DirectX::XMFLOAT4 Position;
+		mat4 View;
+		mat4 Projection;
+		vec3 Position;
+		int padding;
 
 		void Upload(Engine::Camera& other);
 	};
 
 	struct Transform
 	{
-		DirectX::XMMATRIX Translate;
-		DirectX::XMMATRIX Rotate;
-		DirectX::XMMATRIX Scale;
+		mat4 Translate;
+		mat4 Rotate;
+		mat4 Scale;
 
-		void Upload(const Engine::Transform& other);
+		void Upload(Engine::Transform& other);
 	};
 
 	struct Light
 	{
-		DirectX::XMFLOAT4 Position;
-		DirectX::XMFLOAT4 Direction;
-		DirectX::XMFLOAT4 Color;
+		vec4 Position;
+		vec4 Direction;
+		vec4 Color;
 		float Intensity;
 		int Type;
 		int padding[2];
@@ -46,38 +46,39 @@ namespace Engine::CBuffer {
 
 	struct Bone
 	{
-		DirectX::XMFLOAT4X4 SkinnedTransform[100];
-		void Upload(DirectX::XMFLOAT4X4* skinnedTransform);
+		mat4 SkinnedTransform[100];
+		void Upload(mat4* skinnedTransform);
 	};
 
 	struct Environment
 	{
-		DirectX::XMFLOAT4 Ambient;
+		mat4 WorldMatrix;
+		vec3 Ambient;
+		int padding;
 
 		void Upload(const Engine::Environment& other);
 	};
 
 	struct Material
 	{
-		DirectX::XMFLOAT4 Ambient;
-		DirectX::XMFLOAT4 Diffuse;
-		DirectX::XMFLOAT4 Specular;
-		DirectX::XMFLOAT4 Emissive;
-		DirectX::XMFLOAT4 Fresnel;
-
+		vec4 Ambient;
+		vec4 Diffuse;
+		vec4 Specular;
+		vec4 Emissive;
+		vec4 Fresnel;
 		float Shiness;
-		int MMode;
+		int MapMode;
 
 		void Upload(const Engine::Material& other);
 	};
 
 	struct Materials
 	{
-		DirectX::XMFLOAT4 Ambient[MAXIMUM_PART];
-		DirectX::XMFLOAT4 Diffuse[MAXIMUM_PART];
-		DirectX::XMFLOAT4 Specular[MAXIMUM_PART];
-		DirectX::XMFLOAT4 Emissive[MAXIMUM_PART];
-		DirectX::XMFLOAT4 Fresnel[MAXIMUM_PART];
+		vec4 Ambient[MAXIMUM_PART];
+		vec4 Diffuse[MAXIMUM_PART];
+		vec4 Specular[MAXIMUM_PART];
+		vec4 Emissive[MAXIMUM_PART];
+		vec4 Fresnel[MAXIMUM_PART];
 		
 		float Shiness[MAXIMUM_PART];
 		unsigned int MMode[MAXIMUM_PART]{0, };

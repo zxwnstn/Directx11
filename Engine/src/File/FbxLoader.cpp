@@ -274,66 +274,6 @@ namespace Engine {
 		return ret;
 	}
 
-	std::pair<vec3, vec3> CalculateBinomal(const vec3& p1, const vec3& p2, const vec3& p3,
-		const vec2& p1uv, const vec2& p2uv, const vec2& p3uv)
-	{
-		// Calculate the two vectors for this face.
-		vec3 vector1, vector2;
-		for (int i = 0; i < 3; ++i)
-		{
-			vector1.m[i] = p2.m[i] - p1.m[i];
-			vector2.m[i] = p3.m[i] - p1.m[i];
-		}
-
-		vec2 tuVector, tvVector;
-		// Calculate the tu and tv texture space vectors.
-		tuVector.m[0] = p2uv.m[0] - p1uv.m[0];
-		tvVector.m[0] = p2uv.m[1] - p1uv.m[1];
-
-		tuVector.m[1] = p3uv.m[0] - p1uv.m[0];
-		tvVector.m[1] = p3uv.m[1] - p1uv.m[1];
-
-		// Calculate the denominator of the tangent/binormal equation.
-		vec3 tangent, binormal;
-
-		float den = 1.0f / (tuVector.m[0] * tvVector.m[1] - tuVector.m[1] * tvVector.m[0]);
-
-		static int i = 0;
-
-		if (isnan(den) || isinf(den))
-		{
-			LOG_WARN("FBXLoader::Tangent and Binormal are calculated invalid")
-			return { tangent, binormal };
-		}
-
-		// Calculate the cross products and multiply by the coefficient to get the tangent and binormal.
-		tangent.m[0] = (tvVector.m[1] * vector1.m[0] - tvVector.m[0] * vector2.m[0]) * den;
-		tangent.m[1] = (tvVector.m[1] * vector1.m[1] - tvVector.m[0] * vector2.m[1]) * den;
-		tangent.m[2] = (tvVector.m[1] * vector1.m[2] - tvVector.m[0] * vector2.m[2]) * den;
-		binormal.m[0] = (tuVector.m[0] * vector2.m[0] - tuVector.m[1] * vector1.m[0]) * den;
-		binormal.m[1] = (tuVector.m[0] * vector2.m[1] - tuVector.m[1] * vector1.m[1]) * den;
-		binormal.m[2] = (tuVector.m[0] * vector2.m[2] - tuVector.m[1] * vector1.m[2]) * den;
-
-		//Normalize
-		float length = sqrt((tangent.m[0] * tangent.m[0]) + (tangent.m[1] * tangent.m[1]) + (tangent.m[2] * tangent.m[2]));
-		tangent.m[0] = tangent.m[0] / length;
-		tangent.m[1] = tangent.m[1] / length;
-		tangent.m[2] = tangent.m[2] / length;
-
-		length = sqrt((binormal.m[0] * binormal.m[0]) + (binormal.m[1] * binormal.m[1]) + (binormal.m[2] * binormal.m[2]));
-		binormal.m[0] = binormal.m[0] / length;
-		binormal.m[1] = binormal.m[1] / length;
-		binormal.m[2] = binormal.m[2] / length;
-
-		for (int i = 0; i < 3; ++i)
-		{
-			ASSERT(!(isnan(binormal.m[i]) || isnan(tangent.m[i])), "FBXLoader::Binormal or Tangent value is invalid!");
-		}
-
-
-		return { tangent, binormal };
-	}
-
 	void FBXLoader::getVertices(FbxNode* node)
 	{
 		if (loadedVert)
@@ -389,7 +329,7 @@ namespace Engine {
 
 				if (!binormal || !tangent)
 				{
-					auto[binorm, tan] = CalculateBinomal(vertex[0].Position, vertex[1].Position, vertex[2].Position,
+					auto[binorm, tan] = Util::GetTangentAndBinomal(vertex[0].Position, vertex[1].Position, vertex[2].Position,
 						vertex[0].UV, vertex[1].UV, vertex[2].UV);
 
 					for (int k = 0; k < 3; ++k)
@@ -489,7 +429,6 @@ namespace Engine {
 						FbxAMatrix transformMatrix;
 						FbxAMatrix transformLinkMatrix;
 						FbxAMatrix offsetMat;
-						DirectX::XMFLOAT4X4 offset;
 
 						cluster->GetTransformMatrix(transformMatrix);
 						cluster->GetTransformLinkMatrix(transformLinkMatrix);
@@ -498,10 +437,9 @@ namespace Engine {
 						{
 							for (int j = 0; j < 4; ++j)
 							{
-								offset.m[i][j] = (float)offsetMat[i][j];
+								Joints[jointIndex].Offset.m[i][j] = (float)offsetMat[i][j];
 							}
 						}
-						Joints[jointIndex].Offset = DirectX::XMLoadFloat4x4(&offset);
 					}
 
 					//2. Get joint Weight-Index
@@ -610,7 +548,6 @@ namespace Engine {
 			mat.Ambient.x = static_cast<float>(double3.mData[0]);
 			mat.Ambient.y = static_cast<float>(double3.mData[1]);
 			mat.Ambient.z = static_cast<float>(double3.mData[2]);
-			mat.Ambient.w = 1.0f;
 
 			// Diffuse Color
 			double4 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Diffuse;
@@ -628,21 +565,18 @@ namespace Engine {
 			mat.Fresnel.x = static_cast<float>(double3.mData[0]);
 			mat.Fresnel.y = static_cast<float>(double3.mData[1]);
 			mat.Fresnel.z = static_cast<float>(double3.mData[2]);
-			mat.Fresnel.z = 1.0f;
 
 			// Specular Color
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Specular;
 			mat.Specular.x = static_cast<float>(double3.mData[0]);
 			mat.Specular.y = static_cast<float>(double3.mData[1]);
 			mat.Specular.z = static_cast<float>(double3.mData[2]);
-			mat.Specular.w = 1.0f;
 
 			// Emissive Color
 			double3 = reinterpret_cast<FbxSurfacePhong *>(pMaterial)->Emissive;
 			mat.Emissive.x = static_cast<float>(double3.mData[0]);
 			mat.Emissive.y = static_cast<float>(double3.mData[1]);
 			mat.Emissive.z = static_cast<float>(double3.mData[2]);
-			mat.Emissive.w = 1.0f;
 		}
 		else if (pMaterial->GetClassId().Is(FbxSurfaceLambert::ClassId))
 		{
@@ -653,21 +587,18 @@ namespace Engine {
 			mat.Ambient.x = static_cast<float>(double3.mData[0]);
 			mat.Ambient.y = static_cast<float>(double3.mData[1]);
 			mat.Ambient.z = static_cast<float>(double3.mData[2]);
-			mat.Ambient.w = static_cast<float>(double3.mData[3]);
 
 			// Diffuse Color
 			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Diffuse;
 			mat.Diffuse.x = static_cast<float>(double3.mData[0]);
 			mat.Diffuse.y = static_cast<float>(double3.mData[1]);
 			mat.Diffuse.z = static_cast<float>(double3.mData[2]);
-			mat.Diffuse.w = 1.0f;
 
 			// Emissive Color
 			double3 = reinterpret_cast<FbxSurfaceLambert *>(pMaterial)->Emissive;
 			mat.Emissive.x = static_cast<float>(double3.mData[0]);
 			mat.Emissive.y = static_cast<float>(double3.mData[1]);
 			mat.Emissive.z = static_cast<float>(double3.mData[2]);
-			mat.Emissive.z = 1.0f;
 		}
 		return mat;
 	}
@@ -834,9 +765,10 @@ namespace Engine {
 		}
 
 		KeyFrame defualt;
-		defualt.Translation = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
-		defualt.RotationQuat = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-		defualt.Scale = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+		defualt.Scale.x = 1.0f;
+		defualt.Scale.y = 1.0f;
+		defualt.Scale.z = 1.0f;
+
 		for (int i = 0; i < animation.size(); ++i)
 		{
 			if (animation[i].KeyFrames.empty())

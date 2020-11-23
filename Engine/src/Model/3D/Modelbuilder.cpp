@@ -106,5 +106,21 @@ namespace Engine {
 		return NoneFbxModelBuilder(myModel);
 	}
 
+	StaticModelBuilder ModelBuilder::buildFromOBJ()
+	{
+		return StaticModelBuilder(myModel);
+	}
+
+	StaticModelBuilder::StaticModelBuilder(Model3D * myModel)
+		: myModel(myModel)
+	{
+	}
+
+	FinalModelBuilder StaticModelBuilder::SetObject(const std::string & objectName)
+	{
+
+		return FinalModelBuilder(myModel);
+	}
+
 }
 

@@ -16,13 +16,17 @@ set(project_headers
     src/File/FbxLoader.h
     src/File/FileCommon.h
     src/File/Serialization.h
-    src/File/SerializedData.h
+	src/File/ObjLoader.h
     src/Model/Model.h
     src/Model/3D/Modelbuilder.h
     src/Model/3D/SkeletalAnimation.h
     src/Model/3D/Skeleton.h
     src/Model/2D/Sprite.h
     src/Model/2D/SpriteAnimation.h
+	src/Util/Math.h
+	src/Util/MathType.h
+	src/Util/MeshInfo.h
+	src/Util/MathTypeConverter.h
     src/Renderer/CBuffer.h
     src/Renderer/Dx11Core.h
     src/Renderer/InputLayout.h
@@ -44,6 +48,7 @@ set(project_source
 	src/Common/Material.cpp
     src/Core/ModuleCore.cpp
     src/File/FbxLoader.cpp
+	src/File/ObjLoader.cpp
     src/File/FileCommon.cpp
     src/Model/Model.cpp
     src/Model/3D/Modelbuilder.cpp
@@ -51,6 +56,9 @@ set(project_source
     src/Model/3D/Skeleton.cpp
     src/Model/2D/Sprite.cpp
     src/Model/2D/SpriteAnimation.cpp
+	src/Util/Math.cpp
+	src/Util/MeshInfo.cpp
+	src/Util/MathTypeConverter.cpp
     src/Renderer/CBuffer.cpp
     src/Renderer/Dx11Core.cpp
     src/Renderer/InputLayout.cpp

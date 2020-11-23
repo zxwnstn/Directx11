@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Util/Math.h"
 #include "SkeletalAnimation.h"
 #include "Skeleton.h"
 #include "File/FbxLoader.h"
@@ -160,36 +161,21 @@ namespace Engine {
 
 		std::vector<KeyFramePair> keyFrames = SkeletalAnimationArchive::s_Animations[skeletonName + "/" + inform->CurAnim]->GetKeyFrames(inform->Elapsedtime);
 		int i = 0;
-		for (auto& keyFrame : keyFrames)
+		for (auto&[first, second]: keyFrames)
 		{
-			if (!keyFrame.second)
+			if (!second)
 			{
-				XMVECTOR S = XMLoadFloat3(&keyFrame.first->Scale);
-				XMVECTOR P = XMLoadFloat3(&keyFrame.first->Translation);
-				XMVECTOR Q = XMLoadFloat4(&keyFrame.first->RotationQuat);
-				XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-
-				XMStoreFloat4x4(&inform->MySkinnedTransforms[i], XMMatrixAffineTransformation(S, zero, Q, P));
+				inform->MySkinnedTransforms[i] = Util::GetTransform(first->Translation, first->RotationQuat, first->Scale, false);
 			}
 			else
 			{
-				float lerpPercent = (inform->Elapsedtime - keyFrame.first->Start) / inform->KeyInterval;
-
-				XMVECTOR s0 = XMLoadFloat3(&keyFrame.first->Scale);
-				XMVECTOR s1 = XMLoadFloat3(&keyFrame.second->Scale);
-
-				XMVECTOR p0 = XMLoadFloat3(&keyFrame.first->Translation);
-				XMVECTOR p1 = XMLoadFloat3(&keyFrame.second->Translation);
-
-				XMVECTOR q0 = XMLoadFloat4(&keyFrame.first->RotationQuat);
-				XMVECTOR q1 = XMLoadFloat4(&keyFrame.second->RotationQuat);
-
-				XMVECTOR S = XMVectorLerp(s0, s1, lerpPercent);
-				XMVECTOR P = XMVectorLerp(p0, p1, lerpPercent);
-				XMVECTOR Q = XMQuaternionSlerp(q0, q1, lerpPercent);
-
-				XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-				XMStoreFloat4x4(&inform->MySkinnedTransforms[i], XMMatrixAffineTransformation(S, zero, Q, P));
+				float ratio = (inform->Elapsedtime - first->Start) / inform->KeyInterval;
+				inform->MySkinnedTransforms[i] =  Util::GetLerpTransform(
+					first->Translation, second->Translation, 
+					first->RotationQuat, second->RotationQuat, 
+					first->Scale, second->Scale, 
+					ratio
+				);
 			}
 			i++;
 		}
@@ -197,11 +183,7 @@ namespace Engine {
 		auto& joints = SkeletonArchive::Get(skeletonName)->Joints;
 		for (size_t i = 0; i < joints.size(); ++i)
 		{
-			XMMATRIX skinnedTransform = XMLoadFloat4x4(&inform->MySkinnedTransforms[i]);
-			skinnedTransform = XMMatrixMultiply(joints[i].Offset, skinnedTransform);
-			skinnedTransform *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
-			XMStoreFloat4x4(&inform->MySkinnedTransforms[i], XMMatrixTranspose(skinnedTransform));
+			Util::CalcFinalSkinnedTransform(joints[i].Offset, inform->MySkinnedTransforms[i], 0.01f);
 		}
 	}
-
 }
