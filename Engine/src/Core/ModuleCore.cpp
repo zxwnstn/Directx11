@@ -8,6 +8,7 @@
 #include "Renderer/Texture.h"
 #include "File/FileCommon.h"
 #include "Common/Timestep.h"
+#include "Common/Mesh.h"
 
 namespace Engine {
 
@@ -24,6 +25,7 @@ namespace Engine {
 
 		Timestep::Init();
 		Log::Init();
+		MeshArchive::Init();
 
 		ENABLE_ELAPSE
 		LOG_CRITICAL("Hello Directx11 Engine! initiation ModuleCore start");

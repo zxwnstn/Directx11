@@ -37,7 +37,7 @@ namespace Engine {
 
 		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
 			.CreateCompotibleBuffer()
-			.SetBuffer(myModel->m_Skeleton->Vertices.data(), myModel->m_Skeleton->Indices.data(), (uint32_t)myModel->m_Skeleton->Indices.size());
+			.SetMesh(MeshArchive::GetSkeletalMesh(skeletonName));
 
 		myModel->m_Texture = TextureArchive::Get(skeletonName);
 		myModel->m_MaterialSet = MaterialArchive::GetSet(skeletonName);

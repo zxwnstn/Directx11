@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Common/Mesh.h"
 #include "ModelBuffer.h"
 #include "Renderer.h"
 #include "Dx11Core.h"
@@ -72,25 +73,19 @@ namespace Engine {
 	{
 	}
 
-	BufferBuilder & BufferBuilder::SetVertex(void* vertices, uint32_t count, bool isDynamic)
+	BufferBuilder & BufferBuilder::SetMesh(std::shared_ptr<SkeletalMesh> mesh, bool isDynamic)
 	{
-		buffer.Vertex.Init(vertices, count * buffer.Layout.Stride, isDynamic);
+		buffer.Vertex.Init(mesh->Vertices.data(), (uint32_t)mesh->Vertices.size() * buffer.Layout.Stride, isDynamic);
+		buffer.Index.Init(mesh->Indices, mesh->IndiceCount);
 		return *this;
 	}
 
-	BufferBuilder & BufferBuilder::SetIndex(void* indices, uint32_t count)
+	BufferBuilder & BufferBuilder::SetMesh(std::shared_ptr<StaticMesh> mesh, bool isDynamic)
 	{
-		buffer.Index.Init(indices, count);
+		buffer.Vertex.Init(mesh->Vertices.data(), (uint32_t)mesh->Vertices.size() * buffer.Layout.Stride, isDynamic);
+		buffer.Index.Init(mesh->Indices, mesh->IndiceCount);
 		return *this;
 	}
-
-	BufferBuilder & BufferBuilder::SetBuffer(void* vertices, void* indices, uint32_t count, bool isDynamic)
-	{
-		buffer.Vertex.Init(vertices, count * buffer.Layout.Stride, isDynamic);
-		buffer.Index.Init(indices, count);
-		return *this;
-	}
-
 
 	ModelBuffer::ModelBuffer(const InputLayout & inputLayout)
 		: Layout(inputLayout)

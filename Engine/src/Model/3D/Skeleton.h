@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Util/MeshInfo.h"
+#include "Common/Mesh.h"
 
 namespace Engine {
 
@@ -29,10 +29,7 @@ namespace Engine {
 		std::string Name;
 
 		std::vector<Joint> Joints;
-
 		std::unordered_map<std::string, std::vector<ControlPoint>> ControlPoints;
-		std::vector<Vertex> Vertices;
-		std::vector<uint32_t> Indices;
 	};
 
 	class SkeletonArchive

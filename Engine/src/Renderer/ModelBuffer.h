@@ -45,9 +45,9 @@ namespace Engine {
 	public:
 		BufferBuilder(const InputLayout& intpuLayout);
 
-		BufferBuilder& SetVertex(void* vertices, uint32_t size, bool isDynamic = false);
-		BufferBuilder& SetIndex(void* indices, uint32_t count);
-		BufferBuilder& SetBuffer(void* vertices, void* indices, uint32_t count, bool isDynamic = false);
+		BufferBuilder& SetMesh(std::shared_ptr<struct SkeletalMesh> mesh, bool isDynamic = false);
+		BufferBuilder& SetMesh(std::shared_ptr<struct StaticMesh> mesh, bool isDynamic = false);
+
 		inline operator std::shared_ptr<ModelBuffer>() const { return std::make_shared<ModelBuffer>(buffer); }
 
 	private:

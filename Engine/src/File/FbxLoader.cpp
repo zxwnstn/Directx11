@@ -57,7 +57,8 @@ namespace Engine {
 
 		m_SkeletonName = skeletonName;
 		MaterialArchive::AddSet(m_SkeletonName);
-		return SkeletonArchive::Add(skeletonName);
+		MeshArchive::AddSkeletalMesh(m_SkeletonName);
+		return SkeletonArchive::Add(m_SkeletonName);
 	}
 
 	void FBXLoader::Extract(const std::string & path, const std::filesystem::path &file)
@@ -167,14 +168,9 @@ namespace Engine {
 			LOG_MISC("FBXLoader::Contruct indices") {
 
 				ENABLE_ELAPSE
-				auto& indices = SkeletonArchive::Get(m_SkeletonName)->Indices;
-				auto& vertices = SkeletonArchive::Get(m_SkeletonName)->Vertices;
-				indices.resize(vertices.size());
-				for (unsigned int i = 0; i < indices.size(); ++i)
-				{
-					indices[i] = i;
-					vertices[i].check();
-				}
+				auto& mesh = MeshArchive::GetSkeletalMesh(m_SkeletonName);
+				mesh->Indices = MeshArchive::GetSerialIndices();
+				mesh->IndiceCount = (uint32_t)mesh->Vertices.size();
 				LOG_ELAPSE
 			}
 		}
@@ -290,8 +286,8 @@ namespace Engine {
 			std::string nodeName = node->GetName();
 
 			auto skeleton = SkeletonArchive::Get(m_SkeletonName);
+			auto& Vertices = MeshArchive::GetSkeletalMesh(m_SkeletonName)->Vertices;
 			auto& ControlPoints = skeleton->ControlPoints[nodeName];
-			auto& Vertices = skeleton->Vertices;
 
 			auto* uv = mesh->GetElementUV();
 			auto* normal = mesh->GetElementNormal();
@@ -302,7 +298,7 @@ namespace Engine {
 			uint32_t index = 0;
 			for (int i = 0; i < count; ++i)
 			{
-				Vertex vertex[3];
+				SkeletalVertex vertex[3];
 				for (int j = 0; j < 3; ++j)
 				{
 
@@ -336,7 +332,7 @@ namespace Engine {
 					{
 						vertex[k].Tangent = binorm;
 						vertex[k].BiNormal = tan;
-						DEBUG_CALL(vertex[k].check);
+						DEBUG_CALL(vertex[k].checkValid);
 						Vertices.push_back(vertex[k]);
 					}
 				}
@@ -806,12 +802,13 @@ namespace Engine {
 		auto path = GetCachePath(type);
 		File::TryCreateFile(path);
 		auto skeleton = SkeletonArchive::Get(m_SkeletonName);
+		auto mesh = MeshArchive::GetSkeletalMesh(m_SkeletonName);
 
 		switch (type)
 		{
 		case FBXLoader::Type::Vertices:
 		{
-			auto& Vertices = skeleton->Vertices;
+			auto& Vertices = mesh->Vertices;
 			Serializer::Write(path, Vertices);
 		}
 		break;
@@ -853,12 +850,13 @@ namespace Engine {
 	{
 		auto path = GetCachePath(type);
 		auto skeleton = SkeletonArchive::Get(m_SkeletonName);
+		auto mesh = MeshArchive::GetSkeletalMesh(m_SkeletonName);
 
 		switch (type)
 		{
 		case FBXLoader::Type::Vertices:
 		{
-			auto& Vertices = skeleton->Vertices;
+			auto& Vertices = mesh->Vertices;
 			Serializer::Read(path, Vertices);
 		}
 		break;

@@ -10,6 +10,7 @@ set(project_headers
 	src/Common/Timestep.h
 	src/Common/Light.h
 	src/Common/Material.h
+	src/Common/Mesh.h
     src/Core/ModuleCore.h
     src/Core/Base.h
     src/Core/Log.h
@@ -46,6 +47,7 @@ set(project_source
 	src/Common/Timestep.cpp
 	src/Common/Light.cpp
 	src/Common/Material.cpp
+	src/Common/Mesh.cpp
     src/Core/ModuleCore.cpp
     src/File/FbxLoader.cpp
 	src/File/ObjLoader.cpp

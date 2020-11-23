@@ -2,6 +2,7 @@
 
 #define MAXIMUM_JOINTS 100
 #define MAXIMUM_PART   12
+#define MAXIMUM_INDICES 100000000
 
 //TODO create option cmake
 #define ASSERT_ENABLE
