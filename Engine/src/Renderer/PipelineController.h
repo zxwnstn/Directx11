@@ -34,12 +34,14 @@ namespace Engine {
 		PipelineController& SetDepthStencil(DepthStencilOpt opt);
 		PipelineController& SetBlend(BlendOpt opt);
 		PipelineController& SetRasterize(RasterlizerOpt opt);
+		PipelineController& SetRenderTarget(const std::string& targetTextureName);
 
 		inline DepthStencilOpt GetDepthStencilState() const { return m_DepthStencil.opt; }
 		inline BlendOpt GetBlendOpt() const { return m_Blend.opt; }
 		inline RasterlizerOpt GetRasterlizeOpt() const { return m_Rasterlizer.opt; }
 
 		inline void Resize() { m_DepthStencil.Resize(); Bind(PipelineComponent::DepthStencil); }
+		void ClearRTT();
 
 	private:
 		struct DepthStencil
@@ -83,6 +85,7 @@ namespace Engine {
 		Blend m_Blend;
 
 		std::set<PipelineComponent> Pipeline;
+		std::set<std::string> m_UsagedRTT;
 
 		friend class Renderer;
 	};

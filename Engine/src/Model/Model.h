@@ -2,15 +2,34 @@
 
 #include "Renderer/Renderer.h"
 #include "3D/ModelBuilder.h"
+#include "2D/2DModelBuilder.h"
 #include "Common/Transform.h"
+#include "2D/SpriteAnimation.h"
 
 namespace Engine {
 
 	class Model2D
 	{
+	public:
+		Model2D(const std::string& shaderName);
 
+	public:
+		static ModelBuilder2D Create(RenderingShader type, std::string&& shaderName = "");
 
+	public:
+		void Update(float dt);
 
+	public:
+		Transform m_Transform;
+
+	private:
+		std::shared_ptr<class Texture> m_Texture;
+		std::shared_ptr<class SpriteAnimation> m_Animation;
+
+		std::string m_Shader;
+
+		friend class ModelBuilder2D;
+		friend class Renderer;
 	};
 
 	class Model3D

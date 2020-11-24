@@ -15,6 +15,7 @@ namespace Engine {
 	static PipelineController* s_PLController = nullptr;
 	static std::unordered_map<std::string, Shader> RendererShaders;
 	static Environment* GlobalEnv = nullptr;
+	static std::shared_ptr<ModelBuffer> modelBuffer2D;
 
 	void Renderer::Init(const struct WindowProp& prop)
 	{
@@ -24,10 +25,28 @@ namespace Engine {
 		GlobalEnv = new Environment;
 	}
 
+	void Renderer::prep2D()
+	{
+		static float vertices[] = {
+		   -0.5f,  0.5f, 0.0f, 0.0f, 0.0f,
+		   -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+			0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
+			0.5f,  0.5f, 0.0f, 1.0f, 0.0f
+		};
+		static uint32_t indices[] = {
+			0, 2, 1, 0, 3, 2
+		};
+
+		modelBuffer2D = RendererShaders["2D"].CreateCompotibleBuffer()
+			.SetVertices(vertices, 4)
+			.SetIndices(indices, 6);
+	}
+
 	void Renderer::BeginScene(Camera & camera, Light& light)
 	{
 		Dx11Core::Get().ClearBackBuffer();
 		Dx11Core::Get().Context->ClearDepthStencilView(s_PLController->m_DepthStencil.View, D3D11_CLEAR_DEPTH, 1.0f, 0);
+		s_PLController->ClearRTT();
 
 		for (auto&[name, shader] : RendererShaders)
 		{
@@ -36,13 +55,25 @@ namespace Engine {
 			shader.SetParam<CBuffer::Light>(light);
 		}
 	}
-
-	void Renderer::Enque(std::shared_ptr<Model3D> model)
+	void Renderer::ClearDepthStencil()
 	{
-		if (model->m_Shader == "StaticMesh") DrawStatic(model);
-		if (model->m_Shader == "SkeletalMesh") DrawSkeletal(model);	
+		Dx11Core::Get().Context->ClearDepthStencilView(s_PLController->m_DepthStencil.View, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 
+	void Renderer::Enque(std::shared_ptr<class Model3D> model, const std::string & targetTextureName)
+	{
+		s_PLController->SetRenderTarget(targetTextureName);
+
+		if (model->m_Shader == "StaticMesh") DrawStatic(model);
+		if (model->m_Shader == "SkeletalMesh") DrawSkeletal(model);
+	}
+
+	void Renderer::Enque(std::shared_ptr<class Model2D> model, const std::string& targetTextureName)
+	{
+		s_PLController->SetRenderTarget(targetTextureName);
+
+		Draw2D(model);
+	}
 
 	void Renderer::EndScene()
 	{
@@ -144,12 +175,24 @@ namespace Engine {
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
 	}
 
+	void Renderer::Draw2D(std::shared_ptr<class Model2D> model)
+	{
+		RendererShaders[model->m_Shader].Bind();
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Transform>(model->m_Transform);
+		modelBuffer2D->Bind();
+
+		model->m_Texture->Bind();
+
+		Dx11Core::Get().Context->DrawIndexed(modelBuffer2D->GetIndexCount(), 0, 0);
+	}
+
 	std::string ToString(RenderingShader type)
 	{
 		switch (type)
 		{
 		case RenderingShader::SkeletalMesh: return "SkeletalMesh";
 		case RenderingShader::StaticMesh: return "StaticMesh";
+		case RenderingShader::TwoDimension: return "2D";
 		}
 		return "";
 	}

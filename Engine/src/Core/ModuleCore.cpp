@@ -104,8 +104,13 @@ namespace Engine {
 				}
 			}
 		}
+		LOG_INFO("Prepare 2D rendering") {
+			Renderer::prep2D();
+		}
+
 		isInited = true;
 		LOG_CRITICAL("Initiation ModuleCore succesfully Complete {0}sec", Timestep::TotalElapse());
+
 	}
 
 	ModuleCore::~ModuleCore()

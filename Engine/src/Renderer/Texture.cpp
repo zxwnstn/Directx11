@@ -5,6 +5,42 @@
 #include "Common/Material.h"
 
 namespace Engine {
+	Texture::Texture(uint32_t width, uint32_t height, int slot)
+		: Width(width), Height(height)
+	{
+		D3D11_TEXTURE2D_DESC textureDesc;
+		//TODO : Consider Texture size
+		textureDesc.Width = width;
+		textureDesc.Height = height;
+		textureDesc.MipLevels = 0;
+		textureDesc.ArraySize = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Usage = D3D11_USAGE_DEFAULT;
+		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+		textureDesc.CPUAccessFlags = 0;
+		textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+		Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &Buffer);
+		ASSERT(Buffer, "Texture::Create texture failed");
+
+		D3D11_RENDER_TARGET_VIEW_DESC renderTargetDesc;
+		renderTargetDesc.Format = textureDesc.Format;
+		renderTargetDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		renderTargetDesc.Texture2D.MipSlice = 0;
+		Dx11Core::Get().Device->CreateRenderTargetView(Buffer, &renderTargetDesc, &RenderTargetView);
+		ASSERT(RenderTargetView, "Texture::Create Texture render target view failed");
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		srvDesc.Format = textureDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 1;
+
+		Dx11Core::Get().Device->CreateShaderResourceView(Buffer, &srvDesc, &View);
+		ASSERT(View, "Texture::Create texture view failed");
+
+	}
 	Texture::Texture(const std::string & path, int mySlot)
 		: MySlot(mySlot), isTextureArray(false)
 	{
@@ -149,6 +185,12 @@ namespace Engine {
 
 	static std::unordered_map<std::string, std::shared_ptr<Texture>> s_Textures;
 
+	void TextureArchive::Add(const std::string & name, uint32_t width, uint32_t height, int slot)
+	{
+		if (Has(name)) return;
+
+		s_Textures[name].reset(new Texture(width, height, slot));
+	}
 
 	void TextureArchive::Add(const std::string & path, const std::string & name, int slot)
 	{

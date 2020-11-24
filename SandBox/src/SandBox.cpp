@@ -7,8 +7,16 @@ void SandBox::OnUpdate(float dt)
 	controlUpdate(dt);
 
 	Engine::Renderer::BeginScene(*perspective, light);
-	Engine::Renderer::Enque(objmodel);
+
+	Engine::Renderer::Enque(objmodel, "DebugWindow");
+	Engine::Renderer::Enque(fbxmodel, "DebugWindow");
+	Engine::Renderer::ClearDepthStencil();
+
 	Engine::Renderer::Enque(fbxmodel);
+	Engine::Renderer::Enque(objmodel);
+
+	Engine::Renderer::Enque(debugwindow);
+
 	Engine::Renderer::EndScene();
 }
 
@@ -19,13 +27,26 @@ void SandBox::OnAttach()
 	glovEnv->Ambient.y = 0.3f;
 	glovEnv->Ambient.z = 0.3f;
 
+	light.m_Direction.x = 0.0f;
+	light.m_Direction.y = 0.0f;
+	light.m_Direction.z = 1.0f;
+	light.m_Direction.w = 0.0f;
+
+	Engine::TextureArchive::Add("DebugWindow", 1280, 760);
+	
 	fbxmodel = Engine::Model3D::Create(Engine::RenderingShader::SkeletalMesh)
-		.buildFromFBX().SetSkeleton("Pearl");
+		.buildFromFBX().SetSkeleton("Kachujin");
 
 	objmodel = Engine::Model3D::Create(Engine::RenderingShader::StaticMesh)
 		.buildFromOBJ().SetObject("Tree");
 
 	objmodel->m_Transform.SetTranslate(-1.5f, 0.0f, 0.0f);
+
+	debugwindow = Engine::Model2D::Create(Engine::RenderingShader::TwoDimension)
+		.SetTexture("DebugWindow");
+
+	debugwindow->m_Transform.SetTranslate(1.5f, 1.0f, 0.0f);
+	debugwindow->m_Transform.SetScale(float(width) / (float)height * 1.0f, 1.0f, 0.0f);
 
 	float filedOfView = 3.141592f / 3.0f;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));

@@ -51,7 +51,13 @@ namespace Engine {
 		inline operator std::shared_ptr<ModelBuffer>() const { return std::make_shared<ModelBuffer>(buffer); }
 
 	private:
+		BufferBuilder& SetVertices(void* vertices, uint32_t count);
+		BufferBuilder& SetIndices(void* indices, uint32_t count);
+
+	private:
 		ModelBuffer buffer;
+
+		friend class Renderer;
 	};
 
 }

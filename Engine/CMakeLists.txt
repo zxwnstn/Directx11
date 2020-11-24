@@ -24,6 +24,7 @@ set(project_headers
     src/Model/3D/Skeleton.h
     src/Model/2D/Sprite.h
     src/Model/2D/SpriteAnimation.h
+	src/Model/2D/2DModelBuilder.h
 	src/Util/Math.h
 	src/Util/MathType.h
 	src/Util/MathTypeConverter.h
@@ -57,6 +58,7 @@ set(project_source
     src/Model/3D/Skeleton.cpp
     src/Model/2D/Sprite.cpp
     src/Model/2D/SpriteAnimation.cpp
+	src/Model/2D/2DModelBuilder.cpp
 	src/Util/Math.cpp
 	src/Util/MathTypeConverter.cpp
     src/Renderer/CBuffer.cpp

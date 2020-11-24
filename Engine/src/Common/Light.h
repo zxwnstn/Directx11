@@ -20,7 +20,7 @@ namespace Engine {
 			Spot
 		};
 		Transform m_Transform;
-		vec4 m_Direction{1.0f, 0.0f, 0.0f, 0.0f};
+		vec4 m_Direction{0.0f, 0.0f, 1.0f, 0.0f};
 		vec4 m_Color{1.0f, 1.0f, 1.0f, 1.0f};
 		Type m_Type = Type::Directional;
 		float m_Intensity = 1;

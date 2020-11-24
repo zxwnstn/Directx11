@@ -86,26 +86,28 @@ namespace Engine {
 		s_SkeletalMeshes.clear();
 	}
 
-	void MeshArchive::AddStaticMesh(const std::string & name)
+	std::shared_ptr<StaticMesh> MeshArchive::AddStaticMesh(const std::string & name)
 	{
 		if (HasStaticMesh(name))
 		{
 			LOG_WARN("{0} static mesh already exist", name);
-			return;
+			return nullptr;
 		}
 
 		s_StaticMeshes[name].reset(new StaticMesh);
+		return s_StaticMeshes[name];
 	}
 
-	void MeshArchive::AddSkeletalMesh(const std::string & name)
+	std::shared_ptr<SkeletalMesh> MeshArchive::AddSkeletalMesh(const std::string & name)
 	{
 		if (HasSkeletalMesh(name))
 		{
 			LOG_WARN("{0} skeletal mesh already exist", name);
-			return;
+			return nullptr;
 		}
 
 		s_SkeletalMeshes[name].reset(new SkeletalMesh);
+		return s_SkeletalMeshes[name];
 	}
 
 	std::shared_ptr<StaticMesh> MeshArchive::GetStaticMesh(const std::string & name)

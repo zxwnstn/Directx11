@@ -109,11 +109,11 @@ namespace Engine {
 		static void Init();
 		static void ShutDown();
 
-		static void AddStaticMesh(const std::string& name);
+		static std::shared_ptr<StaticMesh> AddStaticMesh(const std::string& name);
 		static bool HasStaticMesh(const std::string& name);
 		static std::shared_ptr<StaticMesh> GetStaticMesh(const std::string& name);
 
-		static void AddSkeletalMesh(const std::string& name);
+		static std::shared_ptr<SkeletalMesh> AddSkeletalMesh(const std::string& name);
 		static bool HasSkeletalMesh(const std::string& name);
 		static std::shared_ptr<SkeletalMesh> GetSkeletalMesh(const std::string& name);
 

@@ -3,6 +3,7 @@
 #include "PipelineController.h"
 #include "Core/ModuleCore.h"
 #include "Dx11Core.h"
+#include "Texture.h"
 
 namespace Engine {
 
@@ -78,11 +79,31 @@ namespace Engine {
 		return *this;
 	}
 
+	PipelineController & PipelineController::SetRenderTarget(const std::string & targetTextureName)
+	{
+		if(targetTextureName == "BackBuffer") 
+			Dx11Core::Get().Context->OMSetRenderTargets(1, &Dx11Core::Get().RenderTargetView, m_DepthStencil.View);
+		else if(TextureArchive::Has(targetTextureName))
+		{
+			ASSERT(TextureArchive::Get(targetTextureName)->RenderTargetView != nullptr, "target texture has no render target view");
+			m_UsagedRTT.insert(targetTextureName);
+			Dx11Core::Get().Context->OMSetRenderTargets(1, &TextureArchive::Get(targetTextureName)->RenderTargetView, m_DepthStencil.View);
+		}
+		return *this;
+	}
+
+	void PipelineController::ClearRTT()
+	{
+		float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		for (auto& texture : m_UsagedRTT)
+		{
+			Dx11Core::Get().Context->ClearRenderTargetView(TextureArchive::Get(texture)->RenderTargetView, clearColor);
+		}
+		m_UsagedRTT.clear();
+	}
+
 	void PipelineController::DepthStencil::Resize()
 	{
-		//Buffer->Release();
-		//View->Release();
-
 		DepthBufferDecs.Width = Dx11Core::Get().WinProp->Width;
 		DepthBufferDecs.Height = Dx11Core::Get().WinProp->Height;
 

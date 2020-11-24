@@ -10,6 +10,26 @@
 
 namespace Engine {
 
+	Model2D::Model2D(const std::string & shaderName)
+		: m_Shader(shaderName)
+	{
+	}
+
+	ModelBuilder2D Model2D::Create(RenderingShader type, std::string&& shaderName)
+	{
+		if (shaderName.empty())
+		{
+			ASSERT(type != RenderingShader::Custom, "Custom shader must specify shader name");
+			shaderName = ToString(type);
+		}
+		return ModelBuilder2D(new Model2D(shaderName));
+	}
+
+	void Model2D::Update(float dt)
+	{
+	}
+
+
 	Model3D::Model3D(const std::string & ShaderName)
 		: m_Shader(ShaderName)
 	{
@@ -35,14 +55,14 @@ namespace Engine {
 		return true;
 	}
 
-	ModelBuilder Model3D::Create(RenderingShader type, std::string && ShaderName)
+	ModelBuilder Model3D::Create(RenderingShader type, std::string && shaderName)
 	{
-		if (ShaderName.empty())
+		if (shaderName.empty())
 		{
-			assert(type != RenderingShader::Custum);
-			ShaderName = ToString(type);
+			ASSERT(type != RenderingShader::Custom, "Custom shader must specify shader name");
+			shaderName = ToString(type);
 		}
-		return ModelBuilder(new Model3D(ShaderName));
+		return ModelBuilder(new Model3D(shaderName));
 	}
 
 	void Model3D::SetShader(const std::string& shader)
@@ -70,4 +90,5 @@ namespace Engine {
 		SkeletalAnimationPlayer::Play(m_Skeleton->Name, m_Animation);
 	}
 
+	
 }

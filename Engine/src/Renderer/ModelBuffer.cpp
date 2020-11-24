@@ -87,6 +87,18 @@ namespace Engine {
 		return *this;
 	}
 
+	BufferBuilder & BufferBuilder::SetVertices(void * vertices, uint32_t count)
+	{
+		buffer.Vertex.Init(vertices, count * buffer.Layout.Stride, false);
+		return *this;
+	}
+
+	BufferBuilder & BufferBuilder::SetIndices(void * indices, uint32_t count)
+	{
+		buffer.Index.Init(indices, count);
+		return *this;
+	}
+
 	ModelBuffer::ModelBuffer(const InputLayout & inputLayout)
 		: Layout(inputLayout)
 	{
