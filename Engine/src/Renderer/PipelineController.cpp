@@ -80,8 +80,8 @@ namespace Engine {
 
 	void PipelineController::DepthStencil::Resize()
 	{
-		Buffer->Release();
-		View->Release();
+		//Buffer->Release();
+		//View->Release();
 
 		DepthBufferDecs.Width = Dx11Core::Get().WinProp->Width;
 		DepthBufferDecs.Height = Dx11Core::Get().WinProp->Height;

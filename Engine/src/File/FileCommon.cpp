@@ -55,6 +55,8 @@ namespace Engine::File {
 			return "../../Engine/assets/Texture/";
 		case File::FBX:
 			return "../../Engine/assets/Fbx/";
+		case File::Obj:
+			return "../../Engine/assets/Obj/";
 		case File::FBXCache:
 			return "../../Engine/assets/FbxCache/";
 		case File::Shader:

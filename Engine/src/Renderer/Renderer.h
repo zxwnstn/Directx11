@@ -6,7 +6,7 @@ namespace Engine {
 
 	enum class RenderingShader
 	{
-		Color, Texture, Skinned, Lighting, Custum
+		StaticMesh, SkeletalMesh, Custum
 	};
 
 	std::string ToString(RenderingShader type);
@@ -21,7 +21,6 @@ namespace Engine {
 		static void BeginScene(class Camera& camera, struct Light& light);
 		static void Enque(std::shared_ptr<class Model3D> model);
 		static void Enque(std::shared_ptr<class Model2D> model);
-		static void Enque(std::shared_ptr<ModelBuffer> buffer, RenderingShader type);
 		static void EndScene();
 
 		static class PipelineController& GetPipelineController();
@@ -35,6 +34,9 @@ namespace Engine {
 		static Environment* GetGlobalEnv();
 
 	private:
+		static void DrawStatic(std::shared_ptr<class Model3D> model);
+		static void DrawSkeletal(std::shared_ptr<class Model3D> model);
+
 		friend class ModuleCore;
 	};
 

@@ -455,7 +455,7 @@ namespace Engine {
 		}
 	}
 
-	std::vector<MaterialTextureInfo> getMaterialTexture(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName)
+	std::vector<MaterialTextureInfo> getMaterialTexture(FbxSurfaceMaterial* pMaterial, const std::string& skeltonName, Material& material)
 	{
 		unsigned int textureIndex = 0;
 		FbxProperty property;
@@ -501,6 +501,7 @@ namespace Engine {
 									info.Name = textureName;
 									materialTexture[0] = info;
 									findD = true;
+									material.MapMode |= 1;
 								}
 								if (textureType == "NormalMap" && !findN)
 								{
@@ -509,6 +510,7 @@ namespace Engine {
 									info.Name = textureName;
 									materialTexture[1] = info;
 									findN = true;
+									material.MapMode |= 2;
 								}
 								if (textureType == "SpecularColor" && !findS)
 								{
@@ -517,6 +519,7 @@ namespace Engine {
 									info.Name = textureName;
 									materialTexture[2] = info;
 									findS = true;
+									material.MapMode |= 4;
 								}
 							}
 						}
@@ -625,7 +628,7 @@ namespace Engine {
 			{
 				FbxSurfaceMaterial* SurfaceMaterial = node->GetMaterial(i);
 				materialSets->Materials[materialIndex] = getMaterialAttribute(SurfaceMaterial, m_SkeletonName);
-				materialSets->MaterialTextures[materialIndex] = getMaterialTexture(SurfaceMaterial, m_SkeletonName);
+				materialSets->MaterialTextures[materialIndex] = getMaterialTexture(SurfaceMaterial, m_SkeletonName, materialSets->Materials[materialIndex]);
 			}			
 			LOG_ELAPSE
 		}

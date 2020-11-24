@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Util/MeshInfo.h"
-
 namespace Engine {
 
 	class FBXLoader

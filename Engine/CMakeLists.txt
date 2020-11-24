@@ -26,7 +26,6 @@ set(project_headers
     src/Model/2D/SpriteAnimation.h
 	src/Util/Math.h
 	src/Util/MathType.h
-	src/Util/MeshInfo.h
 	src/Util/MathTypeConverter.h
     src/Renderer/CBuffer.h
     src/Renderer/Dx11Core.h
@@ -59,7 +58,6 @@ set(project_source
     src/Model/2D/Sprite.cpp
     src/Model/2D/SpriteAnimation.cpp
 	src/Util/Math.cpp
-	src/Util/MeshInfo.cpp
 	src/Util/MathTypeConverter.cpp
     src/Renderer/CBuffer.cpp
     src/Renderer/Dx11Core.cpp

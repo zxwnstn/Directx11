@@ -39,33 +39,10 @@ namespace Engine {
 
 	void Renderer::Enque(std::shared_ptr<Model3D> model)
 	{
-		RendererShaders[model->m_Shader].Bind();
-		RendererShaders[model->m_Shader].SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
-		RendererShaders[model->m_Shader].SetParam<CBuffer::Transform>(model->m_Transform);
-		RendererShaders[model->m_Shader].SetParam<CBuffer::Materials>(*model->m_MaterialSet);
-		
-		auto& textures = model->m_MaterialSet->MaterialTextures;
-		std::vector<std::string> names;
-		for (int i = 0; i < textures.size(); ++i)
-		{
-			auto& textureSet = textures.find(i)->second;
-			for (int j = 0; j < textureSet.size(); ++j)
-			{
-				names.push_back(textureSet[j].Name);
-			}
-		}
-		Texture::MultipleTextureBind(names, 0);
-		model->m_ModelBuffer->Bind();
-
-		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+		if (model->m_Shader == "StaticMesh") DrawStatic(model);
+		if (model->m_Shader == "SkeletalMesh") DrawSkeletal(model);	
 	}
 
-	void Renderer::Enque(std::shared_ptr<ModelBuffer> buffer, RenderingShader type)
-	{
-		RendererShaders[ToString(type)].Bind();
-		buffer->Bind();
-		Dx11Core::Get().Context->DrawIndexed(buffer->GetIndexCount(), 0, 0);
-	}
 
 	void Renderer::EndScene()
 	{
@@ -122,14 +99,57 @@ namespace Engine {
 		return GlobalEnv;
 	}
 
+	void Renderer::DrawStatic(std::shared_ptr<class Model3D> model)
+	{
+		RendererShaders[model->m_Shader].Bind();
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Transform>(model->m_Transform);
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Materials>(*model->m_MaterialSet);
+
+		auto& textures = model->m_MaterialSet->MaterialTextures;
+		std::vector<std::string> names;
+		for (int i = 0; i < textures.size(); ++i)
+		{
+			auto& textureSet = textures.find(i)->second;
+			for (int j = 0; j < textureSet.size(); ++j)
+			{
+				names.push_back(textureSet[j].Name);
+			}
+		}
+		Texture::MultipleTextureBind(names, 0);
+		model->m_ModelBuffer->Bind();
+
+		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+	}
+
+	void Renderer::DrawSkeletal(std::shared_ptr<class Model3D> model)
+	{
+		RendererShaders[model->m_Shader].Bind();
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Transform>(model->m_Transform);
+		RendererShaders[model->m_Shader].SetParam<CBuffer::Materials>(*model->m_MaterialSet);
+
+		auto& textures = model->m_MaterialSet->MaterialTextures;
+		std::vector<std::string> names;
+		for (int i = 0; i < textures.size(); ++i)
+		{
+			auto& textureSet = textures.find(i)->second;
+			for (int j = 0; j < textureSet.size(); ++j)
+			{
+				names.push_back(textureSet[j].Name);
+			}
+		}
+		Texture::MultipleTextureBind(names, 0);
+		model->m_ModelBuffer->Bind();
+
+		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+	}
+
 	std::string ToString(RenderingShader type)
 	{
 		switch (type)
 		{
-		case RenderingShader::Color: return "Color";
-		case RenderingShader::Texture: return "Texture";
-		case RenderingShader::Skinned: return "Skinned";
-		case RenderingShader::Lighting: return "Lighting";
+		case RenderingShader::SkeletalMesh: return "SkeletalMesh";
+		case RenderingShader::StaticMesh: return "StaticMesh";
 		}
 		return "";
 	}

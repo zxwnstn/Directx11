@@ -99,17 +99,25 @@ float4 main(Input input) : SV_TARGET
 {
 	int materialIndex = input.MaterialIndex;
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
+	mapMode = 5;
 
 	//step 1. Get material mapping color
-	float3 diffuseMap  = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode).xyz;
+	float4 diffuseMapFirst  = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
+	if (diffuseMapFirst.w < 0.9f) discard;
+	float3 diffuseMap = diffuseMapFirst.xyz;
 	float3 normalMap   = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
 	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
 
 	float3 Diffuse  = MDiffuse[materialIndex].xyz * diffuseMap;
 	float3 Specular = MSpecular[materialIndex].xyz * specularMap;
-	normalMap = normalMap * 2.0f - 1.0f;
-	input.normal = normalMap.x * input.tangent + normalMap.y * input.binormal + normalMap.z * input.normal;
-	input.normal = normalize(input.normal);
+
+	//this work only has normal map
+	if (mapMode & 2)
+	{
+		normalMap = normalMap * 2.0f - 1.0f;
+		input.normal = normalMap.x * input.tangent + normalMap.y * input.binormal + normalMap.z * input.normal;
+		input.normal = normalize(input.normal);
+	}
 
 	//Step 2. Calc Halfway Vector
 	float LightAttenuation = 1.0f; // no light decrease
@@ -118,10 +126,10 @@ float4 main(Input input) : SV_TARGET
 	float3 LightVector = -LDirection.xyz;
 	if (LType == 1)
 		LightVector = input.position.xyz - LPosition; // Light type 1, SpotLight has posistion no direction!
-	
 	LightVector = normalize(LightVector);
+
 	float3 CamVector = normalize(-input.position.xyz);
-	
+
 	float3 NormalProjection = max(dot(input.normal, LightVector), 0.0f) * input.normal;
 	float3 HalfVector = NormalProjection - LightVector;
 	float3 SpecularVector = normalize(2 * HalfVector + LightVector);
@@ -136,9 +144,7 @@ float4 main(Input input) : SV_TARGET
 
 	//Step4. Calc finale caculated phong blinn
 	float3 finalAmbient  = input.globalAmbient * MAmbient[materialIndex];
-	//return float4(finalAmbient, 1.0f);
 	float3 finalDiffuse  = df * (Diffuse.xyz * LIntensity * LightColor);
-	return float4(finalDiffuse, 1.0f);
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
 	float3 color = finalAmbient + finalDiffuse + finalSpecular;
 

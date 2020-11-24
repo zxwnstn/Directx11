@@ -52,6 +52,7 @@ namespace Engine {
 			return FinalModelBuilder(myModel);
 		}
 
+
 		myModel->SetAnimation(myModel->m_Animation->AnimList[0], true);
 
 		return FinalModelBuilder(myModel);
@@ -118,6 +119,13 @@ namespace Engine {
 
 	FinalModelBuilder StaticModelBuilder::SetObject(const std::string & objectName)
 	{
+		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
+			.CreateCompotibleBuffer()
+			.SetMesh(MeshArchive::GetStaticMesh(objectName));
+
+		myModel->m_Texture = TextureArchive::Get(objectName);
+		myModel->m_MaterialSet = MaterialArchive::GetSet(objectName);
+
 
 		return FinalModelBuilder(myModel);
 	}

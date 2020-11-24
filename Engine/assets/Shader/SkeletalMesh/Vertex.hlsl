@@ -84,6 +84,7 @@ Output main(Input input)
 	output.position = mul(output.position, Projection);
 
 	//Pixel Inputs
+	output.globalAmbient = EAmbient;
 	output.MaterialIndex = input.MaterialIndex;
 	output.tex = input.tex;
 	output.normal =		mul(input.normal, mul(skinTransform,   Rotate));

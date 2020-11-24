@@ -9,6 +9,7 @@
 #include "File/FileCommon.h"
 #include "Common/Timestep.h"
 #include "Common/Mesh.h"
+#include "File/ObjLoader.h"
 
 namespace Engine {
 
@@ -45,6 +46,26 @@ namespace Engine {
 			{
 				if (file.is_directory())
 					Renderer::CreateShader(file.path().string(), file.path().filename().string());
+			}
+		}
+
+		LOG_INFO("Load Obj") {
+			std::filesystem::directory_iterator ObjFolder(File::GetCommonPath(File::Obj));
+			for (auto& dir : ObjFolder)
+			{
+				//file.is_regular_file() && file.path().extension().string() == ".obj"
+				if (dir.is_directory())
+				{
+					std::filesystem::directory_iterator CurFolder(dir.path());
+					for (auto& file : CurFolder)
+					{
+						if (file.is_regular_file() && file.path().extension().string() == ".obj")
+						{
+							ObjLoader objLoader(file.path());
+							objLoader.Extract();
+						}
+					}
+				}
 			}
 		}
 		

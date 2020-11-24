@@ -139,7 +139,10 @@ namespace Engine {
 
 		for (size_t i = 0; i < textures.size(); ++i)
 		{
-			views[i] = TextureArchive::Get(textures[i])->View;
+			auto texture = TextureArchive::Get(textures[i]);
+			if (!texture) continue;
+
+			views[i] = texture->View;
 		}
 		Dx11Core::Get().Context->PSSetShaderResources(slot, (uint32_t)textures.size(), views);
 	}

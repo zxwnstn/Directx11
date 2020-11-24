@@ -32,4 +32,5 @@
 #include "Model/Model.h"
 #include "Model/3D/SkeletalAnimation.h"
 #include "Common/Timestep.h"
+#include "Common/Mesh.h"
 

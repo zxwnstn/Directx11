@@ -34,7 +34,7 @@ namespace Engine {
 		vec4 Emissive;
 		vec4 Fresnel;
 		float Shiness;
-		int MapMode = 7;
+		int MapMode = 0;
 	};
 
 	struct MaterialSet

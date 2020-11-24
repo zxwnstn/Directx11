@@ -7,29 +7,25 @@ void SandBox::OnUpdate(float dt)
 	controlUpdate(dt);
 
 	Engine::Renderer::BeginScene(*perspective, light);
-	//Engine::Renderer::Enque(buffer, Engine::RenderingShader::Skinned);
-	Engine::Renderer::Enque(model);
+	Engine::Renderer::Enque(objmodel);
+	Engine::Renderer::Enque(fbxmodel);
 	Engine::Renderer::EndScene();
 }
 
 void SandBox::OnAttach()
 {
-	//float vertices[] = {
-	//	//pos                tex           norm                binorm              tan                 weight                     /*weight                   indice                   */  indice
-	//	 0.5f, 0.0f, 0.0f,   0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f, 0.0f,    /*0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f,  */  0.0f, 0.0f, 0.0f, 0.0f,
-	//	 0.0f, 1.0f, 0.0f,   0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f, 0.0f,    /*0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f,  */  0.0f, 0.0f, 0.0f, 0.0f,
-	//	-0.5f, 0.0f, 0.0f,   0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f, 0.0f,    /*0.0f, 0.0f, 0.0f, 0.0f,	 0.0f, 0.0f, 0.0f, 0.0f,  */  0.0f, 0.0f, 0.0f, 0.0f
-	//};
-	//uint32_t indices[] = {
-	//	0, 1, 2
-	//};
+	auto glovEnv = Engine::Renderer::GetGlobalEnv();
+	glovEnv->Ambient.x = 0.3f;
+	glovEnv->Ambient.y = 0.3f;
+	glovEnv->Ambient.z = 0.3f;
 
-	//buffer = Engine::Renderer::GetShader(Engine::RenderingShader::Skinned)
-	//	.CreateCompotibleBuffer()
-	//	.SetBuffer(vertices, indices, 3);
-
-	model = Engine::Model3D::Create(Engine::RenderingShader::Lighting)
+	fbxmodel = Engine::Model3D::Create(Engine::RenderingShader::SkeletalMesh)
 		.buildFromFBX().SetSkeleton("Pearl");
+
+	objmodel = Engine::Model3D::Create(Engine::RenderingShader::StaticMesh)
+		.buildFromOBJ().SetObject("Tree");
+
+	objmodel->m_Transform.SetTranslate(-1.5f, 0.0f, 0.0f);
 
 	float filedOfView = 3.141592f / 3.0f;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
@@ -48,16 +44,7 @@ void SandBox::OnResize()
 void SandBox::controlUpdate(float dt)
 {
 	auto& perspectiveTransform = perspective->GetTransform();
-	auto& transform = model->m_Transform;
-
-	if (GetAsyncKeyState('T') & 0x8000)
-	{
-		model->SetShader(Engine::ToString(Engine::RenderingShader::Skinned));
-	}
-	if (GetAsyncKeyState('R') & 0x8000)
-	{
-		model->SetShader(Engine::ToString(Engine::RenderingShader::Lighting));
-	}
+	auto& transform = fbxmodel->m_Transform;
 
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
@@ -103,32 +90,6 @@ void SandBox::controlUpdate(float dt)
 		}
 	}
 
-	/*if (GetAsyncKeyState(VK_NUMPAD1) & 0x8000)
-	{
-		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eDiffuse, false);
-	}
-	if (GetAsyncKeyState(VK_NUMPAD2) & 0x8000)
-	{
-		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eSpecular, false);
-	}
-	if (GetAsyncKeyState(VK_NUMPAD3) & 0x8000)
-	{
-		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eNormal, false);
-	}
-	if (GetAsyncKeyState(VK_NUMPAD4) & 0x8000)
-	{
-		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eDiffuse, true);
-	}
-	if (GetAsyncKeyState(VK_NUMPAD5) & 0x8000)
-	{
-		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eSpecular, true);
-	}
-	if (GetAsyncKeyState(VK_NUMPAD6) & 0x8000)
-	{
-		model->m_Material->SetMaterialTexture(Engine::Texture::UsageType::eNormal, true);
-	}*/
-
-
 	static bool myFlag = true;
 	if (GetAsyncKeyState(VK_SPACE) & 0x8000)
 	{
@@ -154,33 +115,22 @@ void SandBox::controlUpdate(float dt)
 		std::cout << "animation speed : " << speed << "\n";
 	}
 
-	for (int i = 0; i < 11; ++i)
-	{
-		if (GetAsyncKeyState('1' + i) & 0x8000)
-		{
-			model->m_Animation->Expired = false;
-			model->m_Animation->Elapsedtime = 0.0f;
-
-			model->SetAnimation(model->m_Animation->AnimList[i], true);
-		}
-	}
-
 	if (myFlag)
 	{
 		if (GetAsyncKeyState('Z') & 0x8000)
 		{
-			model->m_Animation->Elapsedtime += speed;
+			fbxmodel->m_Animation->Elapsedtime += speed;
 		}
 		if (GetAsyncKeyState('X') & 0x8000)
 		{
-			model->m_Animation->Elapsedtime -= speed;
+			fbxmodel->m_Animation->Elapsedtime -= speed;
 		}
 	}
 	else
 	{
-		model->m_Animation->Elapsedtime += speed;
+		fbxmodel->m_Animation->Elapsedtime += speed;
 	}
-	model->Update(speed);
+	fbxmodel->Update(speed);
 
 }
 

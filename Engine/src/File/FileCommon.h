@@ -7,6 +7,7 @@ namespace Engine::File {
 		Assets,
 		Texture,
 		FBX,
+		Obj,
 		FBXCache,
 		Shader,
 		Log
