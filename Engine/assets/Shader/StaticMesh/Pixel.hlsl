@@ -144,9 +144,9 @@ float4 main(Input input) : SV_TARGET
 
 	//Step4. Calc finale caculated phong blinn
 	float3 finalAmbient  = input.globalAmbient * MAmbient[materialIndex];
-	float3 finalDiffuse  = df * (Diffuse.xyz * LIntensity * LightColor);
+	float3 finalDiffuse  = df * (Diffuse.xyz * LIntensity * LightColor) + +finalAmbient * (Diffuse.xyz * LIntensity * LightColor);
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
-	float3 color = finalAmbient + finalDiffuse + finalSpecular;
+	float3 color = finalDiffuse + finalSpecular;
 
 	return float4(color, 1.0f);
 }
