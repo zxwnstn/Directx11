@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Renderer/Texture.h"
 #include "Common/Camera.h"
 #include "Common/Light.h"
 #include "Common/Material.h"
@@ -9,8 +10,8 @@ namespace Engine::CBuffer {
 	enum class Type
 	{
 		Camera, Transform, Bone, 
-		Environment, Light, Material,
-		Materials, None
+		Environment, Light, Light2, Material, Materials, 
+		TextureInform, None
 	};
 
 	struct Camera
@@ -44,6 +45,14 @@ namespace Engine::CBuffer {
 		void Upload(const Engine::Light& other);
 	};
 
+	struct Light2
+	{
+		mat4 LightView;
+		mat4 LightProjection;
+
+		void Upload(Engine::Light& other);
+	};
+
 	struct Bone
 	{
 		mat4 SkinnedTransform[100];
@@ -54,7 +63,8 @@ namespace Engine::CBuffer {
 	{
 		mat4 WorldMatrix;
 		vec3 Ambient;
-		int padding;
+		bool UseShadowMap;
+		vec4 bias;
 
 		void Upload(const Engine::Environment& other);
 	};
@@ -86,6 +96,15 @@ namespace Engine::CBuffer {
 		void Upload(const Engine::MaterialSet& other);
 	};
 
+	struct TextureInform
+	{
+		float TextureWidth;
+		float TextureHeight;
+		vec2 padding;
+
+		void Upload(const std::shared_ptr<Engine::Texture> other);
+	};
+
 	namespace detail {
 
 		template<typename Type>
@@ -111,6 +130,11 @@ namespace Engine::CBuffer {
 			static const Type value = Type::Light;
 		};
 		template<>
+		struct GetType<CBuffer::Light2>
+		{
+			static const Type value = Type::Light2;
+		};
+		template<>
 		struct GetType<CBuffer::Bone>
 		{
 			static const Type value = Type::Bone;
@@ -129,6 +153,11 @@ namespace Engine::CBuffer {
 		struct GetType<CBuffer::Materials>
 		{
 			static const Type value = Type::Materials;
+		};
+		template<>
+		struct GetType<CBuffer::TextureInform>
+		{
+			static const Type value = Type::TextureInform;
 		};
 	}
 }

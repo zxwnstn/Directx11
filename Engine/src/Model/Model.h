@@ -18,6 +18,8 @@ namespace Engine {
 
 	public:
 		void Update(float dt);
+		inline void ActivateShadow(bool activate) { m_ActiveShadow = activate; }
+		inline bool isActivateShadow() { return m_ActiveShadow; }
 
 	public:
 		Transform m_Transform;
@@ -27,6 +29,7 @@ namespace Engine {
 		std::shared_ptr<class SpriteAnimation> m_Animation;
 
 		std::string m_Shader;
+		bool m_ActiveShadow = true;
 
 		friend class ModelBuilder2D;
 		friend class Renderer;
@@ -48,6 +51,8 @@ namespace Engine {
 		void Update(float dt);
 		bool SetAnimation(const std::string& animationName, bool loop);
 		void SetShader(const std::string& shader);
+		inline void ActivateShadow(bool activate) { m_ActiveShadow = activate; }
+		inline bool isActivateShadow() { return m_ActiveShadow; }
 		std::shared_ptr<struct MaterialSet> m_MaterialSet;
 
 	public:
@@ -70,6 +75,7 @@ namespace Engine {
 
 		std::string m_Shader;
 		Type m_Type;
+		bool m_ActiveShadow = true;
 
 		friend class NoneFbxModelBuilder;
 		friend class FbxModelBuilder;

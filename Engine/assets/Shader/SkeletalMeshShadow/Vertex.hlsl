@@ -3,7 +3,7 @@ cbuffer Environment : register(b0)
 {
 	matrix WorldMatrix;
 	float3 EAmbient;
-	bool UseShadowMap;
+	bool CreateShadowMap;
 	float4 Bias;
 };
 
@@ -27,6 +27,11 @@ cbuffer Bone : register(b3)
 	matrix SkinnedTransform[100];
 }
 
+cbuffer Light2 : register(b4)
+{
+	matrix LightView;
+	matrix LightProjection;
+}
 
 struct Input
 {
@@ -47,18 +52,14 @@ struct Input
 
 struct Output
 {
-	float3 globalAmbient : AMBIENT;
-
 	float4 position : SV_POSITION;
 	float2 tex : TEXCOORD;
-
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
-	float3 binormal : BINORMAL;
-
 	int MaterialIndex : MATERIALIDX;
-	
-	bool UseShadowMap : SHADOWMAP;
+
+	bool CreateShadowMap : SHADOWMAP;
+	float4 lightViewPosition : LPOSITION;
+	float4 depthposition : POS;
+	float4 bias : BIAS;
 };
 
 Output main(Input input)
@@ -82,21 +83,21 @@ Output main(Input input)
 	output.position = mul(output.position, Scale);
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);
+	pos = output.position;
 
 	output.position = mul(output.position, WorldMatrix);
 	output.position = mul(output.position, View);
 	output.position = mul(output.position, Projection);
-
+	
 
 	//Pixel Inputs
-	output.globalAmbient = EAmbient;
-	output.MaterialIndex = input.MaterialIndex;
 	output.tex = input.tex;
-	output.normal =		mul(input.normal, mul(skinTransform,   Rotate));
-	output.binormal =	mul(input.binormal, mul(skinTransform, Rotate));
-	output.tangent =	mul(input.tangent,	mul(skinTransform, Rotate));
-
-	output.UseShadowMap = UseShadowMap;
+	output.lightViewPosition = mul(pos, WorldMatrix);
+	output.lightViewPosition = mul(output.lightViewPosition, LightView);
+	output.lightViewPosition = mul(output.lightViewPosition, LightProjection);
+	output.CreateShadowMap = CreateShadowMap;
+	output.depthposition = output.position;
+	output.bias = Bias;
 
 	return output;
 }

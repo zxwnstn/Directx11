@@ -183,7 +183,7 @@ namespace Engine {
 		auto& joints = SkeletonArchive::Get(skeletonName)->Joints;
 		for (size_t i = 0; i < joints.size(); ++i)
 		{
-			Util::CalcFinalSkinnedTransform(joints[i].Offset, inform->MySkinnedTransforms[i], 0.01f);
+			Util::CalcFinalSkinnedTransform(joints[i].Offset, inform->MySkinnedTransforms[i], 1.0f);
 		}
 	}
 }

@@ -2,6 +2,7 @@
 
 #include "Dx11Core.h"
 #include "Core/ModuleCore.h"
+#include "Texture.h"
 
 namespace Engine {
 
@@ -21,17 +22,10 @@ namespace Engine {
 		WinProp.reset(new WindowProp(prop));
 		GetUserDeviceInform();
 		CreateDeviceContext();
-		SetViewPort();
 	}
 
 	void Dx11Core::ShutDown()
 	{
-	}
-
-	void Dx11Core::ClearBackBuffer()
-	{
-		float color[] = { 0.1f, 0.1f, 0.1f, 0.0f };
-		Context->ClearRenderTargetView(RenderTargetView, color);
 	}
 
 	void Dx11Core::Present()
@@ -41,36 +35,10 @@ namespace Engine {
 
 	void Dx11Core::Resize(uint32_t width, uint32_t height)
 	{
-		Context->OMSetRenderTargets(0, 0, 0);
-		RenderTargetView->Release();
-
-		SwapChain->ResizeBuffers(1, 0, 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
-
-		ID3D11Texture2D* backBuffer;
-		SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
-		ASSERT(backBuffer, "Dx11Core::Can't get backBuffer");
-
 		WinProp->Width = width;
 		WinProp->Height = height;
 
-		Device->CreateRenderTargetView(backBuffer, NULL, &RenderTargetView);
-		backBuffer->Release();
-		ASSERT(RenderTargetView, "Dx11Core::Re-create RenderTargetView failed");
-
-		SetViewPort();
-	}
-
-	unsigned char * Dx11Core::GetBackBufferData()
-	{
-		ID3D11Texture2D* pSurface;
-		SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&pSurface));
-
-		Context->CopyResource(RenderTargetBuffer, pSurface);
-
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		Context->Map(RenderTargetBuffer, 0, D3D11_MAP::D3D11_MAP_READ_WRITE, 0, &mappedResource);
-
-		return (unsigned char*)mappedResource.pData;
+		TextureArchive::Get("BackBuffer")->Resize(width, height);
 	}
 
 	void Dx11Core::GetUserDeviceInform()
@@ -140,40 +108,9 @@ namespace Engine {
 		ASSERT(SwapChain,	"Dx11Core::Create directX swapchain fail");
 		ASSERT(Device,		"Dx11Core::Create directX device fail");
 		ASSERT(Context,		"Dx11Core::Create directX context fail");
-
-		//Set BackBuffer
-		ID3D11Texture2D* backBuffer = nullptr;
-		SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
-		Device->CreateRenderTargetView(backBuffer, NULL, &RenderTargetView);
-
-		backBuffer->Release();
-
-		//RenderTargetTexture
-		D3D11_BUFFER_DESC textureDesc;
-		ZeroMemory(&textureDesc, sizeof(textureDesc));
-
-		textureDesc.ByteWidth = WinProp->Width * WinProp->Height * 4;
-		textureDesc.Usage = D3D11_USAGE_STAGING;
-		textureDesc.BindFlags = 0;// D3D11_BIND_RENDER_TARGET;
-		textureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
-		textureDesc.MiscFlags = 0;
-
-		// Create the texture
-		Device->CreateBuffer(&textureDesc, NULL, &RenderTargetBuffer);
-		ASSERT(RenderTargetBuffer, "Dx11Core::Create directX render target buffer fail");
-	}
-
-	void Dx11Core::SetViewPort()
-	{
-		D3D11_VIEWPORT viewPort;
-		viewPort.Width = (float)WinProp->Width;
-		viewPort.Height = (float)WinProp->Height;
-		viewPort.MinDepth = 0.0f;
-		viewPort.MaxDepth = 1.0f;
-		viewPort.TopLeftX = 0.0f;
-		viewPort.TopLeftY = 0.0f;
-
-		Context->RSSetViewports(1, &viewPort);
+		
+		//Create Back Buffer
+		TextureArchive::Add(WinProp->Width, WinProp->Height);
 	}
 
 	void Dx11Core::ErrorMessage(ID3D10Blob * msg)
@@ -181,4 +118,7 @@ namespace Engine {
 		LOG_ERROR("Dx11Core::On DirectX Error : {0}", reinterpret_cast<const char*>(msg->GetBufferPointer()));
 		msg->Release();
 	}
+
+	uint32_t Dx11Core::Width() const { return WinProp->Width; }
+	uint32_t Dx11Core::Height() const { return WinProp->Height; }
 }

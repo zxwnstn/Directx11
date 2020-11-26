@@ -10,4 +10,10 @@ namespace Engine {
 		WorldMatrix = Util::Identity();
 	}
 
+	Light::Light()
+		: lightCam(3.141592f / 3.0f, 1280.0f / 720.0f)
+	{
+		//lightCam.GetTransform().SetTranslate(m_Transform.GetTranslate());
+	}
+
 }

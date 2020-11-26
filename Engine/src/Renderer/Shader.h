@@ -63,7 +63,7 @@ namespace Engine {
 	private:
 		void AddCBuffer(const std::filesystem::path& path);
 		void CreateCBuffer(int regNumber, Type shaderType, CBuffer::Type cbtype);
-		void CreateSampler();
+		void CreateSampler(const std::filesystem::path& path);
 		void SetLayout(const std::filesystem::path& path, ID3D10Blob* binary);
 		void CreateShader(ID3D10Blob* binary, Type type);
 		ID3D10Blob* CompileShader(const std::filesystem::path& path, Type type);
@@ -77,7 +77,8 @@ namespace Engine {
 		std::unordered_map<Type, ShaderVar> Shaders;
 		std::unordered_map<CBuffer::Type, ContantBuffer> CBuffers;
 
-		ID3D11SamplerState* SamplerState = nullptr;
+		ID3D11SamplerState* SamplerState[10];
+		uint32_t SamplerNumber = 0;
 	};
 
 	class ComputeShader

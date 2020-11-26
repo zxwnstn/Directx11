@@ -9,34 +9,9 @@ namespace Engine {
 
 	void PipelineController::Init(const WindowProp& prop)
 	{
-		m_DepthStencil.Init(prop);
+		m_DepthStencil.Init();
 		m_Rasterlizer.Init();
 		m_Blend.Init();
-	}
-
-	
-	PipelineController& PipelineController::Bind(PipelineComponent comp)
-	{
-		switch (comp)
-		{
-		case PipelineComponent::DepthStencil: Dx11Core::Get().Context->OMSetRenderTargets(1, &Dx11Core::Get().RenderTargetView, m_DepthStencil.View);
-		}
-		Pipeline.emplace(comp);
-		return *this;
-	}
-
-	PipelineController& PipelineController::Unbind(PipelineComponent comp)
-	{
-		switch (comp)
-		{
-		case PipelineComponent::DepthStencil: break;
-		}
-		auto target = Pipeline.find(comp);
-		if (target != Pipeline.end())
-		{
-			Pipeline.erase(target);
-		}
-		return *this;
 	}
 
 	PipelineController& PipelineController::SetDepthStencil(DepthStencilOpt opt)
@@ -81,64 +56,36 @@ namespace Engine {
 
 	PipelineController & PipelineController::SetRenderTarget(const std::string & targetTextureName)
 	{
-		if(targetTextureName == "BackBuffer") 
-			Dx11Core::Get().Context->OMSetRenderTargets(1, &Dx11Core::Get().RenderTargetView, m_DepthStencil.View);
-		else if(TextureArchive::Has(targetTextureName))
+		if (!TextureArchive::Has(targetTextureName))
 		{
-			ASSERT(TextureArchive::Get(targetTextureName)->RenderTargetView != nullptr, "target texture has no render target view");
-			m_UsagedRTT.insert(targetTextureName);
-			Dx11Core::Get().Context->OMSetRenderTargets(1, &TextureArchive::Get(targetTextureName)->RenderTargetView, m_DepthStencil.View);
+			LOG_WARN("Renderer::RenderTarget {0} Dose not exist!", targetTextureName);
+			return *this;
 		}
+
+		auto RttInform = TextureArchive::Get(targetTextureName)->m_RTT;
+		ASSERT(RttInform->m_RenderTargetView, "Renderer::RenderTarget has no RenderTargetView");
+
+		m_UsagedRTT.insert(targetTextureName);
+		Dx11Core::Get().Context->OMSetRenderTargets(1, &RttInform->m_RenderTargetView, RttInform->m_DepthStencilView);
+		Dx11Core::Get().Context->RSSetViewports(1, &RttInform->m_ViewPortDesc);
+
 		return *this;
 	}
 
 	void PipelineController::ClearRTT()
 	{
-		float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		for (auto& texture : m_UsagedRTT)
+		float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+		for (auto& textureName : m_UsagedRTT)
 		{
-			Dx11Core::Get().Context->ClearRenderTargetView(TextureArchive::Get(texture)->RenderTargetView, clearColor);
+			auto RttInform = TextureArchive::Get(textureName)->m_RTT;
+			Dx11Core::Get().Context->ClearRenderTargetView(RttInform->m_RenderTargetView, clearColor);
+			Dx11Core::Get().Context->ClearDepthStencilView(RttInform->m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 		}
 		m_UsagedRTT.clear();
 	}
 
-	void PipelineController::DepthStencil::Resize()
+	void PipelineController::DepthStencil::Init()
 	{
-		DepthBufferDecs.Width = Dx11Core::Get().WinProp->Width;
-		DepthBufferDecs.Height = Dx11Core::Get().WinProp->Height;
-
-		Dx11Core::Get().Device->CreateTexture2D(&DepthBufferDecs, NULL, &Buffer);
-		Dx11Core::Get().Device->CreateDepthStencilView(Buffer, &DepthStencilViewDesc, &View);
-	}
-
-	void PipelineController::DepthStencil::Init(const WindowProp& prop)
-	{
-		//Depth/Stencil buffer
-		ZeroMemory(&DepthBufferDecs, sizeof(DepthBufferDecs));
-		DepthBufferDecs.Width = prop.Width;
-		DepthBufferDecs.Height = prop.Width;
-		DepthBufferDecs.MipLevels = 1;
-		DepthBufferDecs.ArraySize = 1;
-		DepthBufferDecs.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		DepthBufferDecs.SampleDesc.Count = 1;
-		DepthBufferDecs.SampleDesc.Quality = 0;
-		DepthBufferDecs.Usage = D3D11_USAGE_DEFAULT;
-		DepthBufferDecs.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-		DepthBufferDecs.CPUAccessFlags = 0;
-		DepthBufferDecs.MiscFlags = 0;
-		Dx11Core::Get().Device->CreateTexture2D(&DepthBufferDecs, NULL, &Buffer);
-		ASSERT(Buffer, "Renderer::Create DepthBuffer failed");
-
-		//Depth/Stencil View
-		ZeroMemory(&DepthStencilViewDesc, sizeof(DepthStencilViewDesc));
-
-		DepthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		DepthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-		DepthStencilViewDesc.Texture2D.MipSlice = 0;
-
-		Dx11Core::Get().Device->CreateDepthStencilView(Buffer, &DepthStencilViewDesc, &View);
-		ASSERT(View, "Renderer::Create DepthStencilViewDesc failed");
-
 		//Depth/Stencil State
 		D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
 		depthStencilDesc.DepthEnable = true;

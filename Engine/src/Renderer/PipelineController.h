@@ -2,11 +2,6 @@
 
 namespace Engine {
 
-	enum class PipelineComponent
-	{
-		DepthStencil,
-	};
-
 	enum class DepthStencilOpt
 	{
 		Enable, Disable
@@ -28,34 +23,25 @@ namespace Engine {
 		void Init(const struct WindowProp& prop);
 		
 	public:
-		PipelineController& Bind(PipelineComponent comp);
-		PipelineController& Unbind(PipelineComponent comp);
-
 		PipelineController& SetDepthStencil(DepthStencilOpt opt);
 		PipelineController& SetBlend(BlendOpt opt);
 		PipelineController& SetRasterize(RasterlizerOpt opt);
-		PipelineController& SetRenderTarget(const std::string& targetTextureName);
 
 		inline DepthStencilOpt GetDepthStencilState() const { return m_DepthStencil.opt; }
 		inline BlendOpt GetBlendOpt() const { return m_Blend.opt; }
 		inline RasterlizerOpt GetRasterlizeOpt() const { return m_Rasterlizer.opt; }
-
-		inline void Resize() { m_DepthStencil.Resize(); Bind(PipelineComponent::DepthStencil); }
+		
+		PipelineController& SetRenderTarget(const std::string& targetTextureName);
 		void ClearRTT();
 
 	private:
 		struct DepthStencil
 		{
-			ID3D11Texture2D* Buffer;
-			ID3D11DepthStencilView* View;
 			ID3D11DepthStencilState* Enable;
 			ID3D11DepthStencilState* Disable;
-			D3D11_TEXTURE2D_DESC DepthBufferDecs;
-			D3D11_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc;
 			DepthStencilOpt opt;
 		private:
-			void Resize();
-			void Init(const struct WindowProp& prop);
+			void Init();
 			friend class PipelineController;
 		};
 
@@ -79,12 +65,10 @@ namespace Engine {
 			void Init();
 			friend class PipelineController;
 		};
-
 		DepthStencil m_DepthStencil;
 		Rasterlizer m_Rasterlizer;
 		Blend m_Blend;
 
-		std::set<PipelineComponent> Pipeline;
 		std::set<std::string> m_UsagedRTT;
 
 		friend class Renderer;

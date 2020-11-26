@@ -1,8 +1,11 @@
 
 #define MaxPart 12
 
-Texture2D materialTexture[MaxPart * 3];
-SamplerState SampleType;
+Texture2D ShadowMap : register(t0);
+Texture2D materialTexture[MaxPart * 3] : register(t1);
+
+SamplerState SampleType : register(s0);
+SamplerState SampleTypeClamp : register(s1);
 
 cbuffer Light : register(b1)
 {
@@ -32,13 +35,15 @@ struct Input
 	float3 globalAmbient : AMBIENT;
 
 	float4 position : SV_POSITION;
-	float2 tex : TEXCOORD0;
+	float2 tex : TEXCOORD;
 
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
 
 	int MaterialIndex : MATERIALIDX;
+
+	bool UseShadowMap : SHADOWMAP;
 };
 
 float4 GetMaterialDiffuseMap(int index, float2 tex, int mapMode)
@@ -104,6 +109,7 @@ float4 main(Input input) : SV_TARGET
 	//step 1. Get material mapping color
 	float4 diffuseMapFirst  = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
 	if (diffuseMapFirst.w < 0.9f) discard;
+
 	float3 diffuseMap = diffuseMapFirst.xyz;
 	float3 normalMap   = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
 	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
@@ -148,5 +154,20 @@ float4 main(Input input) : SV_TARGET
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 
+	//step5. calc shadow
+	if (input.UseShadowMap)
+	{
+		float2 projectTexCoord;
+		projectTexCoord.x = input.position.x / 1280.0f;
+		projectTexCoord.y = input.position.y / 720.0f;
+		
+		float4 shadow = ShadowMap.Sample(SampleType, projectTexCoord);
+		float shadowIntensity = shadow.r + shadow.g + shadow.b;
+		if (shadowIntensity < 2.0f)
+		{
+			return float4(color * 0.7f, 1.0f);
+		}
+	}
+	
 	return float4(color, 1.0f);
 }

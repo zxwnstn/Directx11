@@ -15,10 +15,12 @@ namespace Engine {
 		case CBuffer::Type::Camera: return sizeof(CBuffer::Camera);
 		case CBuffer::Type::Transform: return sizeof(CBuffer::Transform);
 		case CBuffer::Type::Light: return sizeof(CBuffer::Light);
+		case CBuffer::Type::Light2: return sizeof(CBuffer::Light2);
 		case CBuffer::Type::Bone: return sizeof(CBuffer::Bone);
 		case CBuffer::Type::Environment: return sizeof(CBuffer::Environment);
 		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
 		case CBuffer::Type::Materials: return sizeof(CBuffer::Materials);
+		case CBuffer::Type::TextureInform: return sizeof(CBuffer::TextureInform);
 		}
 		return 0;
 	}
@@ -27,11 +29,13 @@ namespace Engine {
 	{
 		if (name == "Camera") return CBuffer::Type::Camera;
 		if (name == "Light") return CBuffer::Type::Light;
+		if (name == "Light2") return CBuffer::Type::Light2;
 		if (name == "Transform") return CBuffer::Type::Transform;
 		if (name == "Bone") return CBuffer::Type::Bone;
 		if (name == "Environment") return CBuffer::Type::Environment;
 		if (name == "Material") return CBuffer::Type::Material;
 		if (name == "Materials") return CBuffer::Type::Materials;
+		if (name == "TextureInform") return CBuffer::Type::TextureInform;
 		return CBuffer::Type::None;
 	}
 
@@ -187,12 +191,6 @@ namespace Engine {
 				file >> sementicName;   // semtic name + ;
 				sementicName[strlen(sementicName) - 1] = 0;
 
-				if (!strcmp(sementicName, "TEXCOORD0"))
-				{
-					CreateSampler();
-					sementicName[strlen(sementicName) - 1] = 0;
-				}
-
 				AddElements(dataFormat, sementicName, offset, elementDescs);
 				offset += GetDxDataSize(dataFormat);
 				file >> dataFormat;
@@ -207,24 +205,47 @@ namespace Engine {
 
 	}
 
-	void Shader::CreateSampler()
+	void Shader::CreateSampler(const std::filesystem::path& path)
 	{
-		D3D11_SAMPLER_DESC samplerDesc;
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.MipLODBias = 0.0f;
-		samplerDesc.MaxAnisotropy = 1;
-		samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-		samplerDesc.BorderColor[0] = 0;
-		samplerDesc.BorderColor[1] = 0;
-		samplerDesc.BorderColor[2] = 0;
-		samplerDesc.BorderColor[3] = 0;
-		samplerDesc.MinLOD = 0;
-		samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		std::ifstream file(path);
 
-		Dx11Core::Get().Device->CreateSamplerState(&samplerDesc, &SamplerState);
+		std::string tokken;
+		while (!file.eof())
+		{
+			file >> tokken;
+			if (tokken == "SV_TARGET") 
+				break;
+			if (tokken == "SamplerState")
+			{
+				file >> tokken;
+				D3D11_SAMPLER_DESC samplerDesc;
+				samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+				samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+				samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+				samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+				samplerDesc.MipLODBias = 0.0f;
+				samplerDesc.MaxAnisotropy = 1;
+				samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+				samplerDesc.BorderColor[0] = 0;
+				samplerDesc.BorderColor[1] = 0;
+				samplerDesc.BorderColor[2] = 0;
+				samplerDesc.BorderColor[3] = 0;
+				samplerDesc.MinLOD = 0;
+				samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+				if (tokken == "SampleTypeClamp")
+				{
+					samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+					samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+					samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+				}
+
+				Dx11Core::Get().Device->CreateSamplerState(&samplerDesc, &SamplerState[SamplerNumber]);
+				++SamplerNumber;
+			}
+		}
+		file.close();
+		
 	}
 
 	void Shader::CreateShader(ID3D10Blob* binary, Type type)
@@ -310,6 +331,8 @@ namespace Engine {
 
 		if (type == Shader::VertexShader)
 			SetLayout(path, binary);
+		if (type == Shader::PixelShader)
+			CreateSampler(path);
 
 		return binary;
 	}
@@ -335,9 +358,9 @@ namespace Engine {
 			case Type::PixelShader: Dx11Core::Get().Context->PSSetShader(std::get<ID3D11PixelShader*>(shader), NULL, 0); break;
 			}
 		}
-		if (SamplerState)
+		for(uint32_t i = 0 ; i < SamplerNumber; ++i)
 		{
-			Dx11Core::Get().Context->PSSetSamplers(0, 1, &SamplerState);
+			Dx11Core::Get().Context->PSSetSamplers(i, 1, &SamplerState[i]);
 		}
 	}
 

@@ -1,7 +1,7 @@
-#include "CBuffer.h"
 #include "pch.h"
 
 #include "CBuffer.h"
+#include "Renderer/Texture.h"
 
 namespace Engine::CBuffer {
 
@@ -24,6 +24,8 @@ namespace Engine::CBuffer {
 	{
 		Ambient = other.Ambient;
 		WorldMatrix = other.WorldMatrix;
+		UseShadowMap = other.UseShadowMap;
+		bias = other.bias;
 	}
 
 	void Light::Upload(const Engine::Light & other)
@@ -89,6 +91,18 @@ namespace Engine::CBuffer {
 	void Bone::Upload(mat4 * skinnedTransform)
 	{
 		memcpy(SkinnedTransform, skinnedTransform, sizeof(mat4) * MAXIMUM_JOINTS);
+	}
+
+	void Light2::Upload(Engine::Light & other)
+	{
+		LightView = Util::Transpose(other.lightCam.GetViewMatrix());
+		LightProjection = Util::Transpose(other.lightCam.GetProjectionMatrix());
+	}
+
+	void TextureInform::Upload(const std::shared_ptr<Engine::Texture> other)
+	{
+		TextureWidth = (float)other->Width;
+		TextureHeight = (float)other->Height;
 	}
 
 }

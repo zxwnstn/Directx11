@@ -4,16 +4,16 @@ cbuffer Environment : register(b0)
 {
 	matrix WorldMatrix;
 	float3 EAmbient;
-	int padding;
+	bool UseShadowMap;
+	float4 Bias;
 };
-
 
 cbuffer Camera : register(b1)
 {
 	matrix View;
 	matrix Projection;
 	float3 Position;
-	int padding_;
+	int padding;
 };
 
 cbuffer Transform : register(b2)
@@ -26,13 +26,14 @@ cbuffer Transform : register(b2)
 struct Input
 {
 	float3 position : POSITION;
-	float2 tex : TEXCOORD0;
+	float2 tex : TEXCOORD;
 };
 
 struct Output
 {
 	float4 position : SV_POSITION;
-	float2 tex : TEXCOORD0;
+	float2 tex : TEXCOORD;
+	bool UseShadowMap : SHADOWMAP;
 };
 
 Output main(Input input)
@@ -50,6 +51,7 @@ Output main(Input input)
 	output.position = mul(output.position, Projection);
 
 	output.tex = input.tex;
-	
+	output.UseShadowMap = UseShadowMap;
+
 	return output;
 }

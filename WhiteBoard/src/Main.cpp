@@ -13,6 +13,4 @@ int main()
 	std::stringstream ss(str);
 	std::string tokken;
 
-	
-
 }

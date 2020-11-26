@@ -19,26 +19,24 @@ namespace Engine {
 		static Dx11Core& Get();
 		static void ErrorMessage(ID3D10Blob* msg);
 
+		uint32_t Width() const;
+		uint32_t Height() const;
+
 		void Init(const struct WindowProp& prop);
 		void ShutDown();
-		void ClearBackBuffer();
 		void Present();
 		void Resize(uint32_t width, uint32_t height);
-		unsigned char* GetBackBufferData();
 
 	private:
 		void GetUserDeviceInform();
 		void CreateDeviceContext();
-		void SetViewPort();
 
 	public:
 		ID3D11DeviceContext* Context;
 		ID3D11Device* Device;
+
 	private:
 		LocalDeviceSpec LocalSpec;
-
-		ID3D11RenderTargetView* RenderTargetView;
-		ID3D11Buffer* RenderTargetBuffer;
 		IDXGISwapChain* SwapChain;
 
 		std::unique_ptr<struct WindowProp> WinProp;

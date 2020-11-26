@@ -3,7 +3,7 @@ cbuffer Environment : register(b0)
 {
 	matrix WorldMatrix;
 	float3 EAmbient;
-	bool UseShadowMap;
+	bool CreateShadowMap;
 	float4 Bias;
 };
 
@@ -22,32 +22,27 @@ cbuffer Transform : register(b2)
 	matrix Scale;
 };
 
+cbuffer Light2 : register(b3)
+{
+	matrix LightView;
+	matrix LightProjection;
+}
+
 struct Input
 {
 	float3 position : POSITION;
 	float2 tex : TEXCOORD;
-
-	float3 normal : NORMAL;
-	float3 binormal : BINORMAL;
-	float3 tangent : TANGENT;
-
-	int MaterialIndex : MATERIALIDX;
 };
 
 struct Output
 {
-	float3 globalAmbient : AMBIENT;
-
 	float4 position : SV_POSITION;
-	float2 tex : TEXCOORD0;
-
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
-	float3 binormal : BINORMAL;
-
-	int MaterialIndex : MATERIALIDX;
-
-	bool UseShadowMap : SHADOWMAP;
+	float2 tex : TEXCOORD;
+	
+	bool CreateShadowMap : SHADOWMAP;
+	float4 lightViewPosition : LPOSITION;
+	float4 depthposition : POS;
+	float4 bias : BIAS;
 };
 
 Output main(Input input)
@@ -66,14 +61,13 @@ Output main(Input input)
 	output.position = mul(output.position, Projection);
 
 	//Pixel Inputs
-	output.globalAmbient = EAmbient;
-	output.MaterialIndex = input.MaterialIndex;
 	output.tex = input.tex;
-	output.normal =		mul(input.normal,   Rotate);
-	output.binormal =	mul(input.binormal, Rotate);
-	output.tangent =	mul(input.tangent,	Rotate);
+	output.lightViewPosition = mul(pos, WorldMatrix);
+	output.lightViewPosition = mul(output.lightViewPosition, LightView);
+	output.lightViewPosition = mul(output.lightViewPosition, LightProjection);
+	output.CreateShadowMap = CreateShadowMap;
+	output.depthposition = output.position;
+	output.bias = Bias;
 	
-	output.UseShadowMap = UseShadowMap;
-
 	return output;
 }

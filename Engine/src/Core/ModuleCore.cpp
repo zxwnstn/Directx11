@@ -34,7 +34,6 @@ namespace Engine {
 		LOG_INFO("Init Renderer") {
 			Renderer::Init(prop);
 			Renderer::GetPipelineController()
-				.Bind(PipelineComponent::DepthStencil)
 				.SetBlend(BlendOpt::Alpha)
 				.SetDepthStencil(DepthStencilOpt::Enable)
 				.SetRasterize(RasterlizerOpt::Solid);
