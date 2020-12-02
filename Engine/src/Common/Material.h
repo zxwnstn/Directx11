@@ -54,8 +54,8 @@ namespace Engine {
 	class MaterialArchive
 	{
 	public:
-		static void Add(const std::string& name);
-		static void AddSet(const std::string& name);
+		static std::shared_ptr<Material> Add(const std::string& name);
+		static std::shared_ptr<MaterialSet> AddSet(const std::string& name);
 
 		static bool Has(const std::string& name);
 		static bool HasSet(const std::string& name);

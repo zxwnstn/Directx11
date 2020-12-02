@@ -9,12 +9,14 @@ SamplerState SampleTypeClamp : register(s1);
 
 cbuffer Light : register(b1)
 {
-	float4 LPosition;
 	float4 LDirection;
 	float4 LColor;
 	float  LIntensity;
 	int    LType;	//0 Directional, 1 Point, 2 Spot
-	int    padding[2];
+	float  LInnerAng;
+	float  LOuterAngRcp;
+	float  LRangeRcp;
+	int    LPadding[3];
 };
 
 cbuffer Materials : register(b2)
@@ -42,6 +44,8 @@ struct Input
 	float3 binormal : BINORMAL;
 
 	int MaterialIndex : MATERIALIDX;
+
+	float3 lightToPos : LTP;
 
 	bool UseShadowMap : SHADOWMAP;
 };
@@ -100,21 +104,47 @@ float4 GetMaterialSpecularMap(int index, float2 tex, int mapMode)
 	return SpecularMap;
 }
 
+float CalcDistAttenuation(float dist, float lightRangeRcp)
+{
+	float attenuation;
+	attenuation = saturate(1.0f - dist * lightRangeRcp);
+	attenuation *= attenuation;
+
+	return attenuation;
+}
+
+float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, float OuterAngRcp)
+{
+	float attenuation;
+
+	float3 LightTo = -lightPos;
+	float3 LVnormal = normalize(lightDir);
+	float3 LTnormal = normalize(LightTo);
+	float cos = dot(LVnormal, LTnormal);
+	cos = acos(cos);
+
+	attenuation = 1.0f - saturate(cos - InnerAng) * OuterAngRcp;
+	attenuation *= attenuation;
+
+	return attenuation;
+}
+
+
 float4 main(Input input) : SV_TARGET
 {
+	//return float4(1.0f, 1.0f, 1.0f, 1.0f);
 	int materialIndex = input.MaterialIndex;
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
-	mapMode = 5;
 
 	//step 1. Get material mapping color
-	float4 diffuseMapFirst  = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
+	float4 diffuseMapFirst = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
 	if (diffuseMapFirst.w < 0.9f) discard;
 
 	float3 diffuseMap = diffuseMapFirst.xyz;
-	float3 normalMap   = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
+	float3 normalMap = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
 	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
 
-	float3 Diffuse  = MDiffuse[materialIndex].xyz * diffuseMap;
+	float3 Diffuse = MDiffuse[materialIndex].xyz * diffuseMap;
 	float3 Specular = MSpecular[materialIndex].xyz * specularMap;
 
 	//this work only has normal map
@@ -125,15 +155,22 @@ float4 main(Input input) : SV_TARGET
 		input.normal = normalize(input.normal);
 	}
 
-	//Step 2. Calc Halfway Vector
 	float LightAttenuation = 1.0f; // no light decrease
-	float3 LightColor = LColor.xyz * LightAttenuation;
-	
 	float3 LightVector = -LDirection.xyz;
 	if (LType == 1)
-		LightVector = input.position.xyz - LPosition; // Light type 1, SpotLight has posistion no direction!
+	{
+		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp);
+		LightVector = -input.lightToPos;
+	}
+	else if (LType == 2)
+	{
+		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp)
+			* CalcConeAttenuation(input.lightToPos, LightVector, LInnerAng, LOuterAngRcp);
+	}
+	float3 LightColor = LColor.xyz * LightAttenuation;
 	LightVector = normalize(LightVector);
 
+	//Step 2. Calc Halfway Vector
 	float3 CamVector = normalize(-input.position.xyz);
 
 	float3 NormalProjection = max(dot(input.normal, LightVector), 0.0f) * input.normal;
@@ -150,7 +187,7 @@ float4 main(Input input) : SV_TARGET
 
 	//Step4. Calc finale caculated phong blinn
 	float3 finalAmbient  = input.globalAmbient * MAmbient[materialIndex];
-	float3 finalDiffuse  = df * (Diffuse.xyz * LIntensity * LightColor) + +finalAmbient * (Diffuse.xyz * LIntensity * LightColor);
+	float3 finalDiffuse  = df * (Diffuse.xyz * LIntensity * LightColor) + finalAmbient * (Diffuse.xyz * LIntensity * LightColor);
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 
@@ -169,5 +206,7 @@ float4 main(Input input) : SV_TARGET
 		}
 	}
 	
+
+
 	return float4(color, 1.0f);
 }

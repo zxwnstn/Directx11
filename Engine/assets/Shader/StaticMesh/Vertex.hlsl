@@ -22,6 +22,11 @@ cbuffer Transform : register(b2)
 	matrix Scale;
 };
 
+cbuffer LightPos : register(b4)
+{
+	float4 LPosition;
+};
+
 struct Input
 {
 	float3 position : POSITION;
@@ -47,6 +52,8 @@ struct Output
 
 	int MaterialIndex : MATERIALIDX;
 
+	float3 lightToPos : LTP;
+
 	bool UseShadowMap : SHADOWMAP;
 };
 
@@ -59,7 +66,9 @@ Output main(Input input)
 	output.position = mul(pos, Scale);
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);
+
 	pos = output.position;
+	output.lightToPos = pos.xyz - LPosition;
 
 	output.position = mul(output.position, WorldMatrix);
 	output.position = mul(output.position, View);

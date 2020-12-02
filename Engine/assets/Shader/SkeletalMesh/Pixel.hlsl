@@ -9,12 +9,14 @@ SamplerState SampleTypeClamp	: register(s1);
 
 cbuffer Light : register(b1)
 {
-	float4 LPosition;
 	float4 LDirection;
 	float4 LColor;
 	float  LIntensity;
 	int    LType;	//0 Directional, 1 Point, 2 Spot
-	int    padding[2];
+	float  LInnerAng;
+	float  LOuterAngRcp;
+	float  LRangeRcp;
+	int    LPadding[3];
 };
 
 cbuffer Materials : register(b2)
@@ -42,6 +44,8 @@ struct Input
 	float3 binormal : BINORMAL;
 
 	int MaterialIndex : MATERIALIDX;
+
+	float3 lightToPos : LTP;
 	
 	bool UseShadowMap : SHADOWMAP;
 };
@@ -100,6 +104,32 @@ float4 GetMaterialSpecularMap(int index, float2 tex, int mapMode)
 	return SpecularMap;
 }
 
+float CalcDistAttenuation(float dist, float lightRangeRcp)
+{
+	float attenuation;
+	attenuation = saturate(1.0f - dist * lightRangeRcp);
+	attenuation *= attenuation;
+
+	return attenuation;
+}
+
+float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, float OuterAngRcp)
+{
+	float attenuation;
+
+	float3 LightTo = -lightPos;
+	float3 LVnormal = normalize(lightDir);
+	float3 LTnormal = normalize(LightTo);
+	float cos = dot(LVnormal, LTnormal);
+	cos = acos(cos);
+
+	attenuation = 1.0f - saturate(cos - InnerAng) * OuterAngRcp;
+	attenuation *= attenuation;
+
+	return attenuation;
+}
+
+
 float4 main(Input input) : SV_TARGET
 {
 	int materialIndex = input.MaterialIndex;
@@ -124,13 +154,22 @@ float4 main(Input input) : SV_TARGET
 
 	//Step 2. Calc Halfway Vector
 	float LightAttenuation = 1.0f; // no light decrease
-	float3 LightColor = LColor.xyz * LightAttenuation;
-	
 	float3 LightVector = -LDirection.xyz;
-	if (LType == 1)
-		LightVector = input.position.xyz - LPosition; // Light type 1, SpotLight has posistion no direction!
-	
+
+	if (LType == 1) 
+	{
+		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp);
+		LightVector = -input.lightToPos;
+	}
+	if (LType == 2)
+	{
+		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp)
+			* CalcConeAttenuation(input.lightToPos, LightVector, LInnerAng, LOuterAngRcp);
+	}
+	float3 LightColor = LColor.xyz * LightAttenuation;
 	LightVector = normalize(LightVector);
+
+	//Step 2. Calc Halfway Vector
 	float3 CamVector = normalize(-input.position.xyz);
 	
 	float3 NormalProjection = max(dot(input.normal, LightVector), 0.0f) * input.normal;
@@ -138,9 +177,8 @@ float4 main(Input input) : SV_TARGET
 	float3 SpecularVector = normalize(2 * HalfVector + LightVector);
 
 	//Step3. Caclc diffuse, specular factor 
-	float df = max(dot(LightVector, input.normal), 0.0f);								//diffuse factor 	
-
-	//float sf = pow(max(dot(SpecularVector, CamVector), 0.0f), MShiness[materialIndex / 4][materialIndex % 4]);	//specular factor 
+	float df = max(dot(LightVector, input.normal), 0.0f);	//diffuse factor 	
+	
 	float shiness = MShiness[materialIndex / 4][materialIndex % 4];
 	float nn = max(dot(SpecularVector, CamVector), 0.0f);
 	float sf = pow(nn, shiness);
@@ -157,7 +195,6 @@ float4 main(Input input) : SV_TARGET
 		float2 projectTexCoord;
 		projectTexCoord.x = input.position.x / 1280.0f;
 		projectTexCoord.y = input.position.y / 720.0f;
-
 
 		float4 shadow = ShadowMap.Sample(SampleType, projectTexCoord);
 		float shadowIntensity = shadow.r + shadow.g + shadow.b;

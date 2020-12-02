@@ -26,8 +26,14 @@ namespace Engine {
 		void AddScale(float x, float y, float z);
 		void AddScale(const vec3& scale);
 
+		void LocalRotateX(float radian);
+		void LocalRotateY(float radian);
+		void LocalRotateZ(float radian);
+
 		void MoveForwad(float d);
 		void MoveBack(float d);
+		void MoveLeft(float d);
+		void MoveRight(float d);
 
 		inline const vec3& GetTranslate() const { return m_Translate; }
 		inline const vec3& GetRotate() const { return m_Rotate; }

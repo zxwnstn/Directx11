@@ -6,6 +6,7 @@ namespace Engine::Util {
 		const vec2& inUV1, const vec2& inUV2, const vec2& inUV3);
 
 	vec3 GetLookAt(const vec3& rotate);
+	vec3 GetRightVector(const vec3& rotate);
 
 	mat4 GetTransform(const vec3& translate, const vec3& rotate, const vec3& scale, bool transpose);
 	mat4 GetTransform(const vec3& translate, const vec4& quaternion, const vec3& scale, bool transpose);
@@ -32,6 +33,10 @@ namespace Engine::Util {
 	mat4 Translate(const vec3& translate, bool transpose);
 	mat4 Rotate(const vec3& rotate, bool transpose);
 	mat4 Scale(const vec3& scale, bool transpose);
+
+	void RotateLocalX(vec3& rotate, float radian);
+	void RotateLocalY(vec3& rotate, float radian);
+	void RotateLocalZ(vec3& rotate, float radian);
 
 	mat4 Transpose(const mat4& mat);
 	mat4 Identity();

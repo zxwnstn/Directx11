@@ -65,23 +65,23 @@ namespace Engine {
 		: myModel(myModel)
 	{}
 
-	NoneFbxModelBuilder & NoneFbxModelBuilder::SetIndices()
+	NoneFbxModelBuilder & NoneFbxModelBuilder::SetMesh(const std::string & meshName)
 	{
+		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
+			.CreateCompotibleBuffer()
+			.SetMesh(MeshArchive::GetStaticMesh(meshName));
 		return *this;
 	}
 
-	NoneFbxModelBuilder & NoneFbxModelBuilder::SetVertices()
+	NoneFbxModelBuilder & NoneFbxModelBuilder::SetTexture(const std::string & textureName)
 	{
+		myModel->m_Texture = TextureArchive::Get(textureName);
 		return *this;
 	}
 
-	NoneFbxModelBuilder & NoneFbxModelBuilder::SetTexture()
+	NoneFbxModelBuilder & NoneFbxModelBuilder::SetMaterial(const std::string & materialName)
 	{
-		return *this;
-	}
-
-	NoneFbxModelBuilder & NoneFbxModelBuilder::SetMaterial()
-	{
+		myModel->m_MaterialSet = MaterialArchive::GetSet(materialName);
 		return *this;
 	}
 

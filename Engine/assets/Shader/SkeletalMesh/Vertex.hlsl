@@ -27,6 +27,11 @@ cbuffer Bone : register(b3)
 	matrix SkinnedTransform[100];
 }
 
+cbuffer LightPos : register(b4)
+{
+	float4 LPosition;
+};
+
 
 struct Input
 {
@@ -57,6 +62,8 @@ struct Output
 	float3 binormal : BINORMAL;
 
 	int MaterialIndex : MATERIALIDX;
+
+	float3 lightToPos : LTP;
 	
 	bool UseShadowMap : SHADOWMAP;
 };
@@ -78,10 +85,15 @@ Output main(Input input)
 
 	float4 pos = float4(input.position, 1.0f);
 	output.position = mul(pos, skinTransform);
-
 	output.position = mul(output.position, Scale);
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);
+
+	pos = output.position;
+	pos.x = pos.x / pos.w;
+	pos.y = pos.y / pos.w;
+	pos.z = pos.z / pos.w;
+	output.lightToPos = pos.xyz - LPosition;
 
 	output.position = mul(output.position, WorldMatrix);
 	output.position = mul(output.position, View);

@@ -42,10 +42,9 @@ namespace Engine {
 	public:
 		NoneFbxModelBuilder(Model3D* myModel);
 
-		NoneFbxModelBuilder& SetIndices();
-		NoneFbxModelBuilder& SetVertices();
-		NoneFbxModelBuilder& SetTexture();
-		NoneFbxModelBuilder& SetMaterial();
+		NoneFbxModelBuilder& SetMesh(const std::string& meshName);
+		NoneFbxModelBuilder& SetTexture(const std::string& textureName);
+		NoneFbxModelBuilder& SetMaterial(const std::string& materialName);
 
 		FinalModelBuilder Finish();
 

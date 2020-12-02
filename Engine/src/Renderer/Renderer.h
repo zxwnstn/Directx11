@@ -20,6 +20,7 @@ namespace Engine {
 	private:
 		static void Init(const struct WindowProp& prop);
 		static void prep2D();
+		static void prepSkyCube();
 
 	public:
 		static void BeginScene(std::shared_ptr<Camera> camera, std::shared_ptr<Light> light);
@@ -45,6 +46,10 @@ namespace Engine {
 		static void Draw3D(std::shared_ptr<Model3D> model);
 		static void DrawStatic(std::shared_ptr<Model3D> model);
 		static void DrawSkeletal(std::shared_ptr<Model3D> model);
+
+	private:
+		static void type0();
+		static void type1();
 
 		friend class ModuleCore;
 	};

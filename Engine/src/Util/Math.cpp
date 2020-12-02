@@ -27,16 +27,14 @@ namespace Engine::Util {
 		// Calculate the denominator of the tangent/binormal equation.
 		float den = 1.0f / (tuVector.m[0] * tvVector.m[1] - tuVector.m[1] * tvVector.m[0]);
 
-		#ifdef DEBUD_FEATURE
 		if (isnan(den) || isinf(den))
 		{
+			vec3 temp;
 			LOG_WARN("FBXLoader::Tangent and Binormal are calculated invalid")
-				return false;
+			return { temp, temp };
 		}
-		#endif	
 
 		vec3 outTangent, outBinormal;
-
 		// Calculate the cross products and multiply by the coefficient to get the tangent and binormal.
 		outTangent.m[0] = (tvVector.m[1] * vector1.m[0] - tvVector.m[0] * vector2.m[0]) * den;
 		outTangent.m[1] = (tvVector.m[1] * vector1.m[1] - tvVector.m[0] * vector2.m[1]) * den;
@@ -56,11 +54,12 @@ namespace Engine::Util {
 		outBinormal.m[1] = outBinormal.m[1] / length;
 		outBinormal.m[2] = outBinormal.m[2] / length;
 
-		#ifdef DEBUD_FEATURE
+		#ifdef DEBUG_FEATURE
 		for (int i = 0; i < 3; ++i)
 		{
-			ASSERT(!(isnan(binormal.m[i]) || isnan(tangent.m[i])), "FBXLoader::Binormal or Tangent value is invalid!");
-			return false;
+			vec3 temp;
+			ASSERT(!(isnan(outBinormal.m[i]) || isnan(outTangent.m[i])), "FBXLoader::Binormal or Tangent value is invalid!");
+			return {temp, temp};
 		}
 		#endif
 
@@ -69,19 +68,26 @@ namespace Engine::Util {
 
 	vec3 GetLookAt(const vec3 & rotate)
 	{
-		DirectX::XMVECTOR lookVector;
+		DirectX::XMVECTOR lookVector{0.0f, 0.0f, 1.0f, 0.0f};
 		DirectX::XMMATRIX rotateMat;
 
-		lookVector.m128_f32[0] = 0.0f;
-		lookVector.m128_f32[1] = 0.0f;
-		lookVector.m128_f32[2] = 1.0f;
-		lookVector.m128_f32[3] = 0.0f;
-
 		rotateMat = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
-		lookVector = DirectX::XMVector3TransformCoord(lookVector, DirectX::XMMatrixTranspose(rotateMat));
+		lookVector = DirectX::XMVector3TransformCoord(lookVector, rotateMat);
 		DirectX::XMVector3Normalize(lookVector);
 
 		return ToVector3(lookVector);
+	}
+
+	vec3 GetRightVector(const vec3& rotate)
+	{
+		DirectX::XMVECTOR rightVector{ 1.0f, 0.0f, 0.0f, 0.0f };
+		DirectX::XMMATRIX rotateMat;
+
+		rotateMat = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
+		rightVector = DirectX::XMVector3TransformCoord(rightVector, rotateMat);
+		DirectX::XMVector3Normalize(rightVector);
+
+		return ToVector3(rightVector);
 	}
 	
 	mat4 GetTransform(const vec3 & translate, const vec3 & rotate, const vec3 & scale, bool transpose)
@@ -294,6 +300,43 @@ namespace Engine::Util {
 			ret = DirectX::XMMatrixTranspose(ret);
 
 		return ToMatrix(ret);
+	}
+
+	void RotateLocalX(vec3 & rotate, float radian)
+	{
+		DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
+		
+		DirectX::XMVECTOR up{ 0.0f, 1.0f, 0.0f, 0.0f };
+		up = DirectX::XMVector3TransformCoord(up, rotationMatrix);
+		DirectX::XMMATRIX newRotationMatrix = DirectX::XMMatrixRotationAxis(up, radian);
+
+		rotate.x += (float)atan2(newRotationMatrix.r[0].m128_f32[1], newRotationMatrix.r[1].m128_f32[1]);
+		rotate.y += (float)atan2(newRotationMatrix.r[2].m128_f32[0], newRotationMatrix.r[2].m128_f32[2]);
+	}
+
+	void RotateLocalY(vec3 & rotate, float radian)
+	{
+		DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
+
+		DirectX::XMVECTOR foward{ 0.0f, 0.0f, 1.0f, 0.0f };
+		foward = DirectX::XMVector3TransformCoord(foward, rotationMatrix);
+		DirectX::XMMATRIX newRotationMatrix = DirectX::XMMatrixRotationAxis(foward, radian);
+
+		rotate.x += (float)atan2(newRotationMatrix.r[0].m128_f32[1], newRotationMatrix.r[1].m128_f32[1]);
+		rotate.y += (float)atan2(newRotationMatrix.r[2].m128_f32[0], newRotationMatrix.r[2].m128_f32[2]);
+	}
+
+	void RotateLocalZ(vec3 & rotate, float radian)
+	{
+		/*DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
+
+		DirectX::XMVECTOR foward{ 0.0f, 0.0f, 1.0f, 0.0f };
+		foward = DirectX::XMVector3TransformCoord(foward, rotationMatrix);
+		DirectX::XMMATRIX newRotationMatrix = DirectX::XMMatrixRotationAxis(foward, radian);
+
+		rotate.x = (float)atan2(newRotationMatrix.r[0].m128_f32[1], newRotationMatrix.r[1].m128_f32[1]);
+		rotate.y = (float)atan2(newRotationMatrix.r[2].m128_f32[0], newRotationMatrix.r[2].m128_f32[2]);
+		rotate.z = (float)asin(-newRotationMatrix.r[2].m128_f32[1]);*/
 	}
 
 	mat4 Transpose(const mat4& mat)

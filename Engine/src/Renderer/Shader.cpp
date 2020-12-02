@@ -16,6 +16,7 @@ namespace Engine {
 		case CBuffer::Type::Transform: return sizeof(CBuffer::Transform);
 		case CBuffer::Type::Light: return sizeof(CBuffer::Light);
 		case CBuffer::Type::Light2: return sizeof(CBuffer::Light2);
+		case CBuffer::Type::LightPos: return sizeof(CBuffer::LightPos);
 		case CBuffer::Type::Bone: return sizeof(CBuffer::Bone);
 		case CBuffer::Type::Environment: return sizeof(CBuffer::Environment);
 		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
@@ -30,6 +31,7 @@ namespace Engine {
 		if (name == "Camera") return CBuffer::Type::Camera;
 		if (name == "Light") return CBuffer::Type::Light;
 		if (name == "Light2") return CBuffer::Type::Light2;
+		if (name == "LightPos") return CBuffer::Type::LightPos;
 		if (name == "Transform") return CBuffer::Type::Transform;
 		if (name == "Bone") return CBuffer::Type::Bone;
 		if (name == "Environment") return CBuffer::Type::Environment;

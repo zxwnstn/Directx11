@@ -28,34 +28,23 @@ namespace Engine::CBuffer {
 		bias = other.bias;
 	}
 
-	void Light::Upload(const Engine::Light & other)
+	void Light::Upload(Engine::Light & other)
 	{
-		Type = other.m_Type;
+		auto& transform = other.lightCam.GetTransform();
+
+		auto lookat = transform.GetLookAtVector();
+		Direction.x = lookat.x;
+		Direction.y = lookat.y;
+		Direction.z = lookat.z;
+		Direction.w = 0.0f;
+
 		Color = other.m_Color;
-		auto pos = other.m_Transform.GetTranslate();
-		Position.x = pos.x;
-		Position.y = pos.y;
-		Position.z = pos.z;
-		Position.w = 1.0f;
-
 		Intensity = other.m_Intensity;
+		Type = other.m_Type;
+		RangeRcp = 1.0f / other.m_Range;
 
-		if (Type == 0) // Directional
-		{
-			Direction = other.m_Direction;
-		}
-		if (Type == 1) // point
-		{
-			//Position = other.m_Transform.GetTranslateValue();
-		}
-		if (Type == 2)
-		{
-			//Position = other.m_Transform.GetTranslateValue();
-			//auto directionVector = other.m_Transform.GetFowardVector();
-			//Direction.x = directionVector.m128_f32[0];
-			//Direction.x = directionVector.m128_f32[1];
-			//Direction.x = directionVector.m128_f32[2];
-		}
+		InnerAng = other.m_InnerAngle;
+		OuterAngRcp = 1.0f / other.m_OuterAngle;
 	}
 
 	void Material::Upload(const Engine::Material& other)
@@ -103,6 +92,15 @@ namespace Engine::CBuffer {
 	{
 		TextureWidth = (float)other->Width;
 		TextureHeight = (float)other->Height;
+	}
+
+	void LightPos::Upload(Engine::Light & other)
+	{
+		auto translate = other.lightCam.GetTransform().GetTranslate();
+		lightPos.x = translate.x;
+		lightPos.y = translate.y;
+		lightPos.z = translate.z;
+		lightPos.w = 1.0f;
 	}
 
 }

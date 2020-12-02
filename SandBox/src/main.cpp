@@ -5,13 +5,16 @@
 bool running = true;
 SandBox sandBox;
 
+Engine::vec2 prevMouse;
+
 LRESULT __stdcall WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 {
 	switch (iMessage)
 	{
 	case WM_MOUSEMOVE:
-		//g_ptMouse.x = LOWORD(lParam);
-		//g_ptMouse.y = HIWORD(lParam);
+		sandBox.OnMouseMove(float(LOWORD(lParam)) - prevMouse.x, float(HIWORD(lParam)) - prevMouse.y);
+		prevMouse.x = (float)LOWORD(lParam);
+		prevMouse.y = (float)HIWORD(lParam);
 		break;
 	case WM_DESTROY:
 		running = false;

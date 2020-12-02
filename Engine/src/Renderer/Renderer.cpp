@@ -17,12 +17,14 @@ namespace Engine {
 	static Environment* GlobalEnv = nullptr;
 	static std::shared_ptr<ModelBuffer> modelBuffer2D;
 	static std::shared_ptr<ModelBuffer> modelBufferEffect;
+	static std::shared_ptr<ModelBuffer> skyCube;
 
 	static std::vector<std::shared_ptr<Model2D>> queuedModel2D;
 	static std::vector<std::shared_ptr<Model3D>> queuedModel3D;
 
 	static std::shared_ptr<Camera> CurCamera;
 	static std::shared_ptr<Light> CurLight;
+
 
 	void Renderer::Init(const WindowProp& prop)
 	{
@@ -56,7 +58,7 @@ namespace Engine {
 		static uint32_t indices[] = {
 			0, 2, 1, 0, 3, 2
 		};
-
+	
 		modelBuffer2D = RendererShaders["2D"].CreateCompotibleBuffer()
 			.SetVertices(vertices, 4)
 			.SetIndices(indices, 6);
@@ -69,6 +71,74 @@ namespace Engine {
 		Engine::TextureArchive::Add("SceneShadow", Dx11Core::Get().Width(), Dx11Core::Get().Height(), 0);
 		Engine::TextureArchive::Add("EffectTexture1", 2048, 2048, 0);
 		Engine::TextureArchive::Add("EffectTexture2", 2048, 2048, 0);
+	}
+
+	void Renderer::prepSkyCube()
+	{
+		float tz = 0.0f;
+		float to = 1.0f / 3.0f;
+		float tt = 2.0f / 3.0f;
+		float m = -1.0f;
+		float p = 1.0f;
+
+		static float vertices[] = {
+			//left
+			/*0*/m, p, m,  0.0f, to,
+			/*5*/m, m, p, 0.25f, tt,
+			/*2*/m, m, m,  0.0f, tt,
+			/*0*/m, p, m,  0.0f, to,
+			/*4*/m, p, p, 0.25f, to,
+			/*5*/m, m, p, 0.25f, tt,
+
+			//face
+			/*4*/m, p, p, 0.25f, to,
+			/*6*/p, m, p,  0.5f, tt,
+			/*5*/m, m, p, 0.25f, tt,
+			/*4*/m, p, p, 0.25f, to,
+			/*7*/p, p, p,  0.5f, to,
+			/*6*/p, m, p,  0.5f, tt,
+
+			//right
+			/*7*/p, p, p,  0.5f, to,
+			/*3*/p, m, m, 0.75f, tt,
+			/*6*/p, m, p,  0.5f, tt,
+			/*7*/p, p, p,  0.5f, to,
+			/*1*/p, p, m, 0.75f, to,
+			/*3*/p, m, m, 0.75f, tt,
+
+			//back
+			/*1*/p, p, m, 0.75f, to,
+			/*2*/m, m, m,  1.0f, tt,
+			/*3*/p, m, m, 0.75f, tt,
+			/*1*/p, p, m, 0.75f, to,
+			/*0*/m, p, m,  1.0f, to,
+			/*2*/m, m, m,  1.0f, tt,
+
+			//top
+			/*0*/m, p, m, 0.25f, tz,
+			/*7*/p, p, p,  0.5f, to,
+			/*4*/m, p, p, 0.25f, to,
+			/*0*/m, p, m, 0.25f, tz,
+			/*1*/p, p, m,  0.5f, tz,
+			/*7*/p, p, p,  0.5f, to,
+
+			//bottom
+			/*5*/m, m, p, 0.25f, tt,
+			/*3*/p, m, m,  0.5f, 1.0f,
+			/*2*/m, m, m, 0.25f, 1.0f,
+			/*5*/m, m, p, 0.25f, tt,
+			/*6*/p, m, p,  0.5f, tt,
+			/*3*/p, m, m,  0.5f, 1.0f,
+
+		};
+
+		static uint32_t indices[6 * 6];
+		for (uint32_t i = 0; i < 36; ++i)
+			indices[i] = i;
+
+		skyCube = RendererShaders["2D"].CreateCompotibleBuffer()
+			.SetVertices(vertices, 36)
+			.SetIndices(indices, 36);
 	}
 
 	void Renderer::Enque(std::shared_ptr<Model2D> model)
@@ -88,7 +158,7 @@ namespace Engine {
 		CurLight = light;
 	}
 
-	void Renderer::EndScene()
+	void Renderer::type0()
 	{
 		//step 1. Create Shadow Map
 		s_PLController->SetRenderTarget("ShadowMap");
@@ -127,8 +197,62 @@ namespace Engine {
 		for (auto model2D : queuedModel2D) Draw2D(model2D);
 		for (auto model3D : queuedModel3D) Draw3D(model3D);
 
+		//step5. Draw SkyCube
+		RendererShaders["2D"].Bind();
+		{
+			GlobalEnv->UseShadowMap = false;
+			for (auto&[name, shader] : RendererShaders)
+			{
+
+
+				shader.SetParam<CBuffer::Environment>(*GlobalEnv);
+			}
+			skyCube->Bind();
+			TextureArchive::Get("skyBox")->Bind();
+
+
+			auto transform = CurCamera->GetTransform();
+			auto& translate = transform.GetTranslate();
+			transform.SetTranslate(translate.x, translate.y - 30.0f, translate.z);
+			transform.SetScale(100.0f, 100.0f, 100.0f);
+			transform.SetRotate(3.14f, 0.0f, 0.0f);
+
+			RendererShaders["2D"].SetParam<CBuffer::Transform>(transform);
+
+			Dx11Core::Get().Context->DrawIndexed(skyCube->GetIndexCount(), 0, 0);
+		}
+
 		queuedModel2D.clear();
 		queuedModel3D.clear();
+	}
+	
+	void Renderer::type1()
+	{
+		GlobalEnv->UseShadowMap = false;
+		s_PLController->SetRenderTarget("BackBuffer");
+		for (auto&[name, shader] : RendererShaders)
+		{
+			shader.SetParam<CBuffer::Camera>(*CurCamera);
+			shader.SetParam<CBuffer::Light>(*CurLight);
+			shader.SetParam<CBuffer::LightPos>(*CurLight);
+			shader.SetParam<CBuffer::Environment>(*GlobalEnv);
+		}
+		for (auto model2D : queuedModel2D) Draw2D(model2D);
+		for (auto model3D : queuedModel3D) Draw3D(model3D);
+
+		queuedModel2D.clear();
+		queuedModel3D.clear();
+	}
+
+	void Renderer::EndScene()
+	{
+		static int type = 1;
+
+		if (type == 0) 
+			type0();
+		if (type == 1)
+			type1();
+
 
 		Dx11Core::Get().Present();
 	}

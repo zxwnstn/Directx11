@@ -99,6 +99,21 @@ namespace Engine {
 		m_Scale.z += scale.z;
 	}
 
+	void Transform::LocalRotateX(float radian)
+	{
+		Util::RotateLocalX(m_Rotate, radian);
+	}
+
+	void Transform::LocalRotateY(float radian)
+	{
+		Util::RotateLocalY(m_Rotate, radian);
+	}
+
+	void Transform::LocalRotateZ(float radian)
+	{
+		Util::RotateLocalZ(m_Rotate, radian);
+	}
+
 	void Transform::MoveForwad(float d)
 	{
 		vec3 lookAt = GetLookAtVector();
@@ -115,6 +130,24 @@ namespace Engine {
 		m_Translate.x -= lookAt.x * d;
 		m_Translate.y -= lookAt.y * d;
 		m_Translate.z -= lookAt.z * d;
+	}
+
+	void Transform::MoveLeft(float d)
+	{
+		vec3 right = Util::GetRightVector(m_Rotate);
+
+		m_Translate.x -= right.x * d;
+		m_Translate.y -= right.y * d;
+		m_Translate.z -= right.z * d;
+	}
+
+	void Transform::MoveRight(float d)
+	{
+		vec3 right = Util::GetRightVector(m_Rotate);
+
+		m_Translate.x += right.x * d;
+		m_Translate.y += right.y * d;
+		m_Translate.z += right.z * d;
 	}
 
 	vec3 Transform::GetLookAtVector() const
