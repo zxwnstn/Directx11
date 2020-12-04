@@ -1,13 +1,15 @@
 #pragma once
 
-#include "InputLayout.h"
+#include "Common/Mesh.h"
 
 namespace Engine {
+
+	struct BufferBuilder;
 
 	class ModelBuffer
 	{
 	private:
-
+		ModelBuffer(MeshType type);
 		struct VertexBuffer
 		{
 			void Init(void* vertices, uint32_t size, bool isDynamic);
@@ -25,17 +27,19 @@ namespace Engine {
 			uint32_t Count;
 		};
 
-		ModelBuffer(const InputLayout& inputLayout);
+	public:
+		static BufferBuilder Create(MeshType type);
 
 	public:
-		ModelBuffer(const ModelBuffer& other) = default;
 		void Bind() const;
 		inline uint32_t GetIndexCount() const { return Index.Count; }
+		const MeshType GetMeshType() const { return Type; }
 
 	private:
 		VertexBuffer Vertex;
 		IndexBuffer Index;
-		InputLayout Layout;
+		uint32_t Stride;
+		MeshType Type;
 
 		friend struct BufferBuilder;
 	};
@@ -43,19 +47,20 @@ namespace Engine {
 	struct BufferBuilder
 	{
 	public:
-		BufferBuilder(const InputLayout& intpuLayout);
+		BufferBuilder(MeshType type);
 
 		BufferBuilder& SetMesh(std::shared_ptr<struct SkeletalMesh> mesh, bool isDynamic = false);
 		BufferBuilder& SetMesh(std::shared_ptr<struct StaticMesh> mesh, bool isDynamic = false);
 
-		inline operator std::shared_ptr<ModelBuffer>() const { return std::make_shared<ModelBuffer>(buffer); }
+		inline operator std::shared_ptr<ModelBuffer>() const { return std::shared_ptr<ModelBuffer>(buffer); }
 
 	private:
 		BufferBuilder& SetVertices(void* vertices, uint32_t count);
 		BufferBuilder& SetIndices(void* indices, uint32_t count);
 
 	private:
-		ModelBuffer buffer;
+		ModelBuffer* buffer;
+		uint32_t stride;
 
 		friend class Renderer;
 	};

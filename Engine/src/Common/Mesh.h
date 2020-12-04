@@ -2,6 +2,14 @@
 
 namespace Engine {
 
+	enum class MeshType
+	{
+		Skeletal,
+		Static, 
+		Sqaure
+	};
+
+	
 	struct Vertex
 	{
 		template<class Archive>
@@ -64,11 +72,7 @@ namespace Engine {
 		bool checkValid();
 	};
 
-	enum class MeshType 
-	{
-		Skeletal,
-		Static
-	};
+	uint32_t GetStride(MeshType type);
 
 	struct SkeletalMesh
 	{

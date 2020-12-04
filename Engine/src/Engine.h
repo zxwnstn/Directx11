@@ -33,5 +33,7 @@
 #include "Model/3D/SkeletalAnimation.h"
 #include "Common/Timestep.h"
 #include "Common/Mesh.h"
+#include "Common/Light.h"
 #include "Renderer/Texture.h"
+#include "Common/Material.h"
 

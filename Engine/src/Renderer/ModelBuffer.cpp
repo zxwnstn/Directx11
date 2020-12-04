@@ -68,47 +68,54 @@ namespace Engine {
 		Dx11Core::Get().Device->CreateBuffer(&indexBufferDecs, &indexData, &Buffer);
 	}
 
-	BufferBuilder::BufferBuilder(const InputLayout & intpuLayout)
-		: buffer(intpuLayout)
-	{
-	}
-
 	BufferBuilder & BufferBuilder::SetMesh(std::shared_ptr<SkeletalMesh> mesh, bool isDynamic)
 	{
-		buffer.Vertex.Init(mesh->Vertices.data(), (uint32_t)mesh->Vertices.size() * buffer.Layout.Stride, isDynamic);
-		buffer.Index.Init(mesh->Indices, mesh->IndiceCount);
+		buffer->Vertex.Init(mesh->Vertices.data(), (uint32_t)mesh->Vertices.size() * stride, isDynamic);
+		buffer->Index.Init(mesh->Indices, mesh->IndiceCount);
 		return *this;
+	}
+
+	BufferBuilder::BufferBuilder(MeshType type)
+		: buffer(new ModelBuffer(type))
+	{
+		stride = GetStride(type);
 	}
 
 	BufferBuilder & BufferBuilder::SetMesh(std::shared_ptr<StaticMesh> mesh, bool isDynamic)
 	{
-		buffer.Vertex.Init(mesh->Vertices.data(), (uint32_t)mesh->Vertices.size() * buffer.Layout.Stride, isDynamic);
-		buffer.Index.Init(mesh->Indices, mesh->IndiceCount);
+		buffer->Vertex.Init(mesh->Vertices.data(), (uint32_t)mesh->Vertices.size() * stride, isDynamic);
+		buffer->Index.Init(mesh->Indices, mesh->IndiceCount);
 		return *this;
 	}
 
 	BufferBuilder & BufferBuilder::SetVertices(void * vertices, uint32_t count)
 	{
-		buffer.Vertex.Init(vertices, count * buffer.Layout.Stride, false);
+		buffer->Vertex.Init(vertices, count * stride, false);
 		return *this;
 	}
 
 	BufferBuilder & BufferBuilder::SetIndices(void * indices, uint32_t count)
 	{
-		buffer.Index.Init(indices, count);
+		buffer->Index.Init(indices, count);
 		return *this;
 	}
 
-	ModelBuffer::ModelBuffer(const InputLayout & inputLayout)
-		: Layout(inputLayout)
+	ModelBuffer::ModelBuffer(MeshType type)
+		: Type(type)
 	{
+		Stride = GetStride(type);
+	}
+
+	BufferBuilder ModelBuffer::Create(MeshType type)
+	{
+		return BufferBuilder(type);
 	}
 
 	void ModelBuffer::Bind() const
 	{
 		UINT offset = 0;
 
-		Dx11Core::Get().Context->IASetVertexBuffers(0, 1, &Vertex.Buffer, &Layout.Stride, &offset);
+		Dx11Core::Get().Context->IASetVertexBuffers(0, 1, &Vertex.Buffer, &Stride, &offset);
 		Dx11Core::Get().Context->IASetIndexBuffer(Index.Buffer, DXGI_FORMAT_R32_UINT, 0);
 		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}

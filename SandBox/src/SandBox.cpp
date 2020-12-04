@@ -7,11 +7,11 @@ void SandBox::OnUpdate(float dt)
 	controlUpdate(dt);
 
 	objmodel->m_Transform.SetTranslate(light2->lightCam.GetTransform().GetTranslate());
-	Engine::Renderer::BeginScene(perspective, light, light2);
+	Engine::Renderer::BeginScene(perspective, { light, light2 });
 	
-	Engine::Renderer::Enque(fbxmodel);
-	Engine::Renderer::Enque(objmodel);
-	Engine::Renderer::Enque(floor);
+	Engine::Renderer::Enque3D(fbxmodel);
+	Engine::Renderer::Enque3D(objmodel);
+	Engine::Renderer::Enque3D(floor);
 	//Engine::Renderer::Enque(debugwindow);
 
 	Engine::Renderer::EndScene();
@@ -20,10 +20,6 @@ void SandBox::OnUpdate(float dt)
 void SandBox::OnAttach()
 {
 	setStaticSqaure();
-	auto glovEnv = Engine::Renderer::GetGlobalEnv();
-	glovEnv->Ambient.x = 0.3f;
-	glovEnv->Ambient.y = 0.3f;
-	glovEnv->Ambient.z = 0.3f;
 
 	light.reset(new Engine::Light);
 	light->m_Color = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -35,8 +31,10 @@ void SandBox::OnAttach()
 	light->lightCam.GetTransform().SetRotate(0.78f, 1.57f, 0.0f);
 
 	light2.reset(new Engine::Light);
+
+
 	light2->m_Color = { 1.0f, 0.0f, 1.0f, 1.0f };
-	light2->lightCam.GetTransform().SetTranslate(3.0f, 1.0f, 0.0f);
+	light2->lightCam.GetTransform().SetTranslate(-3.0f, 1.0f, 0.0f);
 	light2->m_Type = Engine::Light::Type::Spot;
 	light2->m_OuterAngle = 3.141592f / 3;
 	light2->m_InnerAngle = 3.141592f / 6;
@@ -44,7 +42,7 @@ void SandBox::OnAttach()
 	light2->lightCam.GetTransform().SetRotate(0.78f, 1.57f, 0.0f);
 
 
-	fbxmodel = Engine::Model3D::Create(Engine::RenderingShader::SkeletalDiffered)
+	fbxmodel = Engine::Model3D::Create()
 		.buildFromFBX().SetSkeleton("Pearl");
 	fbxmodel->m_Transform.SetScale(0.01f, 0.01f, 0.01f);
 
@@ -54,12 +52,12 @@ void SandBox::OnAttach()
 		mat.second.Ambient.y = 0.8f;
 		mat.second.Ambient.z = 0.8f;
 
-		mat.second.Specular.x = 0.1f;
-		mat.second.Specular.y = 0.1f;
-		mat.second.Specular.z = 0.1f;
+		mat.second.Specular.x = 0.5f;
+		mat.second.Specular.y = 0.5f;
+		mat.second.Specular.z = 0.5f;
 	}
 
-	objmodel = Engine::Model3D::Create(Engine::RenderingShader::StaticDiffered)
+	objmodel = Engine::Model3D::Create()
 		.buildFromOBJ().SetObject("sphere");
 
 	objmodel->m_Transform.SetScale(0.1f, 0.1f, 0.1f);
@@ -71,7 +69,7 @@ void SandBox::OnAttach()
 		mat.second.Ambient.z = 1.0f;
 	}
 
-	floor = Engine::Model3D::Create(Engine::RenderingShader::StaticDiffered)
+	floor = Engine::Model3D::Create()
 		.buildCustum()
 		.SetMesh("StaticSquare").SetMaterial("default")
 		.Finish();
@@ -79,7 +77,7 @@ void SandBox::OnAttach()
 	floor->m_Transform.SetScale(10.0f, 10.0f, 1.0f);
 	floor->m_Transform.SetRotate(1.57f, 0.0f, 0.0f);
 
-	debugwindow = Engine::Model2D::Create(Engine::RenderingShader::TwoDimension)
+	debugwindow = Engine::Model2D::Create()
 		.SetTexture("SceneShadow");
 	
 	debugwindow->m_Transform.SetTranslate(1.0f, 2.0f, 0.0f);

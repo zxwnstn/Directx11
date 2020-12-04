@@ -49,6 +49,8 @@ namespace Engine {
 		//MaterialIndex, Material
 		std::unordered_map<int, Material> Materials;
 		std::unordered_map<int, std::vector<MaterialTextureInfo>> MaterialTextures;
+
+		void BindTextures(int slot);
 	};
 
 	class MaterialArchive

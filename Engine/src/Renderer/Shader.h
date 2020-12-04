@@ -5,6 +5,13 @@
 
 namespace Engine {
 
+	struct InputLayout
+	{
+		uint32_t Stride;
+		ID3D11InputLayout* D11Layout;
+	};
+
+
 	class Shader
 	{
 	public:
@@ -27,9 +34,10 @@ namespace Engine {
 			ID3D11Buffer* Buffer;
 		};
 
+	private:
+		Shader(const std::string& path, const std::string& name);
+
 	public:
-		Shader(const std::string& path);
-		Shader() = default;
 		BufferBuilder CreateCompotibleBuffer();
 
 	public:
@@ -72,18 +80,33 @@ namespace Engine {
 		std::string Path;
 		std::string Name;
 		uint8_t TypeKey = 0;
-		InputLayout InputLayout;
+		InputLayout Layout;
 
 		std::unordered_map<Type, ShaderVar> Shaders;
 		std::unordered_map<CBuffer::Type, ContantBuffer> CBuffers;
 
 		ID3D11SamplerState* SamplerState[10];
 		uint32_t SamplerNumber = 0;
+
+		friend class ShaderArchive;
 	};
 
 	class ComputeShader
 	{
 
+	};
+
+	class ShaderArchive
+	{
+	public:
+		static std::shared_ptr<Shader> Add(const std::string& path, const std::string& name);
+		static std::shared_ptr<Shader> Get(const std::string& path);
+		static bool Has(const std::string& name);
+
+	private:
+		static std::unordered_map<std::string, std::shared_ptr<Shader>> s_Shaders;
+
+		friend class Renderer;
 	};
 
 }

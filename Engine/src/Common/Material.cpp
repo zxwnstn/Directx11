@@ -1,8 +1,23 @@
 #include "pch.h"
 
 #include "Material.h"
+#include "Renderer/Texture.h"
 
 namespace Engine {
+
+	void MaterialSet::BindTextures(int slot)
+	{
+		std::vector<std::string> textures;
+		for (int i = 0; i < MaterialTextures.size(); ++i)
+		{
+			auto& textureSet = MaterialTextures.find(i)->second;
+			for (int j = 0; j < textureSet.size(); ++j)
+			{
+				textures.push_back(textureSet[j].Name);
+			}
+		}
+		Texture::MultipleTextureBind(textures, 0);
+	}
 
 	static std::unordered_map<std::string, std::shared_ptr<Material>> s_Materials;
 	static std::unordered_map<std::string, std::shared_ptr<MaterialSet>> s_MaterialSets;
@@ -66,6 +81,8 @@ namespace Engine {
 
 		return s_MaterialSets[name];
 	}
+
+	
 
 }
 

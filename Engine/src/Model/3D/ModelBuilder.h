@@ -26,10 +26,10 @@ namespace Engine {
 		Model3D* myModel;
 	};
 
-	class StaticModelBuilder
+	class ObjModelBuilder
 	{
 	public:
-		StaticModelBuilder(Model3D* myModel);
+		ObjModelBuilder(Model3D* myModel);
 
 		FinalModelBuilder SetObject(const std::string& objectName);
 
@@ -37,14 +37,13 @@ namespace Engine {
 		Model3D* myModel;
 	};
 
-	class NoneFbxModelBuilder
+	class CustomModelBuilder
 	{
 	public:
-		NoneFbxModelBuilder(Model3D* myModel);
+		CustomModelBuilder(Model3D* myModel);
 
-		NoneFbxModelBuilder& SetMesh(const std::string& meshName);
-		NoneFbxModelBuilder& SetTexture(const std::string& textureName);
-		NoneFbxModelBuilder& SetMaterial(const std::string& materialName);
+		CustomModelBuilder& SetMesh(const std::string& meshName);
+		CustomModelBuilder& SetMaterial(const std::string& materialName);
 
 		FinalModelBuilder Finish();
 
@@ -58,8 +57,8 @@ namespace Engine {
 		ModelBuilder(Model3D* myModel);
 
 		FbxModelBuilder buildFromFBX();
-		NoneFbxModelBuilder buildCustum();
-		StaticModelBuilder buildFromOBJ();
+		ObjModelBuilder buildFromOBJ();
+		CustomModelBuilder buildCustum();
 
 	private:
 		Model3D* myModel;

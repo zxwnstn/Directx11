@@ -33,18 +33,25 @@ namespace Engine {
 
 		LOG_INFO("Init Renderer") {
 			Renderer::Init(prop);
-			Renderer::GetPipelineController()
-				.SetBlend(BlendOpt::Alpha)
-				.SetDepthStencil(DepthStencilOpt::Enable)
-				.SetRasterize(RasterlizerOpt::Solid);
 		}
 
 		LOG_INFO("Compliing Shader") {
-			std::filesystem::directory_iterator ShaderFolder(File::GetCommonPath(File::Shader));
-			for (auto& file : ShaderFolder)
+			std::filesystem::directory_iterator Categories(File::GetCommonPath(File::Shader));
+			for (auto& category : Categories)
 			{
-				if (file.is_directory())
-					Renderer::CreateShader(file.path().string(), file.path().filename().string());
+				if (category.is_directory())
+				{
+					std::filesystem::directory_iterator Shaders(category);
+					for (auto& shader : Shaders)
+					{
+						auto shaderName = category.path().stem().string();
+						if (shader.is_directory())
+						{
+							shaderName += shader.path().stem().string();
+							ShaderArchive::Add(shader.path().string(), shaderName);
+						}
+					}
+				}
 			}
 		}
 
@@ -102,10 +109,6 @@ namespace Engine {
 					TextureArchive::Add(dir.path().string(), dir.path().stem().string());
 				}
 			}
-		}
-		LOG_INFO("Prepare 2D rendering") {
-			Renderer::prep2D();
-			Renderer::prepSkyCube();
 		}
 
 		isInited = true;

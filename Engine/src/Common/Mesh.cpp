@@ -142,5 +142,16 @@ namespace Engine {
 		return find != s_SkeletalMeshes.end();
 	}
 
+	uint32_t GetStride(MeshType type)
+	{
+		switch (type)
+		{
+		case Engine::MeshType::Skeletal: return sizeof(SkeletalVertex);
+		case Engine::MeshType::Static: return sizeof(Vertex);
+		case Engine::MeshType::Sqaure: return 20;
+		}
+		return 0;
+	}
+
 }
 

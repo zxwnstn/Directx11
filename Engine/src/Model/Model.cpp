@@ -10,30 +10,19 @@
 
 namespace Engine {
 
-	Model2D::Model2D(const std::string & shaderName)
-		: m_Shader(shaderName)
-	{
-	}
 
-	ModelBuilder2D Model2D::Create(RenderingShader type, std::string&& shaderName)
+	ModelBuilder2D Model2D::Create()
 	{
-		if (shaderName.empty())
-		{
-			ASSERT(type != RenderingShader::Custom, "Custom shader must specify shader name");
-			shaderName = ToString(type);
-		}
-		return ModelBuilder2D(new Model2D(shaderName));
+		return ModelBuilder2D(new Model2D);
 	}
 
 	void Model2D::Update(float dt)
 	{
 	}
 
-
-	Model3D::Model3D(const std::string & ShaderName)
-		: m_Shader(ShaderName)
+	ModelBuilder Model3D::Create()
 	{
-
+		return ModelBuilder(new Model3D);
 	}
 
 	void Model3D::Update(float dt)
@@ -55,20 +44,6 @@ namespace Engine {
 		return true;
 	}
 
-	ModelBuilder Model3D::Create(RenderingShader type, std::string && shaderName)
-	{
-		if (shaderName.empty())
-		{
-			ASSERT(type != RenderingShader::Custom, "Custom shader must specify shader name");
-			shaderName = ToString(type);
-		}
-		return ModelBuilder(new Model3D(shaderName));
-	}
-
-	void Model3D::SetShader(const std::string& shader)
-	{
-		m_Shader = shader;
-	}
 
 	void Model3D::animationUpdate(float dt)
 	{

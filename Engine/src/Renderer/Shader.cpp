@@ -124,12 +124,10 @@ namespace Engine {
 		file.close();
 	}
 
-	Shader::Shader(const std::string & path)
-		: Path(path)
+	Shader::Shader(const std::string & path, const std::string& name)
+		: Path(path), Name(name)
 	{
 		std::filesystem::directory_iterator	dirIter(path);
-		auto i = path.rfind('/');
-		Name = path.substr(i);
 
 		LOG_INFO("Create {0} Shader", Name) {
 			for (auto& file : dirIter)
@@ -201,10 +199,9 @@ namespace Engine {
 		}
 		file.close();
 
-		InputLayout.Stride = offset;
+		Layout.Stride = offset;
 		auto ret = Dx11Core::Get().Device->CreateInputLayout(elementDescs.data(), (UINT)elementDescs.size(),
-			binary->GetBufferPointer(), binary->GetBufferSize(), &InputLayout.Layout);
-
+			binary->GetBufferPointer(), binary->GetBufferSize(), &Layout.D11Layout);
 	}
 
 	void Shader::CreateSampler(const std::filesystem::path& path)
@@ -342,13 +339,13 @@ namespace Engine {
 
 	BufferBuilder Shader::CreateCompotibleBuffer()
 	{
-		BufferBuilder builder(InputLayout);
+		BufferBuilder builder(MeshType::Skeletal);
 		return builder;
 	}
 
 	void Shader::Bind() const
 	{
-		Dx11Core::Get().Context->IASetInputLayout(InputLayout.Layout);
+		Dx11Core::Get().Context->IASetInputLayout(Layout.D11Layout);
 
 		for (auto&[type, shader] : Shaders)
 		{
@@ -365,6 +362,30 @@ namespace Engine {
 		{
 			Dx11Core::Get().Context->PSSetSamplers(i, 1, &SamplerState[i]);
 		}
+	}
+
+	std::unordered_map<std::string, std::shared_ptr<Shader>> ShaderArchive::s_Shaders;
+
+	std::shared_ptr<Shader> ShaderArchive::Add(const std::string& path, const std::string& name)
+	{
+		if (!Has(name)) s_Shaders[name].reset(new Shader(path, name));
+		return s_Shaders[name];
+	}
+
+	std::shared_ptr<Shader> ShaderArchive::Get(const std::string& name)
+	{
+		if (!Has(name))
+		{
+			ASSERT(true, name + "Shader does not exist");
+			return nullptr;
+		}
+		return s_Shaders[name];
+	}
+
+	bool ShaderArchive::Has(const std::string & name)
+	{
+		auto find = s_Shaders.find(name);
+		return find != s_Shaders.end();
 	}
 
 }

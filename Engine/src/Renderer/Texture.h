@@ -47,7 +47,7 @@ namespace Engine {
 		void Bind(int slot) const;
 		void Bind() const;
 
-		static void MultipleTextureBind(const std::vector<std::string>& textures, int slot = 1);
+		static void MultipleTextureBind(const std::vector<std::string>& textures, int slot);
 		void Resize(uint32_t Width, uint32_t Height);
 
 	public:

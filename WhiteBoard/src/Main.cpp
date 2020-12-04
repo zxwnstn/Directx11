@@ -5,10 +5,15 @@
 #include <chrono>
 #include <fstream>
 #include <sstream>
+#include <memory>
+
+struct Data
+{
+	int a, b;
+}static data;
 
 int main()
 {
-	std::vector<int> v;
-	v.push_back(4);
-	v = { 1, 2, 3 };
+	Data Data;
+	Data.a = 3;
 }

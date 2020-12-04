@@ -110,7 +110,6 @@ float4 main(Input input) : SV_TARGET
 	float specCos = max(dot(SpecularVector, CamVector), 0.0f);
 	float sf = pow(specCos, shiness);
 
-
 	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * LIntensity * LightColor);
 	float3 finalSpecular = sf * (specular * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;

@@ -6,17 +6,16 @@
 #include "SkeletalAnimation.h"
 #include "Renderer/ModelBuffer.h"
 #include "Renderer/Texture.h"
+#include "Common/Material.h"
 
 namespace Engine {
 
 	/***************************************/
-/********  finalModel Builder  *********/
-/***************************************/
-
+	/********  finalModel Builder  *********/
+	/***************************************/
 	FinalModelBuilder::FinalModelBuilder(Model3D * myModel)
 		: myModel(myModel)
-	{
-	}
+	{}
 
 	/***************************************/
 	/********  FbxModel Builder  ***********/
@@ -35,11 +34,9 @@ namespace Engine {
 			return FinalModelBuilder(nullptr);
 		}
 
-		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
-			.CreateCompotibleBuffer()
+		myModel->m_ModelBuffer = ModelBuffer::Create(MeshType::Skeletal)
 			.SetMesh(MeshArchive::GetSkeletalMesh(skeletonName));
 
-		myModel->m_Texture = TextureArchive::Get(skeletonName);
 		myModel->m_MaterialSet = MaterialArchive::GetSet(skeletonName);
 		myModel->m_Animation.reset(new AnimationInform);
 
@@ -58,34 +55,46 @@ namespace Engine {
 		return FinalModelBuilder(myModel);
 	}
 
+
 	/***************************************/
-	/*******  NoneFbxModel Builder  ********/
+	/*******  ObjModel Builder  ********/
 	/***************************************/
-	NoneFbxModelBuilder::NoneFbxModelBuilder(Model3D * myModel)
+	ObjModelBuilder::ObjModelBuilder(Model3D * myModel)
+		: myModel(myModel)
+	{
+	}
+
+	FinalModelBuilder ObjModelBuilder::SetObject(const std::string & objectName)
+	{
+		myModel->m_ModelBuffer = ModelBuffer::Create(MeshType::Static)
+			.SetMesh(MeshArchive::GetStaticMesh(objectName));
+
+		myModel->m_MaterialSet = MaterialArchive::GetSet(objectName);
+
+		return FinalModelBuilder(myModel);
+	}
+
+	/***************************************/
+	/*******  CustomModel Builder  ********/
+	/***************************************/
+	CustomModelBuilder::CustomModelBuilder(Model3D * myModel)
 		: myModel(myModel)
 	{}
 
-	NoneFbxModelBuilder & NoneFbxModelBuilder::SetMesh(const std::string & meshName)
+	CustomModelBuilder & CustomModelBuilder::SetMesh(const std::string & meshName)
 	{
-		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
-			.CreateCompotibleBuffer()
+		myModel->m_ModelBuffer = ModelBuffer::Create(MeshType::Static)
 			.SetMesh(MeshArchive::GetStaticMesh(meshName));
 		return *this;
 	}
 
-	NoneFbxModelBuilder & NoneFbxModelBuilder::SetTexture(const std::string & textureName)
-	{
-		myModel->m_Texture = TextureArchive::Get(textureName);
-		return *this;
-	}
-
-	NoneFbxModelBuilder & NoneFbxModelBuilder::SetMaterial(const std::string & materialName)
+	CustomModelBuilder & CustomModelBuilder::SetMaterial(const std::string & materialName)
 	{
 		myModel->m_MaterialSet = MaterialArchive::GetSet(materialName);
 		return *this;
 	}
-
-	FinalModelBuilder NoneFbxModelBuilder::Finish()
+	
+	FinalModelBuilder CustomModelBuilder::Finish()
 	{
 		return FinalModelBuilder(myModel);
 	}
@@ -102,32 +111,14 @@ namespace Engine {
 		return FbxModelBuilder(myModel);
 	}
 
-	NoneFbxModelBuilder ModelBuilder::buildCustum()
+	CustomModelBuilder ModelBuilder::buildCustum()
 	{
-		return NoneFbxModelBuilder(myModel);
+		return CustomModelBuilder(myModel);
 	}
 
-	StaticModelBuilder ModelBuilder::buildFromOBJ()
+	ObjModelBuilder ModelBuilder::buildFromOBJ()
 	{
-		return StaticModelBuilder(myModel);
-	}
-
-	StaticModelBuilder::StaticModelBuilder(Model3D * myModel)
-		: myModel(myModel)
-	{
-	}
-
-	FinalModelBuilder StaticModelBuilder::SetObject(const std::string & objectName)
-	{
-		myModel->m_ModelBuffer = Renderer::GetShader(myModel->m_Shader)
-			.CreateCompotibleBuffer()
-			.SetMesh(MeshArchive::GetStaticMesh(objectName));
-
-		myModel->m_Texture = TextureArchive::Get(objectName);
-		myModel->m_MaterialSet = MaterialArchive::GetSet(objectName);
-
-
-		return FinalModelBuilder(myModel);
+		return ObjModelBuilder(myModel);
 	}
 
 }

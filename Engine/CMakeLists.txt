@@ -30,7 +30,6 @@ set(project_headers
 	src/Util/MathTypeConverter.h
     src/Renderer/CBuffer.h
     src/Renderer/Dx11Core.h
-    src/Renderer/InputLayout.h
     src/Renderer/ModelBuffer.h
     src/Renderer/PipelineController.h
     src/Renderer/Renderer.h
@@ -64,7 +63,6 @@ set(project_source
 	src/Util/MathTypeConverter.cpp
     src/Renderer/CBuffer.cpp
     src/Renderer/Dx11Core.cpp
-    src/Renderer/InputLayout.cpp
     src/Renderer/ModelBuffer.cpp
     src/Renderer/PipelineController.cpp
     src/Renderer/Renderer.cpp
