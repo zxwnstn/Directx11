@@ -20,7 +20,6 @@ namespace Engine {
 		{
 		case DepthStencilOpt::Enable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Enable, 1); break;
 		case DepthStencilOpt::Disable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Disable, 1); break;
-		case DepthStencilOpt::GBuffer: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.GBuffer, 1); break;
 		}
 
 		m_DepthStencil.opt = opt;
@@ -32,9 +31,11 @@ namespace Engine {
 		switch (opt)
 		{
 		case BlendOpt::Alpha: Dx11Core::Get().Context->OMSetBlendState(m_Blend.AlphaBlend, m_Blend.BlendFactor, 1);
-			LOG_MISC("Renderer::Set Blend state Alpha");  break;
+			break;
+		case BlendOpt::GBuffer: Dx11Core::Get().Context->OMSetBlendState(m_Blend.GBufferBlend, m_Blend.BlendFactor, 0xffffffff);
+			break;
 		case BlendOpt::None: Dx11Core::Get().Context->OMSetBlendState(m_Blend.None, m_Blend.BlendFactor, 0xffffffff); 
-			LOG_MISC("Renderer::Set Blend state none"); break;
+			break;
 		}
 		m_Blend.opt = opt;
 		return *this;
@@ -110,17 +111,6 @@ namespace Engine {
 		depthStencilDesc.DepthEnable = false;
 		Dx11Core::Get().Device->CreateDepthStencilState(&depthStencilDesc, &Disable);
 		ASSERT(Disable, "PipelineController::Create DepthStencilState fail");
-
-		depthStencilDesc.DepthEnable = true;
-		depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
-		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
-		depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-		depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		depthStencilDesc.BackFace = depthStencilDesc.FrontFace;
-
-		Dx11Core::Get().Device->CreateDepthStencilState(&depthStencilDesc, &GBuffer);
-		ASSERT(GBuffer, "PipelineController::Create DepthStencilState fail");
-
 	}
 
 	void PipelineController::Rasterlizer::Init()
@@ -157,6 +147,22 @@ namespace Engine {
 		blendStateDesc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 
 		Dx11Core::Get().Device->CreateBlendState(&blendStateDesc, &AlphaBlend);
+		
+		ZeroMemory(&blendStateDesc, sizeof(D3D11_BLEND_DESC));
+		blendStateDesc.AlphaToCoverageEnable = FALSE;
+		blendStateDesc.IndependentBlendEnable = FALSE;
+		for (int i = 0; i < 8; ++i)
+		{
+			blendStateDesc.RenderTarget[i].BlendEnable = TRUE;
+			blendStateDesc.RenderTarget[i].SrcBlend = D3D11_BLEND_ONE;
+			blendStateDesc.RenderTarget[i].DestBlend = D3D11_BLEND_ONE;
+			blendStateDesc.RenderTarget[i].BlendOp = D3D11_BLEND_OP_ADD;
+			blendStateDesc.RenderTarget[i].SrcBlendAlpha = D3D11_BLEND_ONE;
+			blendStateDesc.RenderTarget[i].DestBlendAlpha = D3D11_BLEND_ONE;
+			blendStateDesc.RenderTarget[i].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+			blendStateDesc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		}
+		Dx11Core::Get().Device->CreateBlendState(&blendStateDesc, &GBufferBlend);
 	}
 
 }

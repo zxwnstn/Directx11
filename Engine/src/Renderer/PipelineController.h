@@ -4,7 +4,7 @@ namespace Engine {
 
 	enum class DepthStencilOpt
 	{
-		Enable, Disable, GBuffer
+		Enable, Disable
 	};
 
 	enum class RasterlizerOpt
@@ -14,7 +14,7 @@ namespace Engine {
 
 	enum class BlendOpt
 	{
-		Alpha, None
+		Alpha, GBuffer, None
 	};
 
 	class PipelineController
@@ -59,6 +59,7 @@ namespace Engine {
 		struct Blend
 		{
 			ID3D11BlendState* AlphaBlend;
+			ID3D11BlendState* GBufferBlend;
 			ID3D11BlendState* None;
 			BlendOpt opt;
 			float BlendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };

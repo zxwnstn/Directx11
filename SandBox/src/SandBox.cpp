@@ -6,7 +6,7 @@ void SandBox::OnUpdate(float dt)
 {
 	controlUpdate(dt);
 
-	objmodel->m_Transform.SetTranslate(light->lightCam.GetTransform().GetTranslate());
+	objmodel->m_Transform.SetTranslate(light2->lightCam.GetTransform().GetTranslate());
 	Engine::Renderer::BeginScene(perspective, light, light2);
 	
 	Engine::Renderer::Enque(fbxmodel);
@@ -28,7 +28,7 @@ void SandBox::OnAttach()
 	light.reset(new Engine::Light);
 	light->m_Color = { 1.0f, 1.0f, 1.0f, 1.0f };
 	light->lightCam.GetTransform().SetTranslate(-1.0f, 1.0f, 0.0f);
-	light->m_Type = Engine::Light::Type::Spot;
+	light->m_Type = Engine::Light::Type::Directional;
 	light->m_OuterAngle = 3.141592f / 3;
 	light->m_InnerAngle = 3.141592f / 6;
 	light->m_Range = 30.0f;
@@ -37,7 +37,7 @@ void SandBox::OnAttach()
 	light2.reset(new Engine::Light);
 	light2->m_Color = { 1.0f, 0.0f, 1.0f, 1.0f };
 	light2->lightCam.GetTransform().SetTranslate(3.0f, 1.0f, 0.0f);
-	light2->m_Type = Engine::Light::Type::Point;
+	light2->m_Type = Engine::Light::Type::Spot;
 	light2->m_OuterAngle = 3.141592f / 3;
 	light2->m_InnerAngle = 3.141592f / 6;
 	light2->m_Range = 30.0f;
@@ -53,6 +53,10 @@ void SandBox::OnAttach()
 		mat.second.Ambient.x = 0.8f;
 		mat.second.Ambient.y = 0.8f;
 		mat.second.Ambient.z = 0.8f;
+
+		mat.second.Specular.x = 0.1f;
+		mat.second.Specular.y = 0.1f;
+		mat.second.Specular.z = 0.1f;
 	}
 
 	objmodel = Engine::Model3D::Create(Engine::RenderingShader::StaticDiffered)
@@ -158,7 +162,7 @@ void SandBox::setStaticSqaure()
 void SandBox::controlUpdate(float dt)
 {
 	auto& perspectiveTransform = perspective->GetTransform();
-	auto& fbxtransform = light->lightCam.GetTransform();
+	auto& fbxtransform = light2->lightCam.GetTransform();
 	auto& objtransform = fbxmodel->m_Transform;
 
 	if (GetAsyncKeyState('W') & 0x8000)

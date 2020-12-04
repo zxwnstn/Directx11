@@ -8,7 +8,7 @@ Texture2D Ambient : register(t3);
 Texture2D WorldPosition : register(t4);
 Texture2D Misc : register(t5);
 
-SamplerState SampleType : register(s0);
+SamplerState SampleTypeClamp : register(s0);
 
 cbuffer Camera : register(b0)
 {
@@ -66,12 +66,12 @@ float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, floa
 float4 main(Input input) : SV_TARGET
 {
 	//step1. Unpack G-Buffer
-	float4 DepthSample = Depth.Sample(SampleType, input.tex);
-	float4 DiffuseSample = Diffuse.Sample(SampleType, input.tex);
-	float4 NormalSample = Normal.Sample(SampleType, input.tex);
-	float4 AmbientSample = Ambient.Sample(SampleType, input.tex);
-	float4 WorldPositionSample = WorldPosition.Sample(SampleType, input.tex);
-	float4 MiscSample = Misc.Sample(SampleType, input.tex);
+	float4 DepthSample = Depth.Sample(SampleTypeClamp, input.tex);
+	float4 DiffuseSample = Diffuse.Sample(SampleTypeClamp, input.tex);
+	float4 NormalSample = Normal.Sample(SampleTypeClamp, input.tex);
+	float4 AmbientSample = Ambient.Sample(SampleTypeClamp, input.tex);
+	float4 WorldPositionSample = WorldPosition.Sample(SampleTypeClamp, input.tex);
+	float4 MiscSample = Misc.Sample(SampleTypeClamp, input.tex);
 
 	float depth = DepthSample.x;
 	float3 diffuse = DiffuseSample.xyz;
@@ -109,6 +109,7 @@ float4 main(Input input) : SV_TARGET
 	float df = max(dot(lightVector, normal), 0.0f);	//diffuse factor 	
 	float specCos = max(dot(SpecularVector, CamVector), 0.0f);
 	float sf = pow(specCos, shiness);
+
 
 	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * LIntensity * LightColor);
 	float3 finalSpecular = sf * (specular * LIntensity * LightColor);

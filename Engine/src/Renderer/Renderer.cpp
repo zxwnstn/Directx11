@@ -268,9 +268,11 @@ namespace Engine {
 
 	void Renderer::type2()
 	{
+		//Create GBuffer
 		GlobalEnv->UseShadowMap = false;
 		gBuffer->SetRenderTarget();
-		s_PLController->SetDepthStencil(DepthStencilOpt::GBuffer);
+		s_PLController->SetDepthStencil(DepthStencilOpt::Enable);
+		s_PLController->SetBlend(BlendOpt::Alpha);
 		for (auto&[name, shader] : RendererShaders)
 		{
 			shader.SetParam<CBuffer::Camera>(*CurCamera);
@@ -282,8 +284,11 @@ namespace Engine {
 		queuedModel2D.clear();
 		queuedModel3D.clear();
 
+
+		//Render light with gbuffer
 		s_PLController->SetRenderTarget("BackBuffer");
-		s_PLController->SetDepthStencil(DepthStencilOpt::Enable);
+		s_PLController->SetDepthStencil(DepthStencilOpt::Disable);
+		s_PLController->SetBlend(BlendOpt::GBuffer);
 
 		RendererShaders["DifferedLighting"].Bind();
 		RendererShaders["DifferedLighting"].SetParam<CBuffer::Light>(*CurLight2);
@@ -292,15 +297,9 @@ namespace Engine {
 
 		Dx11Core::Get().Context->DrawIndexed(modelBufferEffect->GetIndexCount(), 0, 0);
 
-		s_PLController->SetRenderTarget("BackBuffer");
-		s_PLController->SetDepthStencil(DepthStencilOpt::Enable);
-
-		RendererShaders["DifferedLighting"].Bind();
 		RendererShaders["DifferedLighting"].SetParam<CBuffer::Light>(*CurLight);
-		modelBufferEffect->Bind();
-		gBuffer->Bind();
-
 		Dx11Core::Get().Context->DrawIndexed(modelBufferEffect->GetIndexCount(), 0, 0);
+
 		
 	}
 
