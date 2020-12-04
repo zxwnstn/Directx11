@@ -15,7 +15,7 @@ float4 main(Input input) : SV_TARGET
 {
 	float4 pixel = Texture.Sample(SampleType, input.tex);
 
-	if (input.UseShadowMap)
+	if (false)
 	{
 		float2 projectTexCoord;
 		projectTexCoord.x =  input.position.x / 1280.0f;

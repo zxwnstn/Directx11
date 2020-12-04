@@ -36,6 +36,7 @@ set(project_headers
     src/Renderer/Renderer.h
     src/Renderer/Shader.h
     src/Renderer/Texture.h
+	src/Renderer/GBuffer.h
     src/Engine.h
     src/pch.h
 )
@@ -69,6 +70,7 @@ set(project_source
     src/Renderer/Renderer.cpp
     src/Renderer/Shader.cpp
     src/Renderer/Texture.cpp
+	src/Renderer/GBuffer.cpp
     src/pch.cpp
 )
 

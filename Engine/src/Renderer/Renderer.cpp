@@ -9,6 +9,7 @@
 #include "Model/Model.h"
 #include "Model/3D/SkeletalAnimation.h"
 #include "Model/3D/Skeleton.h"
+#include "GBuffer.h"
 
 namespace Engine {
 
@@ -24,7 +25,10 @@ namespace Engine {
 
 	static std::shared_ptr<Camera> CurCamera;
 	static std::shared_ptr<Light> CurLight;
+	static std::shared_ptr<Light> CurLight2;
 
+	static std::shared_ptr<GBuffer> gBuffer;
+	static std::shared_ptr<Model2D> debugWindow;
 
 	void Renderer::Init(const WindowProp& prop)
 	{
@@ -37,6 +41,16 @@ namespace Engine {
 		GlobalEnv->bias.y = 0.0f;
 		GlobalEnv->bias.z = 1.0f;
 
+		debugWindow = Engine::Model2D::Create(Engine::RenderingShader::TwoDimension);
+		debugWindow->m_Transform.SetTranslate(0.0f, 0.0f, 0.0f);
+		debugWindow->m_Transform.SetScale(2.0f, 2.0f, 0.0f);
+		debugWindow->m_Transform.SetRotate(0.0f, 0.0f, 0.0f);
+
+		gBuffer.reset(new GBuffer(Dx11Core::Get().Width(), Dx11Core::Get().Height(), {
+			{"Diffuse", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"Normal",  DXGI_FORMAT_R32G32B32A32_FLOAT}, 
+			{"Ambient", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"WorldPosition", DXGI_FORMAT_R32G32B32A32_FLOAT},
+			{"Misc", DXGI_FORMAT_R8G8B8A8_UNORM}, 
+		}));
 	}
 
 	void Renderer::prep2D()
@@ -158,6 +172,14 @@ namespace Engine {
 		CurLight = light;
 	}
 
+	void Renderer::BeginScene(std::shared_ptr<Camera> camera, std::shared_ptr<Light> light, std::shared_ptr<Light> light2)
+	{
+		s_PLController->ClearRTT();
+		CurCamera = camera;
+		CurLight = light;
+		CurLight2 = light2;
+	}
+
 	void Renderer::type0()
 	{
 		//step 1. Create Shadow Map
@@ -244,14 +266,54 @@ namespace Engine {
 		queuedModel3D.clear();
 	}
 
+	void Renderer::type2()
+	{
+		GlobalEnv->UseShadowMap = false;
+		gBuffer->SetRenderTarget();
+		s_PLController->SetDepthStencil(DepthStencilOpt::GBuffer);
+		for (auto&[name, shader] : RendererShaders)
+		{
+			shader.SetParam<CBuffer::Camera>(*CurCamera);
+			shader.SetParam<CBuffer::Environment>(*GlobalEnv);
+		}
+		for (auto model2D : queuedModel2D) Draw2D(model2D);
+		for (auto model3D : queuedModel3D) Draw3D(model3D);
+
+		queuedModel2D.clear();
+		queuedModel3D.clear();
+
+		s_PLController->SetRenderTarget("BackBuffer");
+		s_PLController->SetDepthStencil(DepthStencilOpt::Enable);
+
+		RendererShaders["DifferedLighting"].Bind();
+		RendererShaders["DifferedLighting"].SetParam<CBuffer::Light>(*CurLight2);
+		modelBufferEffect->Bind();
+		gBuffer->Bind();
+
+		Dx11Core::Get().Context->DrawIndexed(modelBufferEffect->GetIndexCount(), 0, 0);
+
+		s_PLController->SetRenderTarget("BackBuffer");
+		s_PLController->SetDepthStencil(DepthStencilOpt::Enable);
+
+		RendererShaders["DifferedLighting"].Bind();
+		RendererShaders["DifferedLighting"].SetParam<CBuffer::Light>(*CurLight);
+		modelBufferEffect->Bind();
+		gBuffer->Bind();
+
+		Dx11Core::Get().Context->DrawIndexed(modelBufferEffect->GetIndexCount(), 0, 0);
+		
+	}
+
 	void Renderer::EndScene()
 	{
-		static int type = 1;
+		static int type = 2;
 
 		if (type == 0) 
 			type0();
 		if (type == 1)
 			type1();
+		if (type == 2)
+			type2();
 
 
 		Dx11Core::Get().Present();
@@ -325,8 +387,8 @@ namespace Engine {
 
 	void Renderer::Draw3D(std::shared_ptr<Model3D> model)
 	{
-		if (model->m_Shader == "StaticMesh") DrawStatic(model);
-		if (model->m_Shader == "SkeletalMesh") DrawSkeletal(model);
+		if (model->m_Shader == "StaticMesh" || model->m_Shader == "StaticDiffered") DrawStatic(model);
+		if (model->m_Shader == "SkeletalMesh" || model->m_Shader == "SkeletalDiffered") DrawSkeletal(model);
 	}
 
 	void Renderer::DrawStatic(std::shared_ptr<Model3D> model)
@@ -369,8 +431,8 @@ namespace Engine {
 				names.push_back(textureSet[j].Name);
 			}
 		}
-		TextureArchive::Get("SceneShadow")->Bind(0);
-		Texture::MultipleTextureBind(names);
+		//TextureArchive::Get("SceneShadow")->Bind(0);
+		Texture::MultipleTextureBind(names, 0);
 		model->m_ModelBuffer->Bind();
 
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
@@ -457,6 +519,9 @@ namespace Engine {
 		case RenderingShader::TwoDimension: return "2D";
 		case RenderingShader::VerticalBlur: return "VerticalBlur";
 		case RenderingShader::HorizontalBlur: return "HorizontalBlur";
+		case RenderingShader::SkeletalDiffered: return "SkeletalDiffered";
+		case RenderingShader::StaticDiffered: return "StaticDiffered";
+		case RenderingShader::DifferedLighting: return "DifferedLighting";
 		}
 		return "";
 	}

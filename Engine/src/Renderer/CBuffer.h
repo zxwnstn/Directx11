@@ -35,6 +35,7 @@ namespace Engine::CBuffer {
 
 	struct Light
 	{
+		vec4 Position;
 		vec4 Direction;
 		vec4 Color;
 		float Intensity;

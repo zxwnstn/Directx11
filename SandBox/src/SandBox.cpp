@@ -7,7 +7,7 @@ void SandBox::OnUpdate(float dt)
 	controlUpdate(dt);
 
 	objmodel->m_Transform.SetTranslate(light->lightCam.GetTransform().GetTranslate());
-	Engine::Renderer::BeginScene(perspective, light);
+	Engine::Renderer::BeginScene(perspective, light, light2);
 	
 	Engine::Renderer::Enque(fbxmodel);
 	Engine::Renderer::Enque(objmodel);
@@ -34,8 +34,18 @@ void SandBox::OnAttach()
 	light->m_Range = 30.0f;
 	light->lightCam.GetTransform().SetRotate(0.78f, 1.57f, 0.0f);
 
-	fbxmodel = Engine::Model3D::Create(Engine::RenderingShader::SkeletalMesh)
-		.buildFromFBX().SetSkeleton("Jamie");
+	light2.reset(new Engine::Light);
+	light2->m_Color = { 1.0f, 0.0f, 1.0f, 1.0f };
+	light2->lightCam.GetTransform().SetTranslate(3.0f, 1.0f, 0.0f);
+	light2->m_Type = Engine::Light::Type::Point;
+	light2->m_OuterAngle = 3.141592f / 3;
+	light2->m_InnerAngle = 3.141592f / 6;
+	light2->m_Range = 30.0f;
+	light2->lightCam.GetTransform().SetRotate(0.78f, 1.57f, 0.0f);
+
+
+	fbxmodel = Engine::Model3D::Create(Engine::RenderingShader::SkeletalDiffered)
+		.buildFromFBX().SetSkeleton("Pearl");
 	fbxmodel->m_Transform.SetScale(0.01f, 0.01f, 0.01f);
 
 	for (auto& mat : fbxmodel->m_MaterialSet->Materials)
@@ -45,7 +55,7 @@ void SandBox::OnAttach()
 		mat.second.Ambient.z = 0.8f;
 	}
 
-	objmodel = Engine::Model3D::Create(Engine::RenderingShader::StaticMesh)
+	objmodel = Engine::Model3D::Create(Engine::RenderingShader::StaticDiffered)
 		.buildFromOBJ().SetObject("sphere");
 
 	objmodel->m_Transform.SetScale(0.1f, 0.1f, 0.1f);
@@ -57,7 +67,7 @@ void SandBox::OnAttach()
 		mat.second.Ambient.z = 1.0f;
 	}
 
-	floor = Engine::Model3D::Create(Engine::RenderingShader::StaticMesh)
+	floor = Engine::Model3D::Create(Engine::RenderingShader::StaticDiffered)
 		.buildCustum()
 		.SetMesh("StaticSquare").SetMaterial("default")
 		.Finish();

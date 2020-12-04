@@ -18,10 +18,9 @@ namespace Engine {
 	{
 		switch (opt)
 		{
-		case DepthStencilOpt::Enable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Enable, 1); 
-			LOG_MISC("Renderer::Set depthstencil enable"); break;
-		case DepthStencilOpt::Disable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Disable, 1); 
-			LOG_MISC("Renderer::Set depthstencil disable"); break;
+		case DepthStencilOpt::Enable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Enable, 1); break;
+		case DepthStencilOpt::Disable: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.Disable, 1); break;
+		case DepthStencilOpt::GBuffer: Dx11Core::Get().Context->OMSetDepthStencilState(m_DepthStencil.GBuffer, 1); break;
 		}
 
 		m_DepthStencil.opt = opt;
@@ -106,9 +105,22 @@ namespace Engine {
 		depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 		Dx11Core::Get().Device->CreateDepthStencilState(&depthStencilDesc, &Enable);
+		ASSERT(Enable, "PipelineController::Create DepthStencilState fail");
 
 		depthStencilDesc.DepthEnable = false;
 		Dx11Core::Get().Device->CreateDepthStencilState(&depthStencilDesc, &Disable);
+		ASSERT(Disable, "PipelineController::Create DepthStencilState fail");
+
+		depthStencilDesc.DepthEnable = true;
+		depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
+		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
+		depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+		depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+		depthStencilDesc.BackFace = depthStencilDesc.FrontFace;
+
+		Dx11Core::Get().Device->CreateDepthStencilState(&depthStencilDesc, &GBuffer);
+		ASSERT(GBuffer, "PipelineController::Create DepthStencilState fail");
+
 	}
 
 	void PipelineController::Rasterlizer::Init()

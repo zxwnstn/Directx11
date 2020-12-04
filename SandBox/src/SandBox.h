@@ -23,6 +23,7 @@ private:
 	std::shared_ptr<class Engine::Camera> perspective;
 
 	std::shared_ptr<struct Engine::Light> light;
+	std::shared_ptr<struct Engine::Light> light2;
 
 	float mouseSensitive = 0.005f;
 };

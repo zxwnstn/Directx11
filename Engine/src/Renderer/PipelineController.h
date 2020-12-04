@@ -4,7 +4,7 @@ namespace Engine {
 
 	enum class DepthStencilOpt
 	{
-		Enable, Disable
+		Enable, Disable, GBuffer
 	};
 
 	enum class RasterlizerOpt
@@ -39,6 +39,7 @@ namespace Engine {
 		{
 			ID3D11DepthStencilState* Enable;
 			ID3D11DepthStencilState* Disable;
+			ID3D11DepthStencilState* GBuffer;
 			DepthStencilOpt opt;
 		private:
 			void Init();

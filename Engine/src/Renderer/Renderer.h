@@ -6,7 +6,8 @@ namespace Engine {
 
 	enum class RenderingShader
 	{
-		TwoDimension, StaticMesh, SkeletalMesh, VerticalBlur, HorizontalBlur, Custom
+		TwoDimension, StaticMesh, SkeletalMesh, VerticalBlur, HorizontalBlur, Custom,
+		SkeletalDiffered, StaticDiffered, DifferedLighting
 	};
 
 	std::string ToString(RenderingShader type);
@@ -14,6 +15,7 @@ namespace Engine {
 	class Model2D;
 	class Model3D;
 	struct Light;
+
 
 	class Renderer
 	{
@@ -24,6 +26,7 @@ namespace Engine {
 
 	public:
 		static void BeginScene(std::shared_ptr<Camera> camera, std::shared_ptr<Light> light);
+		static void BeginScene(std::shared_ptr<Camera> camera, std::shared_ptr<Light> light, std::shared_ptr<Light> light2);
 		static void Enque(std::shared_ptr<Model3D> model);
 		static void Enque(std::shared_ptr<Model2D> model);
 		static void EndScene();
@@ -50,6 +53,7 @@ namespace Engine {
 	private:
 		static void type0();
 		static void type1();
+		static void type2();
 
 		friend class ModuleCore;
 	};

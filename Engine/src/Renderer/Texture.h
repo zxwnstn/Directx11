@@ -4,8 +4,6 @@
 
 namespace Engine {
 
-	
-
 	class Texture
 	{
 	private:
@@ -31,6 +29,7 @@ namespace Engine {
 			bool m_IsBackBuffer;
 
 			friend class PipelineController;
+			friend class Renderer;
 		};
 
 	private:
@@ -42,6 +41,7 @@ namespace Engine {
 		Texture(const std::string& path, int mySlot);
 		//General textures(Texture array)
 		Texture(const std::vector<std::string>& paths, int mySlot);
+
 
 	public:
 		void Bind(int slot) const;

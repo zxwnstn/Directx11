@@ -335,6 +335,4 @@ namespace Engine {
 		s_Textures.clear();
 	}
 
-
-
 }

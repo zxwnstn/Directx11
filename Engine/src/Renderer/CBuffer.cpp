@@ -32,6 +32,12 @@ namespace Engine::CBuffer {
 	{
 		auto& transform = other.lightCam.GetTransform();
 
+		auto pos = transform.GetTranslate();
+		Position.x = pos.x;
+		Position.y = pos.y;
+		Position.z = pos.z;
+		Position.w = 1.0f;
+
 		auto lookat = transform.GetLookAtVector();
 		Direction.x = lookat.x;
 		Direction.y = lookat.y;

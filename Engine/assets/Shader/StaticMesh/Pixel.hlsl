@@ -172,7 +172,6 @@ float4 main(Input input) : SV_TARGET
 
 	//Step 2. Calc Halfway Vector
 	float3 CamVector = normalize(-input.position.xyz);
-
 	float3 NormalProjection = max(dot(input.normal, LightVector), 0.0f) * input.normal;
 	float3 HalfVector = NormalProjection - LightVector;
 	float3 SpecularVector = normalize(2 * HalfVector + LightVector);
