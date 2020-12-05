@@ -30,12 +30,9 @@ namespace Engine {
 	{
 		switch (opt)
 		{
-		case BlendOpt::Alpha: Dx11Core::Get().Context->OMSetBlendState(m_Blend.AlphaBlend, m_Blend.BlendFactor, 1);
-			break;
-		case BlendOpt::GBuffer: Dx11Core::Get().Context->OMSetBlendState(m_Blend.GBufferBlend, m_Blend.BlendFactor, 0xffffffff);
-			break;
-		case BlendOpt::None: Dx11Core::Get().Context->OMSetBlendState(m_Blend.None, m_Blend.BlendFactor, 0xffffffff); 
-			break;
+		case BlendOpt::Alpha: Dx11Core::Get().Context->OMSetBlendState(m_Blend.AlphaBlend, m_Blend.BlendFactor, 1); break;
+		case BlendOpt::GBuffer: Dx11Core::Get().Context->OMSetBlendState(m_Blend.GBufferBlend, m_Blend.BlendFactor, 0xffffffff); break;
+		case BlendOpt::None: Dx11Core::Get().Context->OMSetBlendState(m_Blend.None, m_Blend.BlendFactor, 0xffffffff); break;
 		}
 		m_Blend.opt = opt;
 		return *this;
@@ -45,10 +42,8 @@ namespace Engine {
 	{
 		switch (opt)
 		{
-		case RasterlizerOpt::Solid: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Solid); 
-			LOG_MISC("Renderer::Set Rasterize state Fill solid"); break;
-		case RasterlizerOpt::Wire: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Wire); 
-			LOG_MISC("Renderer::Set Rasterize state Fill wire"); break;
+		case RasterlizerOpt::Solid: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Solid); break;
+		case RasterlizerOpt::Wire: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Wire); break;
 		}
 		m_Rasterlizer.opt;
 		return *this;
@@ -128,9 +123,11 @@ namespace Engine {
 		rasterDesc.SlopeScaledDepthBias = 0.0f;
 
 		Dx11Core::Get().Device->CreateRasterizerState(&rasterDesc, &Solid);
+		ASSERT(Solid, "PipelineController::Create RasterizerState fail");
 
 		rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
 		Dx11Core::Get().Device->CreateRasterizerState(&rasterDesc, &Wire);
+		ASSERT(Wire, "PipelineController::Create RasterizerState fail");
 	}
 
 	void PipelineController::Blend::Init()
@@ -147,6 +144,7 @@ namespace Engine {
 		blendStateDesc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 
 		Dx11Core::Get().Device->CreateBlendState(&blendStateDesc, &AlphaBlend);
+		ASSERT(AlphaBlend, "PipelineController::Create AlphaBlend fail");
 		
 		ZeroMemory(&blendStateDesc, sizeof(D3D11_BLEND_DESC));
 		blendStateDesc.AlphaToCoverageEnable = FALSE;
@@ -163,6 +161,7 @@ namespace Engine {
 			blendStateDesc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 		}
 		Dx11Core::Get().Device->CreateBlendState(&blendStateDesc, &GBufferBlend);
+		ASSERT(GBufferBlend, "PipelineController::Create GBufferBlend fail");
 	}
 
 }

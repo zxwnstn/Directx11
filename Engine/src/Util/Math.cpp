@@ -304,39 +304,17 @@ namespace Engine::Util {
 
 	void RotateLocalX(vec3 & rotate, float radian)
 	{
-		DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
-		
-		DirectX::XMVECTOR up{ 0.0f, 1.0f, 0.0f, 0.0f };
-		up = DirectX::XMVector3TransformCoord(up, rotationMatrix);
-		DirectX::XMMATRIX newRotationMatrix = DirectX::XMMatrixRotationAxis(up, radian);
-
-		rotate.x += (float)atan2(newRotationMatrix.r[0].m128_f32[1], newRotationMatrix.r[1].m128_f32[1]);
-		rotate.y += (float)atan2(newRotationMatrix.r[2].m128_f32[0], newRotationMatrix.r[2].m128_f32[2]);
+		rotate.y += radian;
 	}
 
 	void RotateLocalY(vec3 & rotate, float radian)
 	{
-		DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
-
-		DirectX::XMVECTOR foward{ 0.0f, 0.0f, 1.0f, 0.0f };
-		foward = DirectX::XMVector3TransformCoord(foward, rotationMatrix);
-		DirectX::XMMATRIX newRotationMatrix = DirectX::XMMatrixRotationAxis(foward, radian);
-
-		rotate.x += (float)atan2(newRotationMatrix.r[0].m128_f32[1], newRotationMatrix.r[1].m128_f32[1]);
-		rotate.y += (float)atan2(newRotationMatrix.r[2].m128_f32[0], newRotationMatrix.r[2].m128_f32[2]);
+		rotate.x += radian;
 	}
 
 	void RotateLocalZ(vec3 & rotate, float radian)
 	{
-		/*DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(rotate.x, rotate.y, rotate.z);
-
-		DirectX::XMVECTOR foward{ 0.0f, 0.0f, 1.0f, 0.0f };
-		foward = DirectX::XMVector3TransformCoord(foward, rotationMatrix);
-		DirectX::XMMATRIX newRotationMatrix = DirectX::XMMatrixRotationAxis(foward, radian);
-
-		rotate.x = (float)atan2(newRotationMatrix.r[0].m128_f32[1], newRotationMatrix.r[1].m128_f32[1]);
-		rotate.y = (float)atan2(newRotationMatrix.r[2].m128_f32[0], newRotationMatrix.r[2].m128_f32[2]);
-		rotate.z = (float)asin(-newRotationMatrix.r[2].m128_f32[1]);*/
+		rotate.z += radian;
 	}
 
 	mat4 Transpose(const mat4& mat)

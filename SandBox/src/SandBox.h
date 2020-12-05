@@ -9,8 +9,6 @@ public:
 	void OnResize();
 	void OnMouseMove(float dx, float dy);
 
-	void setStaticSqaure();
-
 private:
 	void controlUpdate(float dt);
 

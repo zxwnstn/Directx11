@@ -16,7 +16,7 @@ namespace Engine {
 	private:
 		static std::shared_ptr<spdlog::logger> s_CFLogger;  //target both console and file
 		static std::shared_ptr<spdlog::logger> s_CLogger;   //target only console 
-		static std::shared_ptr<spdlog::logger> s_NoFormat;   //target only console 
+		static std::shared_ptr<spdlog::logger> s_NoFormat;  //target only console 
 	};
 
 }
