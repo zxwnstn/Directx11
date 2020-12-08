@@ -7,8 +7,12 @@ Texture2D Normal : register(t2);
 Texture2D Ambient : register(t3);
 Texture2D WorldPosition : register(t4);
 Texture2D Misc : register(t5);
+Texture2D SpotShadowMap : register(t6);
+TextureCube PointShadowMap : register(t7);
 
 SamplerState SampleTypeClamp : register(s0);
+SamplerComparisonState SampleTypePCF : register(s1);
+SamplerState SampleType : register(s2);
 
 cbuffer Camera : register(b0)
 {
@@ -28,8 +32,14 @@ cbuffer Light : register(b1)
 	float  LInnerAng;
 	float  LOuterAngRcp;
 	float  LRangeRcp;
-	int    LPadding[3];
+	float  LPadding[3];
 };
+
+cbuffer LightCam : register(b2)
+{
+	matrix LView;
+	matrix LProjection;
+}
 
 struct Input
 {
@@ -60,6 +70,32 @@ float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, floa
 	attenuation *= attenuation;
 
 	return attenuation;
+}
+
+float CalcSpotShadow(float4 worldPosition)
+{
+	worldPosition = mul(worldPosition, LView);
+	worldPosition = mul(worldPosition, LProjection);
+
+	float3 uv = worldPosition.xyz / worldPosition.w;
+	uv.x = uv.x * 0.5f + 0.5f;
+	uv.y = -uv.y * 0.5f + 0.5f;
+
+	if (0.0f < uv.x && uv.x < 1.0f && 0.0f < uv.y && uv.y < 1.0f)
+	{
+		return SpotShadowMap.SampleCmpLevelZero(SampleTypePCF, uv.xy, uv.z);
+	}
+	return 1.0f;
+}
+
+float CalcPointShadow(float3 ToPixel, float depth)
+{
+	float3 ToPixelAbs = abs(ToPixel);
+	float Z = max(ToPixelAbs.x, max(ToPixelAbs.y, ToPixelAbs.z));
+	float Depth = (LProjection[2][2] * Z + LProjection[3][2]) / Z;
+	float4 aa = PointShadowMap.Sample(SampleType, ToPixel);
+
+	return PointShadowMap.SampleCmpLevelZero(SampleTypePCF, ToPixel, Depth);
 }
 
 
@@ -110,9 +146,49 @@ float4 main(Input input) : SV_TARGET
 	float specCos = max(dot(SpecularVector, CamVector), 0.0f);
 	float sf = pow(specCos, shiness);
 
-	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * LIntensity * LightColor);
-	float3 finalSpecular = sf * (specular * LIntensity * LightColor);
+	float ShadowAtt = 1.0f;
+	if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
+	if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
+	
+	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * ShadowAtt * LIntensity * LightColor);
+	float3 finalSpecular = sf * (specular * ShadowAtt * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
-
+	
 	return float4(color, 1.0f);
 }
+
+//float CalcShadow(float2 tex, int divide)
+//{
+//	float2 closer;
+//
+//	float width = 1.0f / 1280.0f;
+//	float heigt = 1.0f / 720.0f;
+//	float totalSample = (float)divide * divide;
+//	float count = 0.0f;
+//
+//	for (int i = 0; i < divide; ++i)
+//	{
+//		for (int j = 0; j < divide; ++j)
+//		{
+//			float2 closer;
+//			closer.x = tex.x + (i - divide / 2) * width;
+//			closer.y = tex.y + (j - divide / 2) * heigt;
+//
+//			float4 PositionSample = WorldPosition.Sample(SampleTypeClamp, closer);
+//
+//			PositionSample = mul(PositionSample, LView);
+//			PositionSample = mul(PositionSample, LProjection);
+//
+//			float3 uv = PositionSample.xyz / PositionSample.w;
+//			uv.x = uv.x * 0.5f + 0.5f;
+//			uv.y = -uv.y * 0.5f + 0.5f;
+//
+//			if (0.0f < uv.x && uv.x < 1.0f && 0.0f < uv.y && uv.y < 1.0f)
+//			{
+//				if (SpotShadowMap.Sample(SampleTypeClamp, uv.xy).r < uv.z)
+//					count += 1.0f;
+//			}
+//		}
+//	}
+//	return 1.0f - count / totalSample;
+//}

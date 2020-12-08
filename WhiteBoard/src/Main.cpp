@@ -1,19 +1,22 @@
 #include <iostream>
 
+#include <string>
+#include <filesystem>
 #include <DirectXMath.h>
-#include <vector>
-#include <chrono>
-#include <fstream>
-#include <sstream>
-#include <memory>
 
-struct Data
+void some(uint32_t a, uint32_t b)
 {
-	int a, b;
-}static data;
+	std::cout << "some1" << std::endl;
+}
+
+void some(uint32_t a, bool b)
+{
+	std::cout << "some2" << std::endl;
+}
 
 int main()
 {
-	Data Data;
-	Data.a = 3;
+	DirectX::XMVECTOR vec;
+
+	vec = { 0.0f, 0.0f, 0.0f, 0.0f };
 }

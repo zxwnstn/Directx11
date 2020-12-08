@@ -13,10 +13,10 @@ namespace Engine {
 		switch (type)
 		{
 		case CBuffer::Type::Camera: return sizeof(CBuffer::Camera);
+		case CBuffer::Type::CubeCamera: return sizeof(CBuffer::CubeCamera);
 		case CBuffer::Type::Transform: return sizeof(CBuffer::Transform);
 		case CBuffer::Type::Light: return sizeof(CBuffer::Light);
-		case CBuffer::Type::Light2: return sizeof(CBuffer::Light2);
-		case CBuffer::Type::LightPos: return sizeof(CBuffer::LightPos);
+		case CBuffer::Type::LightCam: return sizeof(CBuffer::LightCam);
 		case CBuffer::Type::Bone: return sizeof(CBuffer::Bone);
 		case CBuffer::Type::Environment: return sizeof(CBuffer::Environment);
 		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
@@ -29,9 +29,9 @@ namespace Engine {
 	CBuffer::Type GetCBType(const std::string& name)
 	{
 		if (name == "Camera") return CBuffer::Type::Camera;
+		if (name == "CubeCamera") return CBuffer::Type::CubeCamera;
 		if (name == "Light") return CBuffer::Type::Light;
-		if (name == "Light2") return CBuffer::Type::Light2;
-		if (name == "LightPos") return CBuffer::Type::LightPos;
+		if (name == "LightCam") return CBuffer::Type::LightCam;
 		if (name == "Transform") return CBuffer::Type::Transform;
 		if (name == "Bone") return CBuffer::Type::Bone;
 		if (name == "Environment") return CBuffer::Type::Environment;
@@ -129,7 +129,7 @@ namespace Engine {
 	{
 		std::filesystem::directory_iterator	dirIter(path);
 
-		LOG_INFO("Create {0} Shader", Name) {
+		LOG_TRACE("Shader::Create {0} Shader", Name) {
 			for (auto& file : dirIter)
 			{
 				Type type = GetShaderType(file.path().filename().string());
@@ -214,7 +214,7 @@ namespace Engine {
 			file >> tokken;
 			if (tokken == "SV_TARGET") 
 				break;
-			if (tokken == "SamplerState")
+			if (tokken == "SamplerState" || tokken == "SamplerComparisonState")
 			{
 				file >> tokken;
 				D3D11_SAMPLER_DESC samplerDesc;
@@ -234,10 +234,22 @@ namespace Engine {
 
 				if (tokken == "SampleTypeClamp")
 				{
-					samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+					samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 					samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 					samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 					samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+				}
+				if (tokken == "SampleTypePCF")
+				{
+					samplerDesc.Filter = D3D11_FILTER::D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+					samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+					samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+					samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+					samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+					samplerDesc.BorderColor[0] = 1.0;
+					samplerDesc.BorderColor[1] = 1.0;
+					samplerDesc.BorderColor[2] = 1.0;
+					samplerDesc.BorderColor[3] = 1.0;
 				}
 
 				Dx11Core::Get().Device->CreateSamplerState(&samplerDesc, &SamplerState[SamplerNumber]);
@@ -247,6 +259,8 @@ namespace Engine {
 		file.close();
 		
 	}
+
+	
 
 	void Shader::CreateShader(ID3D10Blob* binary, Type type)
 	{
@@ -362,6 +376,21 @@ namespace Engine {
 		{
 			Dx11Core::Get().Context->PSSetSamplers(i, 1, &SamplerState[i]);
 		}
+	}
+
+	void Shader::Unbind()
+	{
+		ID3D11VertexShader* vs = nullptr;
+		ID3D11PixelShader* ps = nullptr;
+		ID3D11GeometryShader* gs = nullptr;
+		Dx11Core::Get().Context->VSSetShader(vs, NULL, 0);
+		Dx11Core::Get().Context->PSSetShader(ps, NULL, 0);
+		Dx11Core::Get().Context->GSSetShader(gs, NULL, 0);
+	}
+
+	bool Shader::Has(Type type)
+	{
+		return TypeKey & static_cast<uint32_t>(type);
 	}
 
 	std::unordered_map<std::string, std::shared_ptr<Shader>> ShaderArchive::s_Shaders;

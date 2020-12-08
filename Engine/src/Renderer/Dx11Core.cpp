@@ -110,7 +110,7 @@ namespace Engine {
 		ASSERT(Context,		"Dx11Core::Create directX context fail");
 		
 		//Create Back Buffer
-		TextureArchive::Add(WinProp->Width, WinProp->Height);
+		TextureArchive::CreateBackBuffer(WinProp->Width, WinProp->Height);
 	}
 
 	void Dx11Core::ErrorMessage(ID3D10Blob * msg)

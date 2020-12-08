@@ -21,8 +21,6 @@ namespace Engine {
 		m_BufferDesc.CPUAccessFlags = 0;
 		m_BufferDesc.MiscFlags = 0;
 		Dx11Core::Get().Device->CreateTexture2D(&m_BufferDesc, NULL, &m_Buffer);
-
-
 		ASSERT(m_Buffer, "Renderer::Create DepthBuffer failed");
 
 		//Depth/Stencil Shader Resource View

@@ -44,6 +44,7 @@ namespace Engine {
 		{
 		case RasterlizerOpt::Solid: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Solid); break;
 		case RasterlizerOpt::Wire: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Wire); break;
+		case RasterlizerOpt::Shadow: Dx11Core::Get().Context->RSSetState(m_Rasterlizer.Shadow); break;
 		}
 		m_Rasterlizer.opt;
 		return *this;
@@ -110,24 +111,42 @@ namespace Engine {
 
 	void PipelineController::Rasterlizer::Init()
 	{
-		D3D11_RASTERIZER_DESC rasterDesc;
-		rasterDesc.AntialiasedLineEnable = false;
-		rasterDesc.CullMode = D3D11_CULL_BACK;
-		rasterDesc.DepthBias = 0;
-		rasterDesc.DepthBiasClamp = 0.0f;
-		rasterDesc.DepthClipEnable = true;
-		rasterDesc.FillMode = D3D11_FILL_SOLID;
-		rasterDesc.FrontCounterClockwise = false;
-		rasterDesc.MultisampleEnable = false;
-		rasterDesc.ScissorEnable = false;
-		rasterDesc.SlopeScaledDepthBias = 0.0f;
+		RasterDesc.AntialiasedLineEnable = false;
+		RasterDesc.CullMode = D3D11_CULL_BACK;
+		RasterDesc.DepthBias = 0;
+		RasterDesc.DepthBiasClamp = 0.0f;
+		RasterDesc.DepthClipEnable = false;
+		RasterDesc.FillMode = D3D11_FILL_SOLID;
+		RasterDesc.FrontCounterClockwise = false;
+		RasterDesc.MultisampleEnable = false;
+		RasterDesc.ScissorEnable = false;
+		RasterDesc.SlopeScaledDepthBias = 0.0f;
 
-		Dx11Core::Get().Device->CreateRasterizerState(&rasterDesc, &Solid);
+		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Solid);
 		ASSERT(Solid, "PipelineController::Create RasterizerState fail");
 
-		rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
-		Dx11Core::Get().Device->CreateRasterizerState(&rasterDesc, &Wire);
+		RasterDesc.FillMode = D3D11_FILL_WIREFRAME;
+		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Wire);
 		ASSERT(Wire, "PipelineController::Create RasterizerState fail");
+
+		RasterDesc.FillMode = D3D11_FILL_SOLID;
+		RasterDesc.DepthBias = 85;
+		RasterDesc.SlopeScaledDepthBias = 5.0f;
+		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Shadow);
+		ASSERT(Shadow, "PipelineController::Create RasterizerState fail");
+	}
+
+	void PipelineController::Rasterlizer::AdjustShadowBias(int depth, float slope)
+	{
+		if(Shadow)
+			Shadow->Release();
+		RasterDesc.DepthBias += depth;
+		RasterDesc.SlopeScaledDepthBias += slope;
+
+		if (RasterDesc.DepthBias < 0.0f) RasterDesc.DepthBias = 0.0f;
+		if (RasterDesc.SlopeScaledDepthBias < 0.0f) RasterDesc.SlopeScaledDepthBias = 0.0f;
+		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Shadow);
+		
 	}
 
 	void PipelineController::Blend::Init()
@@ -146,6 +165,10 @@ namespace Engine {
 		Dx11Core::Get().Device->CreateBlendState(&blendStateDesc, &AlphaBlend);
 		ASSERT(AlphaBlend, "PipelineController::Create AlphaBlend fail");
 		
+		blendStateDesc.RenderTarget[0].BlendEnable = FALSE;
+		Dx11Core::Get().Device->CreateBlendState(&blendStateDesc, &None);
+		ASSERT(None, "PipelineController::Create AlphaBlend fail");
+
 		ZeroMemory(&blendStateDesc, sizeof(D3D11_BLEND_DESC));
 		blendStateDesc.AlphaToCoverageEnable = FALSE;
 		blendStateDesc.IndependentBlendEnable = FALSE;

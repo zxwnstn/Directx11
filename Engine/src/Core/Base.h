@@ -6,7 +6,7 @@
 
 //TODO create option cmake
 #define ASSERT_ENABLE
-#define LOGGING_MISC
+#define LOGGING_MISC false
 
 #ifdef _DEBUG
 	#define DEBUG_FEATURE
@@ -28,7 +28,7 @@
 #define BIT(x) 1 << x
 
 //loggings
-#ifdef LOGGING_MISC
+#if LOGGING_MISC
 	#define LOG_MISC(...)      ::Engine::Log::GetCFLogger()->trace(__VA_ARGS__);
 	#define CLOG_MISC(...)     ::Engine::Log::GetCLogger()->trace(__VA_ARGS__);
 #else

@@ -42,7 +42,9 @@ namespace Engine {
 
 	public:
 		void Bind() const;
-		
+		void Unbind();
+		bool Has(Type type);
+
 		template<class ConstantBuffer, class PramType>
 		void SetParam(PramType& param)
 		{
@@ -65,6 +67,7 @@ namespace Engine {
 			{
 			case Type::VertexShader: Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
 			case Type::PixelShader: Dx11Core::Get().Context->PSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
+			case Type::GeometryShader: Dx11Core::Get().Context->GSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
 			}
 		}
 
@@ -100,7 +103,7 @@ namespace Engine {
 	{
 	public:
 		static std::shared_ptr<Shader> Add(const std::string& path, const std::string& name);
-		static std::shared_ptr<Shader> Get(const std::string& path);
+		static std::shared_ptr<Shader> Get(const std::string& name);
 		static bool Has(const std::string& name);
 
 	private:

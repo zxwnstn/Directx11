@@ -51,5 +51,4 @@
 
 #include "Common/Timestep.h"
 
-//vendor
-#include "stb_image.h"
+

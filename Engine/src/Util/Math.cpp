@@ -258,6 +258,47 @@ namespace Engine::Util {
 
 	}
 
+	mat4 GetCubeViewMatrix(vec3 & translate, uint32_t face)
+	{
+		DirectX::XMMATRIX ret;
+		DirectX::XMVECTOR upVector, positionVector, lookAtVector;
+
+		//position vector
+		positionVector = ToXMVector(translate);
+
+		switch (face)
+		{
+		case 0: // right
+			lookAtVector = { 1.0f, 0.0f, 0.0f, 0.0f };
+			upVector = { 0.0f, 1.0f, 0.0f, 0.0f };
+			break;
+		case 1: // left
+			lookAtVector = { -1.0f, 0.0f, 0.0f, 0.0f };
+			upVector = { 0.0f, 1.0f, 0.0f, 0.0f };
+			break;
+		case 2: // top
+			lookAtVector = { 0.0f, 1.0f, 0.0f, 0.0f };
+			upVector = { 0.0f, 0.0f, -1.0f, 0.0f };
+			break;
+		case 3: // bottom
+			lookAtVector = { 0.0f, -1.0f, 0.0f, 0.0f };
+			upVector = { 0.0f, 0.0f, 1.0f, 0.0f };
+			break;
+		case 4: // front
+			lookAtVector = { 0.0f, 0.0f, 1.0f, 0.0f };
+			upVector = { 0.0f, 1.0f, 0.0f, 0.0f };
+			break;
+		case 5: // back
+			lookAtVector = { 0.0f, 0.0f, -1.0f, 0.0f };
+			upVector = { 0.0f, 1.0f, 0.0f, 0.0f };
+			break;
+		}
+		lookAtVector = DirectX::XMVectorAdd(positionVector, lookAtVector);
+		
+		ret = DirectX::XMMatrixLookAtLH(positionVector, lookAtVector, upVector);
+		return ToMatrix(ret);
+	}
+
 	void CalcFinalSkinnedTransform(const mat4 & offset, mat4 & skinnedTransform, float scaleFactor)
 	{
 		DirectX::XMMATRIX offsetMat = ToXMMatrix(offset);

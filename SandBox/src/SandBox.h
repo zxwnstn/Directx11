@@ -14,8 +14,8 @@ private:
 
 	std::shared_ptr<class Engine::Model3D> fbxmodel;
 	std::shared_ptr<class Engine::Model3D> objmodel;
-	std::shared_ptr<class Engine::Model2D> debugwindow;
 	std::shared_ptr<class Engine::Model3D> floor;
+	std::shared_ptr<class Engine::Model2D> debugwindow;
 
 	std::shared_ptr<class Engine::Camera> ortho;
 	std::shared_ptr<class Engine::Camera> perspective;

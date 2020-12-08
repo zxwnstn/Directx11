@@ -11,7 +11,7 @@ namespace Engine {
 	class Camera;
 	class Model2D;
 	class Model3D;
-
+	
 	class Renderer
 	{
 	private:
@@ -26,14 +26,19 @@ namespace Engine {
 
 		static void SetRenderMode(RenderMode mode);
 		static void Resize(uint32_t width, uint32_t height);
+		
+		static std::shared_ptr<struct Environment> GetGlobalEnv();
+		//static RenderingData& GetData();
+
+		static void AdjustDepthBias(int f);
+		static void AdjustSlopeBias(float s);
 
 	private:
 		static void renderDeffered();
 		static void renderForward();
-		static void draw2D(std::shared_ptr<Model2D> model);
-		static void draw3D(std::shared_ptr<Model3D> model);
-
-		static std::shared_ptr<struct Environment> GetGlobalEnv();
+		static void renderShadow();
+		static void draw2D(std::shared_ptr<Model2D> model, const std::string& shader);
+		static void draw3D(std::shared_ptr<Model3D> model, const std::string& shader);
 
 		friend class ModuleCore;
 	};

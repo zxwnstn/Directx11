@@ -27,6 +27,7 @@ namespace Engine::Util {
 	mat4 GetOrthographic(float magnification, float screenAspect, float _near, float _far);
 	mat4 GetPerspective(float fov, float screenAspect, float _near, float _far);
 	mat4 GetViewMatrix(vec3& translate, vec3& rotate);
+	mat4 GetCubeViewMatrix(vec3& translate, uint32_t face);
 
 	void CalcFinalSkinnedTransform(const mat4& offset, mat4& skinnedTransform, float scaleFactor);
 

@@ -88,7 +88,7 @@ namespace Engine::CBuffer {
 		memcpy(SkinnedTransform, skinnedTransform, sizeof(mat4) * MAXIMUM_JOINTS);
 	}
 
-	void Light2::Upload(Engine::Light & other)
+	void LightCam::Upload(Engine::Light & other)
 	{
 		LightView = Util::Transpose(other.lightCam.GetViewMatrix());
 		LightProjection = Util::Transpose(other.lightCam.GetProjectionMatrix());
@@ -100,13 +100,11 @@ namespace Engine::CBuffer {
 		TextureHeight = (float)other->Height;
 	}
 
-	void LightPos::Upload(Engine::Light & other)
+	void CubeCamera::Upload(Engine::Camera & other)
 	{
-		auto translate = other.lightCam.GetTransform().GetTranslate();
-		lightPos.x = translate.x;
-		lightPos.y = translate.y;
-		lightPos.z = translate.z;
-		lightPos.w = 1.0f;
+		for (int i = 0; i < 6; ++i)
+			View[i] = Util::Transpose(Util::GetCubeViewMatrix(other.GetTransform().GetTranslate(), i));
+		Projection = Util::Transpose(other.GetProjectionMatrix());
 	}
 
 }

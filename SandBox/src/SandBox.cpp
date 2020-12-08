@@ -6,11 +6,11 @@ void SandBox::OnUpdate(float dt)
 {
 	controlUpdate(dt);
 
-	Engine::Renderer::BeginScene(perspective, { light, light2 });
+	Engine::Renderer::BeginScene(perspective, { light2, light });
 	
 	Engine::Renderer::Enque3D(fbxmodel);
 	Engine::Renderer::Enque3D(objmodel);
-	//Engine::Renderer::Enque3D(floor);
+	//Engine::Renderer::Enque2D(debugwindow);
 
 	Engine::Renderer::EndScene();
 }
@@ -18,12 +18,12 @@ void SandBox::OnUpdate(float dt)
 void SandBox::OnAttach()
 {
 	light.reset(new Engine::Light);
-	light->m_Color = { 1.0f, 0.0f, 0.0f, 1.0f };
+	light->m_Color = { 1.0f, 0.0f, 1.0f, 1.0f };
 	light->lightCam.GetTransform().SetTranslate(1.0f, 2.0f, 0.0f);
-	light->m_Type = Engine::Light::Type::Spot;
+	light->m_Type = Engine::Light::Type::Point;
 	light->m_OuterAngle = 3.141592f / 3;
 	light->m_InnerAngle = 3.141592f / 6;
-	light->m_Range = 30.0f;
+	light->m_Range = 20.0f;
 	light->lightCam.GetTransform().SetRotate(0.78f, -1.57f, 0.0f);
 
 	light2.reset(new Engine::Light);
@@ -66,16 +66,15 @@ void SandBox::OnAttach()
 	}
 
 	floor = Engine::Model3D::Create()
-		.buildFromOBJ().SetObject("Square");
+		.buildFromOBJ().SetObject("monkey");
 
-	floor->m_Transform.SetScale(10.0f, 10.0f, 1.0f);
-	floor->m_Transform.SetRotate(1.57f, 0.0f, 0.0f);
+	floor->m_Transform.SetScale(1.0f, 1.0f, 1.0f);
+	floor->m_Transform.SetTranslate(0.0f, 1.0f, 0.0f);
 
 	debugwindow = Engine::Model2D::Create()
-		.SetTexture("SceneShadow");
-	
-	debugwindow->m_Transform.SetTranslate(1.0f, 2.0f, 0.0f);
-	debugwindow->m_Transform.SetScale(2.0f, 2.0f, 0.0f);
+		.SetTexture("images");
+	debugwindow->m_Transform.SetTranslate(0.5f, 0.5f, 0.0f);
+	debugwindow->m_Transform.SetScale(0.2f, 0.3f, 0.0f);
 
 	float filedOfView = 3.141592f / 3.0f;
 	perspective.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
@@ -107,7 +106,7 @@ void SandBox::controlUpdate(float dt)
 {
 	auto& perspectiveTransform = perspective->GetTransform();
 	auto& fbxtransform = light->lightCam.GetTransform();
-	auto& objtransform = fbxmodel->m_Transform;
+	auto& objtransform = floor->m_Transform;
 
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
@@ -137,15 +136,47 @@ void SandBox::controlUpdate(float dt)
 		perspectiveTransform.AddTranslate(0.0f, -0.1f, 0.0f);
 	}
 
-	
+	static float sensitive = 0.0001f;
+	static int ss = 1;
+
 	if (GetAsyncKeyState(VK_F1) & 0x8000)
 	{
-		objtransform.AddTranslate(0.0f, 0.02f, 0.0f);
+		sensitive *= 10.0f;
+		std::cout << "bias sensitive" << sensitive << '\n';
 	}
 	if (GetAsyncKeyState(VK_F2) & 0x8000)
 	{
-		objtransform.AddTranslate(0.0f, -0.02f, 0.0f);
+		sensitive *= 0.1f;
+		std::cout << "bias sensitive" << sensitive << '\n';
 	}
+	if (GetAsyncKeyState(VK_F3) & 0x8000)
+	{
+		sensitive += sensitive;
+		std::cout << "bias sensitive" << sensitive << '\n';
+	}
+	if (GetAsyncKeyState(VK_F4) & 0x8000)
+	{
+		sensitive -= sensitive;
+		std::cout << "bias sensitive" << sensitive << '\n';
+	}
+	
+	if (GetAsyncKeyState(VK_F5) & 0x8000)
+	{
+		Engine::Renderer::AdjustDepthBias(ss);
+	}
+	if (GetAsyncKeyState(VK_F6) & 0x8000)
+	{
+		Engine::Renderer::AdjustDepthBias(-ss);
+	}
+	if (GetAsyncKeyState(VK_F7) & 0x8000)
+	{
+		Engine::Renderer::AdjustSlopeBias(sensitive);
+	}
+	if (GetAsyncKeyState(VK_F8) & 0x8000)
+	{
+		Engine::Renderer::AdjustSlopeBias(-sensitive);
+	}
+
 
 	if (GetAsyncKeyState(VK_UP) & 0x8000)
 	{

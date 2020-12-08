@@ -36,21 +36,22 @@ namespace Engine {
 		}
 
 		LOG_INFO("Compliing Shader") {
-			std::filesystem::directory_iterator Categories(File::GetCommonPath(File::Shader));
-			for (auto& category : Categories)
+			std::filesystem::recursive_directory_iterator ShaderDir(File::GetCommonPath(File::Shader));
+			for (auto dir : ShaderDir)
 			{
-				if (category.is_directory())
+				if (dir.is_regular_file())
 				{
-					std::filesystem::directory_iterator Shaders(category);
-					for (auto& shader : Shaders)
+					std::string shaderName;
+					std::filesystem::path edir = dir;
+					while (1)
 					{
-						auto shaderName = category.path().stem().string();
-						if (shader.is_directory())
-						{
-							shaderName += shader.path().stem().string();
-							ShaderArchive::Add(shader.path().string(), shaderName);
-						}
+						edir = edir.parent_path();
+						std::string stem = edir.stem().string();
+						if (stem == "Shader")
+							break;
+						shaderName = stem + shaderName;
 					}
+					ShaderArchive::Add(dir.path().parent_path().string(), shaderName);
 				}
 			}
 		}
@@ -102,13 +103,18 @@ namespace Engine {
 
 		LOG_INFO("Load Texture") {
 			std::filesystem::recursive_directory_iterator TextureFolder(File::GetCommonPath(File::Texture));
+			std::vector<std::string> paths;
 			for (auto& dir : TextureFolder)
 			{
 				if (dir.is_regular_file())
 				{
 					TextureArchive::Add(dir.path().string(), dir.path().stem().string());
+					paths.push_back(dir.path().string());
 				}
 			}
+			TextureArchive::Add(paths, "images", 1024, 1024);
+			TextureArchive::Add("asdf", 1024, 1024, 6);
+			ShadowMap(1024, 1024, 6);
 		}
 
 		isInited = true;

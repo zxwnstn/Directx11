@@ -9,7 +9,7 @@ namespace Engine {
 
 	enum class RasterlizerOpt
 	{
-		Solid, Wire
+		Solid, Wire, Shadow
 	};
 
 	enum class BlendOpt
@@ -48,9 +48,13 @@ namespace Engine {
 
 		struct Rasterlizer
 		{
+			D3D11_RASTERIZER_DESC RasterDesc;
 			ID3D11RasterizerState* Solid;
 			ID3D11RasterizerState* Wire;
+			ID3D11RasterizerState* Shadow;
 			RasterlizerOpt opt;
+			void AdjustShadowBias(int depth, float slope);
+
 		private:
 			void Init();
 			friend class PipelineController;

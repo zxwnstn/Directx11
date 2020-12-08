@@ -2,10 +2,12 @@ project(stb_image LANGUAGES CXX)
 
 set(project_headers 
     stb_image.h
+	stb_image_resize.h
 )
 
 set(project_source 
     stb_image.cpp
+    stb_image_resize.cpp
 )
 
 add_library(

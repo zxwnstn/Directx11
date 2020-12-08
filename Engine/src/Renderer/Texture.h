@@ -1,8 +1,38 @@
 #pragma once
 
 #include "Core/Base.h"
+#include <stdint.h>
 
 namespace Engine {
+
+	class ShadowMap
+	{
+	public:
+		ShadowMap(uint32_t width, uint32_t height);
+		ShadowMap(uint32_t width, uint32_t height, uint32_t arraySize);
+
+		void SetRenderTarget();
+		void Bind(uint32_t slot);
+		void Resize(uint32_t width, uint32_t height);
+
+		static void MultipleBind(std::vector<std::shared_ptr<ShadowMap>>& shadowMaps, uint32_t count, uint32_t slot);
+
+	private:
+		int m_Width;
+		int m_Height;
+
+		ID3D11Texture2D* m_DepthStecilBuffer = nullptr;
+		ID3D11ShaderResourceView* m_ShaderResourceView = nullptr;
+		ID3D11DepthStencilView* m_DepthStencilView = nullptr;
+
+		D3D11_TEXTURE2D_DESC m_DepthStencilBufferDecs;
+		D3D11_SHADER_RESOURCE_VIEW_DESC m_ShaderResourceViewDesc;
+		D3D11_DEPTH_STENCIL_VIEW_DESC m_DepthStencilViewDesc;
+
+		D3D11_VIEWPORT m_ViewPortDesc;
+
+		friend class Renderer;
+	};
 
 	class Texture
 	{
@@ -11,6 +41,7 @@ namespace Engine {
 		{
 		public:
 			RTTInform(uint32_t width, uint32_t height, ID3D11Texture2D* buffer, bool isBackBuffer = false);
+			RTTInform(uint32_t width, uint32_t height, ID3D11Texture2D* buffer, uint32_t arraySize);
 
 		public:
 			void Resize(uint32_t width, uint32_t height, ID3D11Texture2D* buffer);
@@ -30,25 +61,25 @@ namespace Engine {
 
 			friend class PipelineController;
 			friend class Renderer;
-		};
+		};	
 
 	private:
-		//only back buffer
-		Texture(uint32_t width, uint32_t height);
+		//Only back buffer
+		Texture(uint32_t width, uint32_t height, bool);
 		//Render target Texture
-		Texture(uint32_t width, uint32_t height, int slot);						
+		Texture(uint32_t width, uint32_t height);
+		//Render target Textures
+		Texture(uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize);
 		//General texture with image
-		Texture(const std::string& path, int mySlot);
+		Texture(const std::string& path);
 		//General textures(Texture array)
-		Texture(const std::vector<std::string>& paths, int mySlot);
-
+		Texture(const std::vector<std::string>& paths, int unifiedWidth, int unifiedHeight);
 
 	public:
 		void Bind(int slot) const;
-		void Bind() const;
 
 		static void MultipleTextureBind(const std::vector<std::string>& textures, int slot);
-		void Resize(uint32_t Width, uint32_t Height);
+		void Resize(int Width, int Height);
 
 	public:
 		int32_t Width;
@@ -57,8 +88,7 @@ namespace Engine {
 	private:
 		int32_t Channels;
 
-		uint32_t MySlot = 0;
-		uint32_t TextureArrayMax;
+		int TextureArrayMax;
 		bool isTextureArray;
 
 		ID3D11Texture2D* m_Buffer = nullptr;
@@ -73,12 +103,18 @@ namespace Engine {
 	class TextureArchive
 	{
 	private:
-		static void Add(uint32_t width, uint32_t height); //for BackBuffer
+		static void CreateBackBuffer(uint32_t width, uint32_t height); //for BackBuffer
 
 	public:
-		static void Add(const std::string& name, uint32_t width, uint32_t height, int slot = 1); //for Render target texture
-		static void Add(const std::string& path, const std::string& name, int slot = 1);
-		static void Add(const std::vector<std::string>& paths, const std::string& name, int slot = 1);
+		//Create Render target texture
+		static void Add(const std::string& name, uint32_t width, uint32_t height); 
+		//Create Shader resource texture from image file
+		static void Add(const std::string& path, const std::string& name);
+		//Create Render target TextureArray if call by zero unified width or height value setted first image width or height
+		static void Add(const std::string& name, uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize);
+		//Create Shader Resource TextureArray if call by zero unified width or height value setted 1024
+		static void Add(const std::vector<std::string>& paths, const std::string& name, uint32_t unifiedWidth, uint32_t unifiedHeight);
+
 		static bool Has(const std::string& name);
 		static std::shared_ptr<Texture> Get(const std::string& name);
 		static void Shutdown();
