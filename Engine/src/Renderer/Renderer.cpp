@@ -12,6 +12,8 @@
 #include "Model/3D/SkeletalAnimation.h"
 #include "Model/3D/Skeleton.h"
 #include "GBuffer.h"
+#include "SBuffer.h"
+#include "Core/ModuleCore.h"
 
 #define MAX_LIGHT 100
 
@@ -34,7 +36,11 @@ namespace Engine {
 		std::vector<std::shared_ptr<Light>>   QueuedLight;
 		std::shared_ptr<Camera>	ActiveCamera;
 
+		float ReinhardToneMapFactor[3];
+		std::shared_ptr<SBuffer<float>> LumCsBuffer;
+
 		RenderMode Mode;
+		RenderingPath Path;
 
 	}static s_Data;
 
@@ -82,17 +88,20 @@ namespace Engine {
 			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(2048, 2048));
 		for (uint32_t i = 0; i < 10; ++i)
 			s_Data.PointShadowMaps.emplace_back(new ShadowMap(4096, 4096, 6));
+
+		TextureArchive::Add("HDRTexture", prop.Width, prop.Height);
+		s_Data.LumCsBuffer.reset(new SBuffer<float>(SBufferType::Write, nullptr, 20000));
 	}
 
 	void Renderer::Shutdown()
 	{
 	}
 
-	void Renderer::BeginScene(std::shared_ptr<Camera> camera, const std::initializer_list<std::shared_ptr<Light>>& lights)
+	void Renderer::BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights)
 	{
 		s_Data.PLController->ClearRTT();
 		s_Data.ActiveCamera = camera;
-		s_Data.QueuedLight.assign(lights);
+		s_Data.QueuedLight = lights;
 	}
 
 	void Renderer::Enque2D(std::shared_ptr<Model2D> model)
@@ -105,30 +114,282 @@ namespace Engine {
 		s_Data.Queued3D.push_back(model);
 	}
 
+	bool isHdr = true;
+
+	void Renderer::ActivateHdr(bool activate)
+	{
+		isHdr = activate;
+	}
+
 	void Renderer::EndScene()
 	{
 		for (auto&[name, shader] : ShaderArchive::s_Shaders)
 			shader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
 
-		renderShadow();
-		
-		switch (s_Data.Mode)
+		switch (s_Data.Path)
 		{
-		case RenderMode::Deffered: renderDeffered();
-		case RenderMode::Forward: renderForward();
+		case RenderingPath::Fbx: FbxLoad(); break;
+		case RenderingPath::Deffered: Deffered(); break;
+		case RenderingPath::Phong: Phong(); break;
+		case RenderingPath::Animation: Animation(); break;
+		case RenderingPath::HDR: HDR(); break;
+		case RenderingPath::CurvedPn: CurvedPn(); break;
 		}
 
-		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+		//renderShadow();
+		//
 
-		//Render 2D
-		s_Data.PLController->SetBlend(BlendOpt::None);
-		for (auto model : s_Data.Queued2D) draw2D(model, "2D");
+		//switch (s_Data.Mode)
+		//{
+		//case RenderMode::Deffered: renderDeffered();
+		//case RenderMode::Forward: renderForward();
+		//}
+
+		//s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+
+		////Render 2D
+		//s_Data.PLController->SetBlend(BlendOpt::None);
+		//for (auto model : s_Data.Queued2D) draw2D(model, "2D");
 
 		s_Data.Queued2D.clear();
 		s_Data.Queued3D.clear();
 		s_Data.QueuedLight.clear();
 
+		//Dx11Core::Get().Present();
+	}
+
+	void Renderer::Present()
+	{
 		Dx11Core::Get().Present();
+	}
+
+	void Renderer::excompute()
+	{		
+		unsigned int arr[126];
+		for (int i = 0; i < 126; ++i)
+			arr[i] = i;
+
+		unsigned int arr2[126]{ 0 };
+
+		SBuffer<unsigned int> readBuffer(SBufferType::Read, arr, 126);
+		SBuffer<unsigned int> writeBuffer(SBufferType::Write, arr2, 126);
+		
+		auto shader = ShaderArchive::Get("ComputeBasic");
+		shader->Bind();
+
+		readBuffer.Bind(0);
+		writeBuffer.SetAsTarget(0);
+		shader->Dipatch(2, 3, 1);
+
+		auto v= writeBuffer.GetData();
+		for (int i = 0; i < 130; ++i)
+		{
+			std::cout << v[i] << " ";
+			if (i % 10 == 0) std::cout << "\n";
+		}
+	}
+
+	void Renderer::excompute2(std::shared_ptr<Model3D> model)
+	{
+		static bool first = true;
+		static std::shared_ptr<Texture> uav;
+		static std::shared_ptr<Texture> stone = TextureArchive::Get("stone01");
+		static std::shared_ptr<Texture> apple = TextureArchive::Get("apple");
+		if (first)
+		{
+			TextureArchive::Add("UAV", 512, 512, true, true);
+			auto shader = ShaderArchive::Get("ComputeTexture");
+			shader->Bind();
+
+			uav = TextureArchive::Get("UAV");
+			stone->SetComputeResource(0);
+			apple->SetComputeResource(1);
+			uav->SetComputeOuput();
+
+			shader->Dipatch(32, 32, 1);
+			first = false;
+			shader->Unbind();
+
+			//Notice : This Process must be needed!(Unbind Resource)
+			ID3D11UnorderedAccessView* nullUAV = nullptr;
+			Dx11Core::Get().Context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+		}
+
+		auto twod = ShaderArchive::Get("2D");
+		twod->Bind();
+
+		s_Data.PLController->ClearRTT();
+
+		s_Data.PLController->SetRenderTarget("BackBuffer");
+
+		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
+		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+
+		Engine::Transform t;
+		t.SetScale(0.5f, 0.5f, 1.0f);
+		
+		twod->SetParam<CBuffer::Transform>(t);
+
+		s_Data.ModelBuffer2D->Bind();
+		uav->Bind(0);
+		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+	}
+
+	void Renderer::exstreamout(std::shared_ptr<Model3D> model)
+	{
+		s_Data.PLController->ClearRTT();
+
+		s_Data.PLController->SetRenderTarget("BackBuffer");
+
+		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+		s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
+
+		auto shader = ShaderArchive::Get("EtcStreamout");
+		shader->Bind();
+		ID3D11PixelShader* ps = nullptr;
+		
+		SOBuffer sobuffer;
+		sobuffer.Bind();
+		
+		model->m_ModelBuffer->Bind();
+		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
+
+		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+		sobuffer.Unbind();
+		shader->Unbind();
+
+		auto d = sobuffer.GetData();
+		for (int i = 0; i < 100; ++i)
+		{
+			//d[i].print();
+		}
+
+		shader = ShaderArchive::Get("EtcCheckSO");
+		shader->Bind();
+
+		uint32_t stride = 36;
+		uint32_t offset = 0; 
+		Dx11Core::Get().Context->IASetVertexBuffers(0, 1, &sobuffer.m_OutstreamBuffer, &stride, &offset);
+		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		Dx11Core::Get().Context->DrawAuto();
+	}
+
+	void Renderer::exavlum(const std::string& texture)
+	{
+		auto tex = TextureArchive::Get(texture);
+
+		auto width = tex->Width;
+		auto height = tex->Height;
+		
+		{
+			ENABLE_ELAPSE
+			auto shader = ShaderArchive::Get("HDRAverage");
+
+			shader->Bind();
+			float* a = nullptr;
+			SBuffer<float> buffer(SBufferType::Write, a, 20000);
+			buffer.SetAsTarget(0);
+			Dx11Core::Get().Context->CSSetShaderResources(0, 1, &tex->m_ResourceView);
+
+			uint32_t dispatchX = (uint32_t)ceil(width / 16.0f);
+			uint32_t dispatchY = (uint32_t)ceil(height / 16.0f);
+
+			uvec4 vec;
+			vec.x = dispatchX;
+			vec.y = dispatchY;
+			shader->SetParam<CBuffer::DispatchInfo>(vec);
+			
+			shader->Dipatch(dispatchX, dispatchY, 1);
+			buffer.UnSetTarget();
+
+			D3D11_BOX box;
+			box.left = 0;
+			box.right = sizeof(float) * dispatchX * dispatchY;
+			box.top = 0;
+			box.bottom = 1;
+			box.front = 0;
+			box.back = 1;
+			auto data = buffer.GetData();
+			float averageLum = 0.0f;
+			for (uint32_t i = 0; i < dispatchY; ++i)
+			{
+				for (uint32_t j = 0; j < dispatchX; ++j)
+				{
+					averageLum += data[i * dispatchX + j];
+				}
+			}
+			averageLum /= width * height;
+			buffer.Unmap();
+			LOG_ELAPSE
+			LOG_INFO("{0} gpu average", averageLum);
+		}
+	}
+
+	void Renderer::exhdr()
+	{
+		uint32_t dispatchX = (uint32_t)ceil(Dx11Core::Get().Width() / 16.0f);
+		uint32_t dispatchY = (uint32_t)ceil(Dx11Core::Get().Height() / 16.0f);
+		auto shader = ShaderArchive::Get("HDRAverage");
+
+		shader->Bind();
+		SBuffer<float> buffer(SBufferType::Write, nullptr, 1);
+		buffer.Bind(0);
+		//texture.Bind(0); // HDR texture
+
+		shader->Dipatch(dispatchX, dispatchY, 1);
+		buffer.UnSetTarget();
+
+		auto data = buffer.GetData();
+		float averageLum = 0.0f;
+
+		for (uint32_t i = 0; i < dispatchY; ++i)
+		{
+			for (uint32_t j = 0; j < dispatchX; ++j)
+			{
+				averageLum += data[i * dispatchX + j];
+			}
+		}
+		averageLum /= float(Dx11Core::Get().Width() *Dx11Core::Get().Height());
+	}
+
+	void Renderer::experiment1(std::shared_ptr<Model3D> model, float tFactor)
+	{
+		s_Data.PLController->ClearRTT();
+
+		s_Data.PLController->SetRenderTarget("BackBuffer");
+
+		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
+		s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
+
+		//auto d2 = ShaderArchive::Get("2D");
+		//d2->Bind();
+
+		//Transform t;
+		//t.SetScale(0.3f, 0.3f, 0.3f);
+		//d2->SetParam<CBuffer::Transform>(t);
+		//s_Data.ModelBuffer2D->Bind();
+		////model->m_Texture->Bind(0);
+		////Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[0]->m_ShaderResourceView);
+
+		//Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+		//d2->Unbind();
+
+		auto myShader = ShaderArchive::Get("EtcPNTriangle");
+		//auto myShader = ShaderArchive::Get("Etcbasic");
+		myShader->Bind();
+		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
+		myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		myShader->SetParam<CBuffer::TFactor>(tFactor);
+
+		model->m_ModelBuffer->Bind();
+		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
+		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+
+		s_Data.Queued2D.clear();
+		s_Data.Queued3D.clear();
+		s_Data.QueuedLight.clear();
+
 	}
 
 	void Renderer::renderShadow()
@@ -171,12 +432,66 @@ namespace Engine {
 		}
 	}
 
+	void Renderer::computeLum()
+	{
+		auto hdr = TextureArchive::Get("HDRTexture");
+		auto width = hdr->Width;
+		auto height = hdr->Height;
+
+		auto shader = ShaderArchive::Get("HDRAverage");
+
+		shader->Bind();
+		s_Data.LumCsBuffer->SetAsTarget(0);
+		Dx11Core::Get().Context->CSSetShaderResources(0, 1, &hdr->m_ResourceView);
+
+		uint32_t dispatchX = (uint32_t)ceil(width / 16.0f);
+		uint32_t dispatchY = (uint32_t)ceil(height / 16.0f);
+
+		uvec4 vec;
+		vec.x = dispatchX;
+		vec.y = dispatchY;
+		shader->SetParam<CBuffer::DispatchInfo>(vec);
+
+		shader->Dipatch(dispatchX, dispatchY, 1);
+		s_Data.LumCsBuffer->UnSetTarget();
+		
+		auto data = s_Data.LumCsBuffer->GetData();
+		s_Data.ReinhardToneMapFactor[2] = 0.0f;
+		for (uint32_t i = 0; i < dispatchY; ++i)
+		{
+			for (uint32_t j = 0; j < dispatchX; ++j)
+			{
+				s_Data.ReinhardToneMapFactor[2] += data[i * dispatchX + j];
+			}
+		}
+		s_Data.ReinhardToneMapFactor[2] /= width * height;
+		//s_Data.ReinhardToneMapFactor[1] = 1.03f - 2.0f / (2.0f + log10(s_Data.ReinhardToneMapFactor[2] + 1));
+
+		s_Data.LumCsBuffer->Unmap();
+	}
+
+	void Renderer::setReinhardFactor(float white, float middleGray)
+	{
+		s_Data.ReinhardToneMapFactor[0] = white * white;
+		if (middleGray != 0.0f)
+		{
+			s_Data.ReinhardToneMapFactor[1] = middleGray;
+		}
+	}
+
+	float* Renderer::GetReinhardFactor()
+	{
+		return s_Data.ReinhardToneMapFactor;
+	}
+
 	void Renderer::renderDeffered()
 	{
 		//Pass1. Render Geometry Buffer
 		s_Data.GeometryBuffer->SetRenderTarget();
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
+
 		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+
 		s_Data.PLController->SetBlend(BlendOpt::Alpha);
 		for (auto&[name, shader] : ShaderArchive::s_Shaders)
 			shader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
@@ -190,7 +505,9 @@ namespace Engine {
 		for (auto model3D : s_Data.Queued3D) draw3D(model3D, shader);
 		
 		//Pass2. Render light with gbuffer
-		s_Data.PLController->SetRenderTarget("BackBuffer");
+		if (isHdr) s_Data.PLController->SetRenderTarget("HDRTexture");
+		else s_Data.PLController->SetRenderTarget("BackBuffer");
+
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
 		s_Data.PLController->SetBlend(BlendOpt::GBuffer);
 
@@ -201,6 +518,7 @@ namespace Engine {
 
 		uint32_t pointIndex = 0;
 		uint32_t spotIndex = 0;
+
 		for (uint32_t i = 0; i < s_Data.QueuedLight.size(); ++i)
 		{
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
@@ -220,6 +538,22 @@ namespace Engine {
 			}
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
 		}	
+		lightingShader->Unbind();
+
+		if (isHdr)
+		{
+			s_Data.PLController->SetRenderTarget("BackBuffer");
+			computeLum();
+
+			auto hdrShader = ShaderArchive::Get("HDRLighting");
+			auto hdrTexture = TextureArchive::Get("HDRTexture");
+			hdrShader->Bind();
+
+			hdrShader->SetParam<CBuffer::ToneMapFactor>(s_Data.ReinhardToneMapFactor);
+			hdrTexture->Bind(0);
+
+			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+		}
 	}
 
 	void Renderer::renderForward()
@@ -234,7 +568,7 @@ namespace Engine {
 		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
 		s_Data.ModelBuffer2D->Bind();
 		//model->m_Texture->Bind(0);
-		//Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[0]->m_ShaderResourceView);
+		//Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[0]->m_Shader                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ResourceView);
 
 		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
 	}
@@ -291,6 +625,62 @@ namespace Engine {
 	{
 		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(0, s);
 		LOG_TRACE("Current Slope Bias : {0}", s_Data.PLController->m_Rasterlizer.RasterDesc.SlopeScaledDepthBias);
+	}
+
+	void Renderer::SetRenderingPath(RenderingPath path)
+	{
+		s_Data.Path = path;
+	}
+
+	void Renderer::FbxLoad()
+	{
+		s_Data.PLController->SetRenderTarget("BackBuffer");
+
+		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
+		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+
+		std::string useShader = "SceneFbx";
+
+		auto myShader = ShaderArchive::Get(useShader);
+		myShader->Bind();
+		myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+
+		for (auto& model : s_Data.Queued3D)
+		{
+			myShader->SetParam<CBuffer::Transform>(model->m_Transform);
+			myShader->SetParam<CBuffer::Materials>(*model->m_MaterialSet);
+			myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+
+			model->m_ModelBuffer->Bind();
+
+			if (myShader->Has(Shader::Type::PixelShader))
+				model->m_MaterialSet->BindTextures(1);
+
+
+			Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+		}
+		myShader->Unbind();
+	}
+
+
+	void Renderer::CurvedPn()
+	{
+	}
+
+	void Renderer::HDR()
+	{
+	}
+
+	void Renderer::Phong()
+	{
+	}
+
+	void Renderer::Animation()
+	{
+	}
+
+	void Renderer::Deffered()
+	{
 	}
 
 }

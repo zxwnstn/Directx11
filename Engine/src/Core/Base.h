@@ -6,7 +6,7 @@
 
 //TODO create option cmake
 #define ASSERT_ENABLE
-#define LOGGING_MISC false
+#define LOGGING_MISC true
 
 #ifdef _DEBUG
 	#define DEBUG_FEATURE
@@ -47,6 +47,7 @@
 #define LOG_WARN(...)     ::Engine::Log::GetCFLogger()->warn(__VA_ARGS__);
 #define LOG_ERROR(...)    ::Engine::Log::GetCFLogger()->error(__VA_ARGS__);		LOCATE_DETAIL
 #define LOG_CRITICAL(...) ::Engine::Log::GetCFLogger()->critical(__VA_ARGS__);
+
 
 // Target C logger
 #define CLOG_TRACE(...)    ::Engine::Log::GetCLogger()->trace(__VA_ARGS__);

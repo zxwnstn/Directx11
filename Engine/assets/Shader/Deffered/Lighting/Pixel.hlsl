@@ -41,6 +41,11 @@ cbuffer LightCam : register(b2)
 	matrix LProjection;
 }
 
+cbuffer Gamma : register(b3)
+{
+	uint4 GammaCorection;
+};
+
 struct Input
 {
 	float4 position : SV_POSITION;
@@ -111,12 +116,14 @@ float4 main(Input input) : SV_TARGET
 
 	float depth = DepthSample.x;
 	float3 diffuse = DiffuseSample.xyz;
+	diffuse = pow(diffuse, 2.2f);
 	float3 normal = NormalSample.xyz;
+
 	float3 ambient = AmbientSample.xyz;
 	float specular = MiscSample.x;
 	float shiness = MiscSample.y;
 	float3 worldPosition = WorldPositionSample.xyz;
-	
+
 	//step2. Calc Light intensity
 	float lightAttenuation = 1.0f;
 	float3 lightVector = -LDirection.xyz;
@@ -147,14 +154,14 @@ float4 main(Input input) : SV_TARGET
 	float sf = pow(specCos, shiness);
 
 	float ShadowAtt = 1.0f;
-	if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
-	if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
+	//if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
+	//if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
 	
 	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * ShadowAtt * LIntensity * LightColor);
 	float3 finalSpecular = sf * (specular * ShadowAtt * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 	
-	return float4(color, 1.0f);
+	return pow(float4(color, 1.0f), 0.4545);
 }
 
 //float CalcShadow(float2 tex, int divide)

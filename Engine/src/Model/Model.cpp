@@ -47,6 +47,13 @@ namespace Engine {
 
 	void Model3D::animationUpdate(float dt)
 	{
+		if (!m_PlayingAnimation)
+		{
+			for (int i = 0; i < 100; ++i)
+				m_Animation->MySkinnedTransforms[i].identify();
+			return;
+		}
+
 		if (!m_Animation->Expired)
 			m_Animation->Elapsedtime += dt;
 

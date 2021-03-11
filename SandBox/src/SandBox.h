@@ -1,27 +1,29 @@
 #pragma once
 
+#include "scene/Scene.h"
+
 class SandBox 
 {
 public:
+	void Init();
 	void OnUpdate(float dt);
-	void OnAttach();
-	void OnDettach();
+	void OnImGui();
+	/*void OnAttach();
+	void OnDettach();*/
+	
 	void OnResize();
 	void OnMouseMove(float dx, float dy);
 
-private:
 	void controlUpdate(float dt);
 
-	std::shared_ptr<class Engine::Model3D> fbxmodel;
-	std::shared_ptr<class Engine::Model3D> objmodel;
-	std::shared_ptr<class Engine::Model3D> floor;
-	std::shared_ptr<class Engine::Model2D> debugwindow;
+private:
+	std::shared_ptr<Scene> CurScene;
+	std::vector<std::shared_ptr<Scene>> Scenes;
+	const char* ScenesNames[10];
 
-	std::shared_ptr<class Engine::Camera> ortho;
-	std::shared_ptr<class Engine::Camera> perspective;
-
-	std::shared_ptr<struct Engine::Light> light;
-	std::shared_ptr<struct Engine::Light> light2;
 
 	float mouseSensitive = 0.005f;
+	int curSceneIdx = 0;
+	bool sceneChanged = false;
 };
+

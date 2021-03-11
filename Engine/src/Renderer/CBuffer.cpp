@@ -107,5 +107,28 @@ namespace Engine::CBuffer {
 		Projection = Util::Transpose(other.GetProjectionMatrix());
 	}
 
+	void TFactor::Upload(float factor)
+	{
+		Factor.x = factor;
+	}
+
+	void DispatchInfo::Upload(uvec4& other)
+	{
+		info = other;
+	}
+
+	void ToneMapFactor::Upload(float * other)
+	{
+		WhiteSqr = other[0];
+		MiddleGray = other[1];
+		AverageLum = other[2];
+		padding = 0.0f;
+	}
+
+	void Gamma::Upload(uvec4 & other)
+	{
+		GammaCorection = other;
+	}
+
 }
 

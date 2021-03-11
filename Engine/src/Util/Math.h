@@ -2,6 +2,9 @@
 
 namespace Engine::Util {
 
+	float ToDegree(float radian);
+	float ToRadian(float degree);
+
 	std::pair<vec3, vec3> GetTangentAndBinomal(const vec3& inVertex1, const vec3& inVertex2, const vec3& inVertex3,
 		const vec2& inUV1, const vec2& inUV2, const vec2& inUV3);
 

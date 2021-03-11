@@ -10,6 +10,7 @@
 #include "Common/Timestep.h"
 #include "Common/Mesh.h"
 #include "File/ObjLoader.h"
+#include "ImGuiLayer.h"
 
 namespace Engine {
 
@@ -93,7 +94,6 @@ namespace Engine {
 					for (auto& file : CurFolder)
 					{
 						if (file.is_directory()) continue;
-
 						fbxLoader.Extract(specificDir, file);
 					}
 				}
@@ -117,9 +117,12 @@ namespace Engine {
 			ShadowMap(1024, 1024, 6);
 		}
 
+		LOG_INFO("Init ImGui") {
+			ImGuiLayer::Init((int)prop.hWnd);
+		}
+
 		isInited = true;
 		LOG_CRITICAL("Initiation ModuleCore succesfully Complete {0}sec", Timestep::TotalElapse());
-
 	}
 
 	ModuleCore::~ModuleCore()

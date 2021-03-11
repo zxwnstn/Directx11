@@ -14,6 +14,7 @@ set(project_headers
     src/Core/ModuleCore.h
     src/Core/Base.h
     src/Core/Log.h
+	 src/Core/ImGuiLayer.h
     src/File/FbxLoader.h
     src/File/FileCommon.h
     src/File/Serialization.h
@@ -36,6 +37,7 @@ set(project_headers
     src/Renderer/Shader.h
     src/Renderer/Texture.h
 	src/Renderer/GBuffer.h
+	src/Renderer/SBuffer.h
     src/Engine.h
     src/pch.h
 )
@@ -49,6 +51,7 @@ set(project_source
 	src/Common/Material.cpp
 	src/Common/Mesh.cpp
     src/Core/ModuleCore.cpp
+    src/Core/ImGuiLayer.cpp
     src/File/FbxLoader.cpp
 	src/File/ObjLoader.cpp
     src/File/FileCommon.cpp
@@ -69,6 +72,7 @@ set(project_source
     src/Renderer/Shader.cpp
     src/Renderer/Texture.cpp
 	src/Renderer/GBuffer.cpp
+	src/Renderer/SBuffer.cpp
     src/pch.cpp
 )
 
@@ -90,6 +94,7 @@ target_link_libraries(
     PRIVATE
     stb_image
     spdlog
+	ImGui
 )
 
 target_precompile_headers(
@@ -106,6 +111,7 @@ target_include_directories(
 	"${CMAKE_SOURCE_DIR}/vendor/FbxSDK/include"
 	"${CMAKE_SOURCE_DIR}/vendor/stb_image"
 	"${CMAKE_SOURCE_DIR}/vendor/spdlog/include"
+	"${CMAKE_SOURCE_DIR}/vendor/imgui"
 )
 
 set_target_properties(

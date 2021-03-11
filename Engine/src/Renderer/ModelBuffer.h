@@ -42,6 +42,7 @@ namespace Engine {
 		MeshType Type;
 
 		friend struct BufferBuilder;
+		friend class Renderer;
 	};
 
 	struct BufferBuilder

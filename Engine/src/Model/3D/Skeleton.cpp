@@ -39,6 +39,15 @@ namespace Engine {
 		s_Skeletons.clear();
 	}
 
+	std::vector<std::string> SkeletonArchive::GetAllName()
+	{
+		std::vector<std::string> names;
+		for (auto&[name, skeleton] : s_Skeletons)
+			names.push_back(name);
+
+		return names;
+	}
+
 	Joint::Joint()
 	{
 		Offset = Util::Identity();

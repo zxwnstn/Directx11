@@ -74,12 +74,17 @@ namespace Engine {
 		Texture(const std::string& path);
 		//General textures(Texture array)
 		Texture(const std::vector<std::string>& paths, int unifiedWidth, int unifiedHeight);
+		//UAV
+		Texture(uint32_t width, uint32_t height, bool, bool);
+
 
 	public:
 		void Bind(int slot) const;
 
 		static void MultipleTextureBind(const std::vector<std::string>& textures, int slot);
 		void Resize(int Width, int Height);
+		void SetComputeOuput();
+		void SetComputeResource(int slot);
 
 	public:
 		int32_t Width;
@@ -93,6 +98,7 @@ namespace Engine {
 
 		ID3D11Texture2D* m_Buffer = nullptr;
 		ID3D11ShaderResourceView* m_ResourceView = nullptr;
+		ID3D11UnorderedAccessView* m_UAView = nullptr;
 		RTTInform* m_RTT = nullptr;
 
 		friend class TextureArchive;
@@ -114,6 +120,8 @@ namespace Engine {
 		static void Add(const std::string& name, uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize);
 		//Create Shader Resource TextureArray if call by zero unified width or height value setted 1024
 		static void Add(const std::vector<std::string>& paths, const std::string& name, uint32_t unifiedWidth, uint32_t unifiedHeight);
+		//Create UAV
+		static void Add(const std::string& name, uint32_t width, uint32_t height, bool, bool);
 
 		static bool Has(const std::string& name);
 		static std::shared_ptr<Texture> Get(const std::string& name);

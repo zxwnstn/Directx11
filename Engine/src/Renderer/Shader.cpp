@@ -22,6 +22,10 @@ namespace Engine {
 		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
 		case CBuffer::Type::Materials: return sizeof(CBuffer::Materials);
 		case CBuffer::Type::TextureInform: return sizeof(CBuffer::TextureInform);
+		case CBuffer::Type::TFactor: return sizeof(CBuffer::TFactor);
+		case CBuffer::Type::DispatchInfo: return sizeof(CBuffer::DispatchInfo);
+		case CBuffer::Type::ToneMapFactor: return sizeof(CBuffer::ToneMapFactor);
+		case CBuffer::Type::Gamma: return sizeof(CBuffer::Gamma);
 		}
 		return 0;
 	}
@@ -38,6 +42,10 @@ namespace Engine {
 		if (name == "Material") return CBuffer::Type::Material;
 		if (name == "Materials") return CBuffer::Type::Materials;
 		if (name == "TextureInform") return CBuffer::Type::TextureInform;
+		if (name == "TFactor") return CBuffer::Type::TFactor;
+		if (name == "DispatchInfo") return CBuffer::Type::DispatchInfo;
+		if (name == "ToneMapFactor") return CBuffer::Type::ToneMapFactor;
+		if (name == "Gamma") return CBuffer::Type::Gamma;
 		return CBuffer::Type::None;
 	}
 
@@ -70,6 +78,7 @@ namespace Engine {
 		if (filename == "Domain.hlsl") return Shader::Type::DomainShader;
 		if (filename == "Geometry.hlsl") return Shader::Type::GeometryShader;
 		if (filename == "Vertex.hlsl") return Shader::Type::VertexShader;
+		if (filename == "Compute.hlsl") return Shader::Type::ComputeShader;
 
 		return Shader::Type::None;
 	}
@@ -143,6 +152,7 @@ namespace Engine {
 				ASSERT(binary, "Shader::Create shader binary failed");
 
 				CreateShader(binary, type);
+				
 				LOG_MISC("Compile Success : {0}", file.path().filename().string());
 			}
 		}
@@ -257,9 +267,7 @@ namespace Engine {
 			}
 		}
 		file.close();
-		
 	}
-
 	
 
 	void Shader::CreateShader(ID3D10Blob* binary, Type type)
@@ -293,7 +301,22 @@ namespace Engine {
 		case Shader::GeometryShader:
 		{
 			ID3D11GeometryShader* shader;
-			Dx11Core::Get().Device->CreateGeometryShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			if (SOLayout.empty())
+			{
+				Dx11Core::Get().Device->CreateGeometryShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			}
+			else
+			{
+				uint32_t stride = 0;
+				for (auto& elem : SOLayout)
+					stride += elem.ComponentCount;
+				stride *= 4;
+
+				Dx11Core::Get().Device->CreateGeometryShaderWithStreamOutput(
+					binary->GetBufferPointer(),binary->GetBufferSize(), 
+					SOLayout.data(), (UINT)SOLayout.size(), &stride, 1, D3D11_SO_NO_RASTERIZED_STREAM, nullptr, &shader);
+			}
+		
 			ASSERT(shader, "Shader::Create Shader failed");
 			Shaders.emplace(type, shader);
 		}
@@ -306,8 +329,52 @@ namespace Engine {
 			Shaders.emplace(type, shader);
 		}
 		break;
+		case Shader::ComputeShader:
+		{
+			ID3D11ComputeShader* shader;
+			Dx11Core::Get().Device->CreateComputeShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
+			ASSERT(shader, "Shader::Create Shader failed");
+			Shaders.emplace(type, shader);
 		}
+		break;
+		}
+		
 		binary->Release();
+	}
+
+	void Shader::CheckStreamOut(const std::filesystem::path & path)
+	{
+		std::ifstream file(path);
+		std::string tokken;
+
+		while (!file.eof())
+		{
+			file >> tokken;
+			if (tokken == "StreamOutput")
+			{
+				file >> tokken;
+				file >> tokken;
+				while (tokken != "};")
+				{
+					D3D11_SO_DECLARATION_ENTRY so{ 0, };
+					char* sementicName = new char[20];
+					
+					so.ComponentCount = GetDxDataSize(tokken) / 4;  // data type
+					file >> tokken;									// var name
+					file >> tokken;									// : 
+					file >> sementicName;							// Sementic name
+					sementicName[strlen(sementicName) - 1] = 0;
+					so.SemanticName = sementicName;
+
+					SOLayout.push_back(so);
+
+					file >> tokken;
+				}
+				break;
+			}
+		}
+		file.close();
+
 	}
 
 	ID3D10Blob* Shader::CompileShader(const std::filesystem::path & path, Type type)
@@ -325,6 +392,7 @@ namespace Engine {
 		case Shader::DomainShader: compilerName = "ds"; break;
 		case Shader::GeometryShader: compilerName = "gs"; break;
 		case Shader::PixelShader: compilerName = "ps"; break;
+		case Shader::ComputeShader: compilerName = "cs"; break;
 		}
 		compilerName += "_5_0";
 
@@ -347,6 +415,8 @@ namespace Engine {
 			SetLayout(path, binary);
 		if (type == Shader::PixelShader)
 			CreateSampler(path);
+		if (type == Shader::GeometryShader)
+			CheckStreamOut(path);
 
 		return binary;
 	}
@@ -359,8 +429,17 @@ namespace Engine {
 
 	void Shader::Bind() const
 	{
-		Dx11Core::Get().Context->IASetInputLayout(Layout.D11Layout);
+		if (TypeKey == Type::ComputeShader)
+		{
+			Dx11Core::Get().Context->CSSetShader(std::get<ID3D11ComputeShader*>(Shaders.begin()->second), NULL, 0);
+			for (uint32_t i = 0; i < SamplerNumber; ++i)
+			{
+				Dx11Core::Get().Context->CSSetSamplers(i, 1, &SamplerState[i]);
+			}
+			return;
+		}
 
+		Dx11Core::Get().Context->IASetInputLayout(Layout.D11Layout);
 		for (auto&[type, shader] : Shaders)
 		{
 			switch (type)
@@ -383,9 +462,21 @@ namespace Engine {
 		ID3D11VertexShader* vs = nullptr;
 		ID3D11PixelShader* ps = nullptr;
 		ID3D11GeometryShader* gs = nullptr;
+		ID3D11HullShader* hs = nullptr;
+		ID3D11DomainShader* ds = nullptr;
+		ID3D11ComputeShader* cs = nullptr;
 		Dx11Core::Get().Context->VSSetShader(vs, NULL, 0);
+		Dx11Core::Get().Context->HSSetShader(hs, NULL, 0);
+		Dx11Core::Get().Context->DSSetShader(ds, NULL, 0);
 		Dx11Core::Get().Context->PSSetShader(ps, NULL, 0);
 		Dx11Core::Get().Context->GSSetShader(gs, NULL, 0);
+		Dx11Core::Get().Context->CSSetShader(cs, NULL, 0);
+	}
+
+	void Shader::Dipatch(uint32_t x, uint32_t y, uint32_t z)
+	{
+		if (TypeKey != Type::ComputeShader) return;
+		Dx11Core::Get().Context->Dispatch(x, y, z);
 	}
 
 	bool Shader::Has(Type type)

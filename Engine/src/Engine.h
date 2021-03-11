@@ -36,4 +36,7 @@
 #include "Common/Light.h"
 #include "Renderer/Texture.h"
 #include "Common/Material.h"
+#include "Core/ImGuiLayer.h"
+#include "Model/3D/Skeleton.h"
+
 

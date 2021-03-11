@@ -15,15 +15,16 @@ namespace Engine {
 	class Shader
 	{
 	public:
-		using ShaderVar = std::variant<ID3D11VertexShader*, ID3D11HullShader*, ID3D11DomainShader*, ID3D11GeometryShader*, ID3D11PixelShader*>;
+		using ShaderVar = std::variant<ID3D11VertexShader*, ID3D11HullShader*, ID3D11DomainShader*, ID3D11GeometryShader*, ID3D11PixelShader*, ID3D11ComputeShader*>;
 
 		enum Type
 		{
-			VertexShader = 0b00001,
-			HullShader = 0b00010,
-			DomainShader = 0b00100,
-			GeometryShader = 0b01000,
-			PixelShader = 0b10000,
+			VertexShader = 0b000001,
+			HullShader = 0b000010,
+			DomainShader = 0b000100,
+			GeometryShader = 0b001000,
+			PixelShader = 0b010000,
+			ComputeShader = 0b100000,
 			None
 		};
 
@@ -43,6 +44,7 @@ namespace Engine {
 	public:
 		void Bind() const;
 		void Unbind();
+		void Dipatch(uint32_t x, uint32_t y, uint32_t z);
 		bool Has(Type type);
 
 		template<class ConstantBuffer, class PramType>
@@ -68,6 +70,9 @@ namespace Engine {
 			case Type::VertexShader: Dx11Core::Get().Context->VSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
 			case Type::PixelShader: Dx11Core::Get().Context->PSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
 			case Type::GeometryShader: Dx11Core::Get().Context->GSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
+			case Type::DomainShader: Dx11Core::Get().Context->DSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
+			case Type::HullShader: Dx11Core::Get().Context->HSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
+			case Type::ComputeShader: Dx11Core::Get().Context->CSSetConstantBuffers(bufferNumber, 1, &cbuffer.Buffer); return;
 			}
 		}
 
@@ -77,6 +82,7 @@ namespace Engine {
 		void CreateSampler(const std::filesystem::path& path);
 		void SetLayout(const std::filesystem::path& path, ID3D10Blob* binary);
 		void CreateShader(ID3D10Blob* binary, Type type);
+		void CheckStreamOut(const std::filesystem::path& path);
 		ID3D10Blob* CompileShader(const std::filesystem::path& path, Type type);
 
 	private:
@@ -87,16 +93,12 @@ namespace Engine {
 
 		std::unordered_map<Type, ShaderVar> Shaders;
 		std::unordered_map<CBuffer::Type, ContantBuffer> CBuffers;
+		std::vector<D3D11_SO_DECLARATION_ENTRY> SOLayout;
 
 		ID3D11SamplerState* SamplerState[10];
 		uint32_t SamplerNumber = 0;
 
 		friend class ShaderArchive;
-	};
-
-	class ComputeShader
-	{
-
 	};
 
 	class ShaderArchive

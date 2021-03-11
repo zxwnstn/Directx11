@@ -7,6 +7,17 @@ namespace Engine::Util {
 
 	DirectX::XMVECTOR zero{ 0.0f, 0.0f, 0.0f, 1.0f };
 
+	float ToDegree(float radian)
+	{
+		static const float prec = 180 / 3.141592f;
+		return radian * prec;
+	}
+	float ToRadian(float degree)
+	{
+		static const float prec = 3.141592f / 180.0f;
+		return degree * prec;
+	}
+
 	std::pair<vec3, vec3> GetTangentAndBinomal(const vec3 & inVertex1, const vec3 & inVertex2, const vec3 & inVertex3, const vec2 & inUV1, const vec2 & inUV2, const vec2 & inUV3)
 	{
 		vec3 vector1, vector2;

@@ -125,15 +125,16 @@ namespace Engine {
 		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Solid);
 		ASSERT(Solid, "PipelineController::Create RasterizerState fail");
 
-		RasterDesc.FillMode = D3D11_FILL_WIREFRAME;
-		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Wire);
-		ASSERT(Wire, "PipelineController::Create RasterizerState fail");
-
 		RasterDesc.FillMode = D3D11_FILL_SOLID;
 		RasterDesc.DepthBias = 85;
 		RasterDesc.SlopeScaledDepthBias = 5.0f;
 		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Shadow);
 		ASSERT(Shadow, "PipelineController::Create RasterizerState fail");
+
+		RasterDesc.FillMode = D3D11_FILL_WIREFRAME;
+		RasterDesc.CullMode = D3D11_CULL_NONE;
+		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Wire);
+		ASSERT(Wire, "PipelineController::Create RasterizerState fail");
 	}
 
 	void PipelineController::Rasterlizer::AdjustShadowBias(int depth, float slope)

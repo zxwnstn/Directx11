@@ -2,6 +2,10 @@
 
 #include "SandBox.h"
 
+#include "../../vendor/imgui/imgui.h"
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#include "../../vendor/imgui/backends/imgui_impl_win32.h"
+
 bool running = true;
 SandBox sandBox;
 
@@ -9,6 +13,9 @@ Engine::vec2 prevMouse;
 
 LRESULT __stdcall WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, iMessage, wParam, lParam))
+		return true;
+
 	switch (iMessage)
 	{
 	case WM_MOUSEMOVE:
@@ -66,24 +73,23 @@ int main()
 
 	Engine::ModuleCore::Init({ width, height, (uint64_t)hWindow });
 
-
-	sandBox.OnAttach();
+	sandBox.Init();
 
 	Engine::Timestep::SetTimePoint();
 
+	Engine::Timestep ts;
 	while (running)
 	{
 		MSG msg;
-		Engine::Timestep ts;
+		
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		sandBox.OnUpdate(ts);
+		sandBox.OnUpdate(ts.elapse());
 	}
 	
-
 	return 0;
 }
 

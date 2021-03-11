@@ -41,6 +41,7 @@ namespace Engine {
 		static std::shared_ptr<Skeleton> Get(const std::string& name);
 		static bool Has(const std::string& name);
 		static void Shutdown();
+		static std::vector<std::string> GetAllName();
 	};
 
 }

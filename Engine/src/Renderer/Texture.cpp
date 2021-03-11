@@ -353,7 +353,6 @@ namespace Engine {
 		m_RTT = new RTTInform(unifiedWidth, unifiedHeight, m_Buffer, arraySize);
 	}
 
-
 	Texture::Texture(const std::string & path)
 		: isTextureArray(false)
 	{
@@ -454,6 +453,41 @@ namespace Engine {
 		Dx11Core::Get().Context->GenerateMips(m_ResourceView);
 	}
 
+	Texture::Texture(uint32_t width, uint32_t height, bool, bool)
+		: Width(width), Height(height)
+	{
+		//Create texture
+		D3D11_TEXTURE2D_DESC textureDesc;
+		textureDesc.Width = Width;
+		textureDesc.Height = Height;
+		textureDesc.MipLevels = 1;
+		textureDesc.ArraySize = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Usage = D3D11_USAGE_DEFAULT;
+		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+		textureDesc.CPUAccessFlags = 0;
+		textureDesc.MiscFlags = 0;
+		Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &m_Buffer);
+		ASSERT(m_Buffer, "Texture::Create texture failed");
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &srvDesc, &m_ResourceView);
+		ASSERT(m_ResourceView, "Texture::Create texture failed");
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+		uavDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D.MipSlice = 0;
+		Dx11Core::Get().Device->CreateUnorderedAccessView(m_Buffer, &uavDesc, &m_UAView);
+		ASSERT(m_UAView, "Texture::Create texture failed");
+	}
+
 	void Texture::Resize(int width, int height)
 	{
 		Width = width;
@@ -462,6 +496,17 @@ namespace Engine {
 		if (m_RTT)
 			m_RTT->Resize(Width, Height, m_Buffer);
 	}
+
+	void Texture::SetComputeOuput()
+	{
+		Dx11Core::Get().Context->CSSetUnorderedAccessViews(0, 1, &m_UAView, NULL);
+	}
+
+	void Texture::SetComputeResource(int slot)
+	{
+		Dx11Core::Get().Context->CSSetShaderResources(slot, 1, &m_ResourceView);
+	}
+
 	void Texture::Bind(int slot) const
 	{
 		Dx11Core::Get().Context->PSSetShaderResources(slot, 1, &m_ResourceView);
@@ -477,6 +522,8 @@ namespace Engine {
 			if (!texture) continue;
 
 			views[i] = texture->m_ResourceView;
+
+
 		}
 		Dx11Core::Get().Context->PSSetShaderResources(slot, (uint32_t)textures.size(), views);
 	}
@@ -516,6 +563,13 @@ namespace Engine {
 		if (Has(name)) return;
 
 		s_Textures[name].reset(new Texture(paths, unifiedWidth, unifiedWidth));
+	}
+
+	void TextureArchive::Add(const std::string & name, uint32_t width, uint32_t height, bool, bool)
+	{
+		if (Has(name)) return;
+
+		s_Textures[name].reset(new Texture(width, height, true, true));
 	}
 
 	bool TextureArchive::Has(const std::string & name)

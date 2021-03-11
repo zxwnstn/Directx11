@@ -75,6 +75,19 @@ namespace Engine {
 			};
 		};
 		mat4() {}
+
+		void identify()
+		{
+			for (int i = 0; i < 4; ++i)
+			{
+				for (int j = 0; j < 4; ++j)
+				{
+					m[i][j] = 0.0f;
+					if (i == j)
+						m[i][j] = 1.0f;
+				}
+			}
+		}
 	};
 
 	struct uvec2

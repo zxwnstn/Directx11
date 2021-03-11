@@ -1,3 +1,5 @@
+
+
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(Directx11 LANGUAGES CXX)
@@ -24,6 +26,7 @@ endif()
 
 add_subdirectory(vendor/stb_image)
 add_subdirectory(vendor/spdlog)
+add_subdirectory(vendor/imgui)
 add_subdirectory(Engine)
 add_subdirectory(Editor)
 add_subdirectory(SandBox)
@@ -31,6 +34,7 @@ add_subdirectory(WhiteBoard)
 
 set_target_properties(
     spdlog
+	ImGui
     PROPERTIES 
     FOLDER Vendor
 )

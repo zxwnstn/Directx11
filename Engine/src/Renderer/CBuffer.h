@@ -9,7 +9,7 @@ namespace Engine::CBuffer {
 
 	enum class Type
 	{
-		Camera, CubeCamera, Transform, Bone, 
+		Camera, CubeCamera, Transform, Bone, TFactor, DispatchInfo, ToneMapFactor, Gamma,
 		Environment, Light, LightCam, Material, Materials, 
 		TextureInform, None
 	};
@@ -22,6 +22,12 @@ namespace Engine::CBuffer {
 		int padding;
 
 		void Upload(Engine::Camera& other);
+	};
+
+	struct TFactor
+	{
+		vec4 Factor;
+		void Upload(float factor);
 	};
 
 	struct CubeCamera
@@ -56,12 +62,34 @@ namespace Engine::CBuffer {
 		void Upload(Engine::Light& other);
 	};
 
+	struct DispatchInfo
+	{
+		uvec4 info;
+		void Upload(uvec4& other);
+	};
+
 	struct LightCam
 	{
 		mat4 LightView;
 		mat4 LightProjection;
 
 		void Upload(Engine::Light& other);
+	};
+
+	struct ToneMapFactor
+	{
+		float WhiteSqr;
+		float MiddleGray;
+		float AverageLum;
+		float padding;
+
+		void Upload(float* other);
+	};
+
+	struct Gamma
+	{
+		uvec4 GammaCorection;
+		void Upload(uvec4& other);
 	};
 
 	struct Bone
@@ -176,6 +204,26 @@ namespace Engine::CBuffer {
 		struct GetType<CBuffer::TextureInform>
 		{
 			static const Type value = Type::TextureInform;
+		};
+		template<>
+		struct GetType<CBuffer::TFactor>
+		{
+			static const Type value = Type::TFactor;
+		};
+		template<>
+		struct GetType<CBuffer::DispatchInfo>
+		{
+			static const Type value = Type::DispatchInfo;
+		};
+		template<>
+		struct GetType<CBuffer::ToneMapFactor>
+		{
+			static const Type value = Type::ToneMapFactor;
+		};
+		template<>
+		struct GetType<CBuffer::Gamma>
+		{
+			static const Type value = Type::Gamma;
 		};
 	}
 }

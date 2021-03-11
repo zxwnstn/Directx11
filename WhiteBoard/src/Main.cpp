@@ -1,22 +1,32 @@
 #include <iostream>
+#include <vector>
+#include <memory>
 
-#include <string>
-#include <filesystem>
-#include <DirectXMath.h>
-
-void some(uint32_t a, uint32_t b)
+class Some 
 {
-	std::cout << "some1" << std::endl;
-}
+	virtual void some(){
 
-void some(uint32_t a, bool b)
+	}
+};
+
+class SS : public Some
 {
-	std::cout << "some2" << std::endl;
-}
+public:
+	virtual void some() override
+	{
+		std::cout << "hello";
+	}
+
+};
+
 
 int main()
 {
-	DirectX::XMVECTOR vec;
+	std::vector<std::shared_ptr<Some>> s;
 
-	vec = { 0.0f, 0.0f, 0.0f, 0.0f };
+	std::shared_ptr<Some> ptr;
+	ptr.reset(new SS);
+
+	s.push_back(ptr);
+
 }

@@ -16,7 +16,7 @@ namespace Engine {
 				textures.push_back(textureSet[j].Name);
 			}
 		}
-		Texture::MultipleTextureBind(textures, 0);
+		Texture::MultipleTextureBind(textures, slot);
 	}
 
 	static std::unordered_map<std::string, std::shared_ptr<Material>> s_Materials;
