@@ -120,4 +120,15 @@ namespace Engine {
 		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}
 
+	void ModelBuffer::UnBind() const
+	{
+		ID3D11Buffer* null = nullptr;
+
+		UINT offset = 0;
+
+		Dx11Core::Get().Context->IASetVertexBuffers(0, 1, &null, &Stride, &offset);
+		Dx11Core::Get().Context->IASetIndexBuffer(null, DXGI_FORMAT_R32_UINT, 0);
+		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	}
+
 }

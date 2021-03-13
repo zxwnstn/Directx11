@@ -160,6 +160,13 @@ namespace Engine {
 		Dx11Core::Get().Context->PSSetShaderResources(0, uint32_t(m_BindingOrder.size() + 1), views);
 	}
 
+	void GBuffer::UnBind()
+	{
+		ID3D11RenderTargetView* view[8]{ 0, };
+		ID3D11DepthStencilView* depth = nullptr;
+		Dx11Core::Get().Context->OMSetRenderTargets((uint32_t)m_BindingOrder.size(), view, depth);
+	}
+
 	void GBuffer::SetRenderTarget()
 	{
 		Dx11Core::Get().Context->ClearDepthStencilView(m_DepthBuffer->m_DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);

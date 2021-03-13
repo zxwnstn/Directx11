@@ -1,4 +1,4 @@
-Texture2D HDRTexture : register(t0);
+Texture2D<float4> HDRTexture : register(t0);
 RWStructuredBuffer<float> Result : register(u0);
 
 groupshared float accum[256];
@@ -75,14 +75,7 @@ void main(uint3 Gid : SV_GroupID,
 
 	if (GI == 0)
 	{
-		if (accum[0] == 0.0f)
-		{
-			Result[Gid.y * info.x + Gid.x] = 1.0f;
-		}
-		else
-		{
-			Result[Gid.y * info.x + Gid.x] = accum[0];
-		}
+		Result[Gid.y * info.x + Gid.x] = accum[0];
 	}
 
 }

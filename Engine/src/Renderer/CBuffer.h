@@ -10,7 +10,7 @@ namespace Engine::CBuffer {
 	enum class Type
 	{
 		Camera, CubeCamera, Transform, Bone, TFactor, DispatchInfo, ToneMapFactor, Gamma,
-		Environment, Light, LightCam, Material, Materials, 
+		Environment, Light, LightCam, LightColor, LightPos, Material, Materials,
 		TextureInform, None
 	};
 
@@ -57,7 +57,7 @@ namespace Engine::CBuffer {
 		float InnerAng;
 		float OuterAngRcp;
 		float RangeRcp;
-		int padding[3];
+		uvec3 padding;
 
 		void Upload(Engine::Light& other);
 	};
@@ -72,6 +72,20 @@ namespace Engine::CBuffer {
 	{
 		mat4 LightView;
 		mat4 LightProjection;
+
+		void Upload(Engine::Light& other);
+	};
+
+	struct LightPos
+	{
+		vec4 pos;
+
+		void Upload(Engine::Light& other);
+	};
+
+	struct LightColor
+	{
+		vec4 color;
 
 		void Upload(Engine::Light& other);
 	};
@@ -175,9 +189,19 @@ namespace Engine::CBuffer {
 			static const Type value = Type::Light;
 		};
 		template<>
+		struct GetType<CBuffer::LightPos>
+		{
+			static const Type value = Type::LightPos;
+		};
+		template<>
 		struct GetType<CBuffer::LightCam>
 		{
 			static const Type value = Type::LightCam;
+		};
+		template<>
+		struct GetType<CBuffer::LightColor>
+		{
+			static const Type value = Type::LightColor;
 		};
 		
 		template<>

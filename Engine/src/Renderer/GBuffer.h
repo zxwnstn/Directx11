@@ -39,6 +39,7 @@ namespace Engine {
 
 	public:
 		void Bind();
+		void UnBind();
 		void SetRenderTarget();
 		void Resize(uint32_t width, uint32_t height);
 
@@ -46,7 +47,6 @@ namespace Engine {
 		uint32_t m_Width;
 		uint32_t m_Height;
 		D3D11_VIEWPORT m_ViewPortDesc;
-
 		DepthElem* m_DepthBuffer;
 
 		std::vector<std::string> m_BindingOrder;

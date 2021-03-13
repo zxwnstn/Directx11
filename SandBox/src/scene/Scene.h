@@ -8,15 +8,12 @@ public:
 	virtual void Init() {};
 	virtual void ControlUpdate() {};
 
-	void ChangeInto();
-
 	const std::string GetName() const { return m_Name; }
 	std::shared_ptr<class Engine::Camera> GetCurCam() { return m_Cur_cam; }
 	std::vector<std::shared_ptr<struct Engine::Light>>& GetLights() { return m_Lights; }
 
 protected:
 	std::string m_Name;
-	Engine::RenderingPath m_RenderingPath;
 
 	std::vector<std::shared_ptr<class Engine::Camera>> m_Cameras;
 	std::vector<std::shared_ptr<struct Engine::Light>> m_Lights;

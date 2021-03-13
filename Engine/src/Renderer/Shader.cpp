@@ -16,7 +16,9 @@ namespace Engine {
 		case CBuffer::Type::CubeCamera: return sizeof(CBuffer::CubeCamera);
 		case CBuffer::Type::Transform: return sizeof(CBuffer::Transform);
 		case CBuffer::Type::Light: return sizeof(CBuffer::Light);
+		case CBuffer::Type::LightPos: return sizeof(CBuffer::LightPos);
 		case CBuffer::Type::LightCam: return sizeof(CBuffer::LightCam);
+		case CBuffer::Type::LightColor: return sizeof(CBuffer::LightColor);
 		case CBuffer::Type::Bone: return sizeof(CBuffer::Bone);
 		case CBuffer::Type::Environment: return sizeof(CBuffer::Environment);
 		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
@@ -35,7 +37,9 @@ namespace Engine {
 		if (name == "Camera") return CBuffer::Type::Camera;
 		if (name == "CubeCamera") return CBuffer::Type::CubeCamera;
 		if (name == "Light") return CBuffer::Type::Light;
+		if (name == "LightPos") return CBuffer::Type::LightPos;
 		if (name == "LightCam") return CBuffer::Type::LightCam;
+		if (name == "LightColor") return CBuffer::Type::LightColor;
 		if (name == "Transform") return CBuffer::Type::Transform;
 		if (name == "Bone") return CBuffer::Type::Bone;
 		if (name == "Environment") return CBuffer::Type::Environment;
@@ -465,12 +469,18 @@ namespace Engine {
 		ID3D11HullShader* hs = nullptr;
 		ID3D11DomainShader* ds = nullptr;
 		ID3D11ComputeShader* cs = nullptr;
+		ID3D11SamplerState* ss = nullptr;
 		Dx11Core::Get().Context->VSSetShader(vs, NULL, 0);
 		Dx11Core::Get().Context->HSSetShader(hs, NULL, 0);
 		Dx11Core::Get().Context->DSSetShader(ds, NULL, 0);
 		Dx11Core::Get().Context->PSSetShader(ps, NULL, 0);
 		Dx11Core::Get().Context->GSSetShader(gs, NULL, 0);
 		Dx11Core::Get().Context->CSSetShader(cs, NULL, 0);
+
+		for (uint32_t i = 0; i < SamplerNumber; ++i)
+		{
+			Dx11Core::Get().Context->PSSetSamplers(i, 1, &ss);
+		}
 	}
 
 	void Shader::Dipatch(uint32_t x, uint32_t y, uint32_t z)

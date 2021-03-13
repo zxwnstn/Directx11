@@ -51,6 +51,18 @@ namespace Engine::CBuffer {
 
 		InnerAng = other.m_InnerAngle;
 		OuterAngRcp = 1.0f / other.m_OuterAngle;
+
+		if (other.noLight)
+		{
+			padding.x = 1;
+			padding.y = 1;
+			padding.z = 1;
+		}
+		else {
+			padding.x = 0;
+			padding.y = 0;
+			padding.z = 0;
+		}
 	}
 
 	void Material::Upload(const Engine::Material& other)
@@ -128,6 +140,20 @@ namespace Engine::CBuffer {
 	void Gamma::Upload(uvec4 & other)
 	{
 		GammaCorection = other;
+	}
+
+	void LightPos::Upload(Engine::Light & other)
+	{
+		auto translate = other.lightCam.GetTransform().GetTranslate();
+		pos.x = translate.x;
+		pos.y = translate.y;
+		pos.z = translate.z;
+	}
+
+	void LightColor::Upload(Engine::Light & other)
+	{
+		color = other.m_Color;
+		color.w = 1.0f;
 	}
 
 }

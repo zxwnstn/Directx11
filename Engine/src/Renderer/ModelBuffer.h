@@ -32,6 +32,7 @@ namespace Engine {
 
 	public:
 		void Bind() const;
+		void UnBind() const;
 		inline uint32_t GetIndexCount() const { return Index.Count; }
 		const MeshType GetMeshType() const { return Type; }
 

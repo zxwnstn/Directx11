@@ -68,16 +68,26 @@ namespace Engine {
 		return *this;
 	}
 
-	void PipelineController::ClearRTT()
+	void PipelineController::ClearRTT(const std::string & target)
 	{
-		float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-		for (auto& textureName : m_UsagedRTT)
+		float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+		if (!target.empty())
 		{
-			auto RttInform = TextureArchive::Get(textureName)->m_RTT;
+			auto RttInform = TextureArchive::Get(target)->m_RTT;
 			Dx11Core::Get().Context->ClearRenderTargetView(RttInform->m_RenderTargetView, clearColor);
 			Dx11Core::Get().Context->ClearDepthStencilView(RttInform->m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 		}
-		m_UsagedRTT.clear();
+		else
+		{
+			for (auto& textureName : m_UsagedRTT)
+			{
+				auto RttInform = TextureArchive::Get(textureName)->m_RTT;
+				Dx11Core::Get().Context->ClearRenderTargetView(RttInform->m_RenderTargetView, clearColor);
+				Dx11Core::Get().Context->ClearDepthStencilView(RttInform->m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+			}
+			m_UsagedRTT.clear();
+		}
 	}
 
 	void PipelineController::DepthStencil::Init()

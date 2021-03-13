@@ -294,28 +294,26 @@ namespace Engine {
 		: Width(width), Height(height)
 	{
 		//Create texture
-		D3D11_TEXTURE2D_DESC textureDesc;
-		textureDesc.Width = width;
-		textureDesc.Height = height;
-		textureDesc.MipLevels = 1;
-		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = 0;
-		Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &m_Buffer);
+		m_TextureDesc.Width = width;
+		m_TextureDesc.Height = height;
+		m_TextureDesc.MipLevels = 1;
+		m_TextureDesc.ArraySize = 1;
+		m_TextureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		m_TextureDesc.SampleDesc.Count = 1;
+		m_TextureDesc.SampleDesc.Quality = 0;
+		m_TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		m_TextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		m_TextureDesc.CPUAccessFlags = 0;
+		m_TextureDesc.MiscFlags = 0;
+		Dx11Core::Get().Device->CreateTexture2D(&m_TextureDesc, NULL, &m_Buffer);
 		ASSERT(m_Buffer, "Texture::Create texture failed");
 
 		//Create Shader Resource view(SRV)
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.MipLevels = 1;
-		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &srvDesc, &m_ResourceView);
+		m_SrvDesc.Format = m_TextureDesc.Format;
+		m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		m_SrvDesc.Texture2D.MostDetailedMip = 0;
+		m_SrvDesc.Texture2D.MipLevels = 1;
+		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
 		ASSERT(m_ResourceView, "Texture::Create texture view failed");
 
 		m_RTT = new RTTInform(width, height, m_Buffer, false);
@@ -324,30 +322,28 @@ namespace Engine {
 	Texture::Texture(uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize)
 	{
 		//Create texture
-		D3D11_TEXTURE2D_DESC textureDesc;
-		textureDesc.Width = unifiedWidth;
-		textureDesc.Height = unifiedHeight;
-		textureDesc.MipLevels = 1;
-		textureDesc.ArraySize = arraySize;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = 0;
-		Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &m_Buffer);
+		m_TextureDesc.Width = unifiedWidth;
+		m_TextureDesc.Height = unifiedHeight;
+		m_TextureDesc.MipLevels = 1;
+		m_TextureDesc.ArraySize = arraySize;
+		m_TextureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		m_TextureDesc.SampleDesc.Count = 1;
+		m_TextureDesc.SampleDesc.Quality = 0;
+		m_TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		m_TextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		m_TextureDesc.CPUAccessFlags = 0;
+		m_TextureDesc.MiscFlags = 0;
+		Dx11Core::Get().Device->CreateTexture2D(&m_TextureDesc, NULL, &m_Buffer);
 		ASSERT(m_Buffer, "Texture::Create texture failed");
 
 		//Create Shader Resource view(SRV)
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.ArraySize = arraySize;
-		srvDesc.Texture2DArray.FirstArraySlice = 0;
-		srvDesc.Texture2DArray.MipLevels = 1;
-		srvDesc.Texture2DArray.MostDetailedMip = 0;
-		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &srvDesc, &m_ResourceView);
+		m_SrvDesc.Format = m_TextureDesc.Format;
+		m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		m_SrvDesc.Texture2DArray.ArraySize = arraySize;
+		m_SrvDesc.Texture2DArray.FirstArraySlice = 0;
+		m_SrvDesc.Texture2DArray.MipLevels = 1;
+		m_SrvDesc.Texture2DArray.MostDetailedMip = 0;
+		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
 		ASSERT(m_ResourceView, "Texture::Create texture view failed");
 
 		m_RTT = new RTTInform(unifiedWidth, unifiedHeight, m_Buffer, arraySize);
@@ -365,19 +361,18 @@ namespace Engine {
 		uint32_t rowPitch = Width * 4 * sizeof(unsigned char);
 
 		//Create texture
-		D3D11_TEXTURE2D_DESC textureDesc;
-		textureDesc.Width = Width;
-		textureDesc.Height = Height;
-		textureDesc.MipLevels = 0;
-		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-		Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &m_Buffer);
+		m_TextureDesc.Width = Width;
+		m_TextureDesc.Height = Height;
+		m_TextureDesc.MipLevels = 0;
+		m_TextureDesc.ArraySize = 1;
+		m_TextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_TextureDesc.SampleDesc.Count = 1;
+		m_TextureDesc.SampleDesc.Quality = 0;
+		m_TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		m_TextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+		m_TextureDesc.CPUAccessFlags = 0;
+		m_TextureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+		Dx11Core::Get().Device->CreateTexture2D(&m_TextureDesc, NULL, &m_Buffer);
 		ASSERT(m_Buffer, "Texture::Create texture failed");
 
 		//Upload image data
@@ -385,12 +380,11 @@ namespace Engine {
 		stbi_image_free(data);
 
 		//Create Shader Resource View(SRV)
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.MipLevels = 1;
-		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &srvDesc, &m_ResourceView);
+		m_SrvDesc.Format = m_TextureDesc.Format;
+		m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		m_SrvDesc.Texture2D.MostDetailedMip = 0;
+		m_SrvDesc.Texture2D.MipLevels = 1;
+		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
 		Dx11Core::Get().Context->GenerateMips(m_ResourceView);
 		ASSERT(m_ResourceView, "Texture::Create texture view failed");
 	}
@@ -418,23 +412,22 @@ namespace Engine {
 			{
 				LOG_TRACE("Texture::Create texture array unified width {0} height {1}", Width, Height);
 
-				D3D11_TEXTURE2D_DESC textureDesc;
-				textureDesc.Width = Width;
-				textureDesc.Height = Height;
-				textureDesc.MipLevels = 0;
-				textureDesc.ArraySize = (uint32_t)paths.size();
-				textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				textureDesc.SampleDesc.Count = 1;
-				textureDesc.SampleDesc.Quality = 0;
-				textureDesc.Usage = D3D11_USAGE_DEFAULT;
-				textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-				textureDesc.CPUAccessFlags = 0;
-				textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-				Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &m_Buffer);
+				m_TextureDesc.Width = Width;
+				m_TextureDesc.Height = Height;
+				m_TextureDesc.MipLevels = 0;
+				m_TextureDesc.ArraySize = (uint32_t)paths.size();
+				m_TextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				m_TextureDesc.SampleDesc.Count = 1;
+				m_TextureDesc.SampleDesc.Quality = 0;
+				m_TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+				m_TextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+				m_TextureDesc.CPUAccessFlags = 0;
+				m_TextureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+				Dx11Core::Get().Device->CreateTexture2D(&m_TextureDesc, NULL, &m_Buffer);
 				ASSERT(m_Buffer, "Texture::Create texture failed");
 
-				m_Buffer->GetDesc(&textureDesc);
-				maxMiplevel = textureDesc.MipLevels;
+				m_Buffer->GetDesc(&m_TextureDesc);
+				maxMiplevel = m_TextureDesc.MipLevels;
 			}
 			LOG_MISC("{0}", paths[i]);
 			Dx11Core::Get().Context->UpdateSubresource(m_Buffer, i * maxMiplevel, NULL, resizedData, Width * 4 * sizeof(unsigned char), 0);
@@ -442,14 +435,13 @@ namespace Engine {
 			delete[] resizedData;
 		}
 
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.MostDetailedMip = 0;
-		srvDesc.Texture2DArray.MipLevels = maxMiplevel;
-		srvDesc.Texture2DArray.FirstArraySlice = 0;
-		srvDesc.Texture2DArray.ArraySize = paths.size();
-		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &srvDesc, &m_ResourceView);
+		m_SrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		m_SrvDesc.Texture2DArray.MostDetailedMip = 0;
+		m_SrvDesc.Texture2DArray.MipLevels = maxMiplevel;
+		m_SrvDesc.Texture2DArray.FirstArraySlice = 0;
+		m_SrvDesc.Texture2DArray.ArraySize = paths.size();
+		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
 		Dx11Core::Get().Context->GenerateMips(m_ResourceView);
 	}
 
@@ -457,27 +449,25 @@ namespace Engine {
 		: Width(width), Height(height)
 	{
 		//Create texture
-		D3D11_TEXTURE2D_DESC textureDesc;
-		textureDesc.Width = Width;
-		textureDesc.Height = Height;
-		textureDesc.MipLevels = 1;
-		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = 0;
-		Dx11Core::Get().Device->CreateTexture2D(&textureDesc, NULL, &m_Buffer);
+		m_TextureDesc.Width = Width;
+		m_TextureDesc.Height = Height;
+		m_TextureDesc.MipLevels = 1;
+		m_TextureDesc.ArraySize = 1;
+		m_TextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_TextureDesc.SampleDesc.Count = 1;
+		m_TextureDesc.SampleDesc.Quality = 0;
+		m_TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		m_TextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+		m_TextureDesc.CPUAccessFlags = 0;
+		m_TextureDesc.MiscFlags = 0;
+		Dx11Core::Get().Device->CreateTexture2D(&m_TextureDesc, NULL, &m_Buffer);
 		ASSERT(m_Buffer, "Texture::Create texture failed");
 
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &srvDesc, &m_ResourceView);
+		m_SrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		m_SrvDesc.Texture2D.MipLevels = 1;
+		m_SrvDesc.Texture2D.MostDetailedMip = 0;
+		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
 		ASSERT(m_ResourceView, "Texture::Create texture failed");
 
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc;
@@ -493,7 +483,22 @@ namespace Engine {
 		Width = width;
 		Height = height;
 
-		if (m_RTT)
+		if (m_ResourceView)
+		{
+			m_Buffer->Release();
+			m_ResourceView->Release();
+
+			m_TextureDesc.Width = Width;
+			m_TextureDesc.Height = Height;
+
+			Dx11Core::Get().Device->CreateTexture2D(&m_TextureDesc, NULL, &m_Buffer);
+			ASSERT(m_Buffer, "Texture::Resize texture failed");
+
+			Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
+			ASSERT(m_ResourceView, "Texture::Resize texture failed");
+		}
+
+		if (m_RTT) {}
 			m_RTT->Resize(Width, Height, m_Buffer);
 	}
 
@@ -510,6 +515,11 @@ namespace Engine {
 	void Texture::Bind(int slot) const
 	{
 		Dx11Core::Get().Context->PSSetShaderResources(slot, 1, &m_ResourceView);
+	}
+	void Texture::UnBind(int slot)
+	{
+		ID3D11ShaderResourceView* null = nullptr;
+		Dx11Core::Get().Context->PSSetShaderResources(slot, 1, &null);
 	}
 
 	void Texture::MultipleTextureBind(const std::vector<std::string>& textures, int slot)

@@ -80,6 +80,7 @@ namespace Engine {
 
 	public:
 		void Bind(int slot) const;
+		static void UnBind(int slot);
 
 		static void MultipleTextureBind(const std::vector<std::string>& textures, int slot);
 		void Resize(int Width, int Height);
@@ -100,6 +101,9 @@ namespace Engine {
 		ID3D11ShaderResourceView* m_ResourceView = nullptr;
 		ID3D11UnorderedAccessView* m_UAView = nullptr;
 		RTTInform* m_RTT = nullptr;
+
+		D3D11_TEXTURE2D_DESC m_TextureDesc; 
+		D3D11_SHADER_RESOURCE_VIEW_DESC m_SrvDesc;
 
 		friend class TextureArchive;
 		friend class Renderer;

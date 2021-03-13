@@ -4,11 +4,12 @@
 Texture2D ShadowMap : register(t0);
 Texture2D materialTexture[MaxPart * 3] : register(t1);
 
-SamplerState SampleType;
-SamplerState SampleTypeClamp	: register(s1);
+SamplerState SampleType : register(s0);
+SamplerState SampleTypeClamp : register(s1);
 
 cbuffer Light : register(b1)
 {
+	float4 Position;
 	float4 LDirection;
 	float4 LColor;
 	float  LIntensity;
@@ -16,7 +17,7 @@ cbuffer Light : register(b1)
 	float  LInnerAng;
 	float  LOuterAngRcp;
 	float  LRangeRcp;
-	int    LPadding[3];
+	int3   LPadding;
 };
 
 cbuffer Materials : register(b2)
@@ -137,6 +138,10 @@ float4 main(Input input) : SV_TARGET
 
 	//step 1. Get material mapping color
 	float4 diffuseMapFirst = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
+	if (LPadding.x == 1)
+	{
+		return diffuseMapFirst;
+	}
 	if (diffuseMapFirst.w < 0.9f) discard;
 
 	float3 diffuseMap = diffuseMapFirst.xyz;
@@ -198,9 +203,9 @@ float4 main(Input input) : SV_TARGET
 
 		float4 shadow = ShadowMap.Sample(SampleType, projectTexCoord);
 		float shadowIntensity = shadow.r + shadow.g + shadow.b;
-		if (shadowIntensity < 2.0f)
+		if (shadowIntensity >= 2.0f)
 		{
-			return float4(color * 0.7f, 1.0f);
+			return float4(1.0f, 0.0f, 0.0f, 1.0f);
 		}
 	}
 

@@ -32,7 +32,14 @@ void SandBox::Init()
 
 	CurScene = Scenes[0];
 
-	CurScene->ChangeInto();
+	switch (renderingPath)
+		
+	{
+	case 0: Engine::Renderer::SetRenderMode(Engine::RenderMode::Forward); break;
+	case 1: Engine::Renderer::SetRenderMode(Engine::RenderMode::Deffered); break;
+	}
+	Engine::Renderer::ActivateHdr(hdr);
+	Engine::Renderer::ActivateShadow(shadow);
 }
 
 void SandBox::OnImGui()
@@ -57,6 +64,42 @@ void SandBox::OnImGui()
 		ImGui::Text("x : %f, y : %f, z : %f", Engine::Util::ToDegree(camRotate.x), Engine::Util::ToDegree(camRotate.y), Engine::Util::ToDegree(camRotate.z));
 	}
 	
+	if (ImGui::CollapsingHeader("Rendering"))
+	{
+
+		static char* rendering[] = { "Forward", "Deffered" };
+		if (ImGui::Combo("Rendering path", &renderingPath, rendering, 2))
+			pathChanged = true;
+
+		if (renderingPath == 0)
+		{
+			ImGui::Checkbox("PhongShading", &phongShading);
+			ImGui::Checkbox("Pn Tesselation", &pnTesselation);
+		}
+		if (renderingPath == 1)
+		{
+			ImGui::Checkbox("Show G-Buffer", &gBuffer);
+			if (ImGui::Checkbox("Shadow", &shadow))
+			{
+				Engine::Renderer::ActivateShadow(shadow);
+			}
+			if (ImGui::Checkbox("Hdr", &hdr))
+			{
+				Engine::Renderer::ActivateHdr(hdr);
+			}
+			if (hdr)
+			{
+				ImGui::BeginChild("", ImVec2(300, 100), true);
+				float* factor = Engine::Renderer::GetReinhardFactor();
+				ImGui::SliderFloat("White", &factor[0], 0.0f, 10.0f, nullptr, 1.0f);
+				ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 10.0f, nullptr, 1.0f);
+				ImGui::Text("Average Lum : %f", factor[2]);
+				ImGui::EndChild();
+			}
+		}
+	}
+
+	
 	
 	ImGui::End();
 
@@ -68,7 +111,14 @@ void SandBox::OnImGui()
 
 void SandBox::OnUpdate(float dt)
 {
-	Engine::Renderer::BeginScene(CurScene->GetCurCam(), CurScene->GetLights());
+	if (phongShading || renderingPath == 1)
+	{
+		Engine::Renderer::BeginScene(CurScene->GetCurCam(), CurScene->GetLights());
+	}
+	else if(!phongShading)
+	{
+		Engine::Renderer::BeginScene(CurScene->GetCurCam(), std::vector<std::shared_ptr<Engine::Light>>());
+	}
 
 	CurScene->OnUpdate(dt);
 	Engine::Renderer::EndScene();
@@ -82,6 +132,19 @@ void SandBox::OnUpdate(float dt)
 		sceneChanged = false;
 		CurScene = Scenes[curSceneIdx];
 	}
+	if (pathChanged)
+	{
+		pathChanged = false;
+		if (renderingPath == 0)
+		{
+			Engine::Renderer::SetRenderMode(Engine::RenderMode::Forward);
+		}
+		else
+		{
+			Engine::Renderer::SetRenderMode(Engine::RenderMode::Deffered);
+		}
+	}
+
 }
 
 

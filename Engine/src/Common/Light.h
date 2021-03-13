@@ -23,12 +23,15 @@ namespace Engine {
 			Spot
 		};
 		Camera lightCam;
+		std::string name;
 		vec4 m_Color{1.0f, 1.0f, 1.0f, 1.0f};
 		Type m_Type = Type::Directional;
 		float m_InnerAngle = 0.0f;
-		float m_OuterAngle = 0.0f;
+		float m_OuterAngle = 1.0f;
 		float m_Intensity = 1;
 		float m_Range = 10.0f;
+
+		bool noLight = false;
 	};
 
 }

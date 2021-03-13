@@ -46,6 +46,15 @@ cbuffer Gamma : register(b3)
 	uint4 GammaCorection;
 };
 
+
+cbuffer Environment : register(b4)
+{
+	matrix WorldMatrix;
+	float3 EAmbient;
+	bool UseShadowMap;
+	float4 Bias;
+};
+
 struct Input
 {
 	float4 position : SV_POSITION;
@@ -154,8 +163,11 @@ float4 main(Input input) : SV_TARGET
 	float sf = pow(specCos, shiness);
 
 	float ShadowAtt = 1.0f;
-	//if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
-	//if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
+	if (UseShadowMap)
+	{
+		if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
+		if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
+	}
 	
 	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * ShadowAtt * LIntensity * LightColor);
 	float3 finalSpecular = sf * (specular * ShadowAtt * LIntensity * LightColor);

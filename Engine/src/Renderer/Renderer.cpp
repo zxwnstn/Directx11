@@ -18,7 +18,7 @@
 #define MAX_LIGHT 100
 
 namespace Engine {
-	
+
 	struct RenderingData {
 
 		std::shared_ptr<PipelineController> PLController;
@@ -38,6 +38,9 @@ namespace Engine {
 
 		float ReinhardToneMapFactor[3];
 		std::shared_ptr<SBuffer<float>> LumCsBuffer;
+		std::shared_ptr<Light> emptyLight;
+		std::shared_ptr<Model3D> lightModel;
+
 
 		RenderMode Mode;
 		RenderingPath Path;
@@ -65,7 +68,7 @@ namespace Engine {
 			{"Diffuse", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"Normal",  DXGI_FORMAT_R32G32B32A32_FLOAT},
 			{"Ambient", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"WorldPosition", DXGI_FORMAT_R32G32B32A32_FLOAT},
 			{"Misc", DXGI_FORMAT_R8G8B8A8_UNORM},
-		}));
+			}));
 
 		float vertices[] = {
 		   -1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
@@ -82,7 +85,7 @@ namespace Engine {
 			.SetVertices(vertices, 4)
 			.SetIndices(indices, 6);
 
-		s_Data.Mode = RenderMode::Deffered;
+		s_Data.Mode = RenderMode::Forward;
 
 		for (uint32_t i = 0; i < MAX_LIGHT; ++i)
 			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(2048, 2048));
@@ -90,7 +93,13 @@ namespace Engine {
 			s_Data.PointShadowMaps.emplace_back(new ShadowMap(4096, 4096, 6));
 
 		TextureArchive::Add("HDRTexture", prop.Width, prop.Height);
+		TextureArchive::Add("ForwardTexture", prop.Width, prop.Height);
+
 		s_Data.LumCsBuffer.reset(new SBuffer<float>(SBufferType::Write, nullptr, 20000));
+
+		s_Data.emptyLight.reset(new Light);
+		s_Data.emptyLight->noLight = true;
+
 	}
 
 	void Renderer::Shutdown()
@@ -114,11 +123,16 @@ namespace Engine {
 		s_Data.Queued3D.push_back(model);
 	}
 
-	bool isHdr = true;
+	bool isHdr = false;
 
 	void Renderer::ActivateHdr(bool activate)
 	{
 		isHdr = activate;
+	}
+
+	void Renderer::ActivateShadow(bool activate)
+	{
+		s_Data.GlobalEnv->UseShadowMap = activate;
 	}
 
 	void Renderer::EndScene()
@@ -126,35 +140,27 @@ namespace Engine {
 		for (auto&[name, shader] : ShaderArchive::s_Shaders)
 			shader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
 
-		switch (s_Data.Path)
+		renderShadow();
+
+		switch (s_Data.Mode)
 		{
-		case RenderingPath::Fbx: FbxLoad(); break;
-		case RenderingPath::Deffered: Deffered(); break;
-		case RenderingPath::Phong: Phong(); break;
-		case RenderingPath::Animation: Animation(); break;
-		case RenderingPath::HDR: HDR(); break;
-		case RenderingPath::CurvedPn: CurvedPn(); break;
+		case RenderMode::Deffered: renderDeffered(); break;
+		case RenderMode::Forward: renderForward(); break;
 		}
 
-		//renderShadow();
-		//
-
-		//switch (s_Data.Mode)
-		//{
-		//case RenderMode::Deffered: renderDeffered();
-		//case RenderMode::Forward: renderForward();
-		//}
+		////Some();
 
 		//s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
 
-		////Render 2D
+		//////Render 2D
 		//s_Data.PLController->SetBlend(BlendOpt::None);
-		//for (auto model : s_Data.Queued2D) draw2D(model, "2D");
+		//for (auto model : s_Data.Queued2D)
+		//	draw2D(model, "2D");
+		
 
 		s_Data.Queued2D.clear();
 		s_Data.Queued3D.clear();
 		s_Data.QueuedLight.clear();
-
 		//Dx11Core::Get().Present();
 	}
 
@@ -164,7 +170,7 @@ namespace Engine {
 	}
 
 	void Renderer::excompute()
-	{		
+	{
 		unsigned int arr[126];
 		for (int i = 0; i < 126; ++i)
 			arr[i] = i;
@@ -173,7 +179,7 @@ namespace Engine {
 
 		SBuffer<unsigned int> readBuffer(SBufferType::Read, arr, 126);
 		SBuffer<unsigned int> writeBuffer(SBufferType::Write, arr2, 126);
-		
+
 		auto shader = ShaderArchive::Get("ComputeBasic");
 		shader->Bind();
 
@@ -181,7 +187,7 @@ namespace Engine {
 		writeBuffer.SetAsTarget(0);
 		shader->Dipatch(2, 3, 1);
 
-		auto v= writeBuffer.GetData();
+		auto v = writeBuffer.GetData();
 		for (int i = 0; i < 130; ++i)
 		{
 			std::cout << v[i] << " ";
@@ -227,7 +233,7 @@ namespace Engine {
 
 		Engine::Transform t;
 		t.SetScale(0.5f, 0.5f, 1.0f);
-		
+
 		twod->SetParam<CBuffer::Transform>(t);
 
 		s_Data.ModelBuffer2D->Bind();
@@ -247,10 +253,10 @@ namespace Engine {
 		auto shader = ShaderArchive::Get("EtcStreamout");
 		shader->Bind();
 		ID3D11PixelShader* ps = nullptr;
-		
+
 		SOBuffer sobuffer;
 		sobuffer.Bind();
-		
+
 		model->m_ModelBuffer->Bind();
 		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
 
@@ -268,7 +274,7 @@ namespace Engine {
 		shader->Bind();
 
 		uint32_t stride = 36;
-		uint32_t offset = 0; 
+		uint32_t offset = 0;
 		Dx11Core::Get().Context->IASetVertexBuffers(0, 1, &sobuffer.m_OutstreamBuffer, &stride, &offset);
 		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -281,10 +287,10 @@ namespace Engine {
 
 		auto width = tex->Width;
 		auto height = tex->Height;
-		
+
 		{
 			ENABLE_ELAPSE
-			auto shader = ShaderArchive::Get("HDRAverage");
+				auto shader = ShaderArchive::Get("HDRAverage");
 
 			shader->Bind();
 			float* a = nullptr;
@@ -299,17 +305,10 @@ namespace Engine {
 			vec.x = dispatchX;
 			vec.y = dispatchY;
 			shader->SetParam<CBuffer::DispatchInfo>(vec);
-			
+
 			shader->Dipatch(dispatchX, dispatchY, 1);
 			buffer.UnSetTarget();
 
-			D3D11_BOX box;
-			box.left = 0;
-			box.right = sizeof(float) * dispatchX * dispatchY;
-			box.top = 0;
-			box.bottom = 1;
-			box.front = 0;
-			box.back = 1;
 			auto data = buffer.GetData();
 			float averageLum = 0.0f;
 			for (uint32_t i = 0; i < dispatchY; ++i)
@@ -322,7 +321,7 @@ namespace Engine {
 			averageLum /= width * height;
 			buffer.Unmap();
 			LOG_ELAPSE
-			LOG_INFO("{0} gpu average", averageLum);
+				LOG_INFO("{0} gpu average", averageLum);
 		}
 	}
 
@@ -432,69 +431,173 @@ namespace Engine {
 		}
 	}
 
-	void Renderer::computeLum()
+	void Renderer::renderLight(const std::shared_ptr<Light>& light)
 	{
-		auto hdr = TextureArchive::Get("HDRTexture");
-		auto width = hdr->Width;
-		auto height = hdr->Height;
+		static bool inFirst = true;
+		if (inFirst)
+		{
+			s_Data.lightModel = Engine::Model3D::Create()
+				.buildFromOBJ()
+				.SetObject("Sphere");
+			inFirst = false;
+		}
 
-		auto shader = ShaderArchive::Get("HDRAverage");
+		if (light->m_Type == Light::Type::Directional)
+			return;
 
+		auto shader = ShaderArchive::Get("EtcDrawLight");
 		shader->Bind();
+
+		s_Data.lightModel->m_ModelBuffer->Bind();
+
+		light->lightCam.GetTransform().SetScale(0.2f, 0.2f, 0.2f);
+		shader->SetParam<CBuffer::Transform>(light->lightCam.GetTransform());
+		shader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		shader->SetParam<CBuffer::LightColor>(*light);
+
+		Dx11Core::Get().Context->DrawIndexed(s_Data.lightModel->m_ModelBuffer->GetIndexCount(), 0, 0);
+	}
+
+	float Renderer::computeLum(const std::string& target)
+	{
 		s_Data.LumCsBuffer->SetAsTarget(0);
+		
+		auto hdr = TextureArchive::Get(target);
 		Dx11Core::Get().Context->CSSetShaderResources(0, 1, &hdr->m_ResourceView);
 
+		auto shader = ShaderArchive::Get("HDRAverage");
+		auto width = hdr->Width;
+		auto height = hdr->Height;
 		uint32_t dispatchX = (uint32_t)ceil(width / 16.0f);
 		uint32_t dispatchY = (uint32_t)ceil(height / 16.0f);
-
 		uvec4 vec;
 		vec.x = dispatchX;
 		vec.y = dispatchY;
 		shader->SetParam<CBuffer::DispatchInfo>(vec);
-
-		shader->Dipatch(dispatchX, dispatchY, 1);
-		s_Data.LumCsBuffer->UnSetTarget();
 		
+		shader->Bind();
+		
+		shader->Dipatch(dispatchX, dispatchY, 1);
+
 		auto data = s_Data.LumCsBuffer->GetData();
-		s_Data.ReinhardToneMapFactor[2] = 0.0f;
+		float ret = 0.0f;
 		for (uint32_t i = 0; i < dispatchY; ++i)
 		{
 			for (uint32_t j = 0; j < dispatchX; ++j)
 			{
-				s_Data.ReinhardToneMapFactor[2] += data[i * dispatchX + j];
+				ret += data[i * dispatchX + j];
 			}
 		}
-		s_Data.ReinhardToneMapFactor[2] /= width * height;
+
+		s_Data.LumCsBuffer->UnSetTarget();
+		s_Data.LumCsBuffer->Unmap();
+
+		return ret /= width * height;
 		//s_Data.ReinhardToneMapFactor[1] = 1.03f - 2.0f / (2.0f + log10(s_Data.ReinhardToneMapFactor[2] + 1));
 
-		s_Data.LumCsBuffer->Unmap();
 	}
 
-	void Renderer::setReinhardFactor(float white, float middleGray)
-	{
-		s_Data.ReinhardToneMapFactor[0] = white * white;
-		if (middleGray != 0.0f)
-		{
-			s_Data.ReinhardToneMapFactor[1] = middleGray;
-		}
-	}
 
 	float* Renderer::GetReinhardFactor()
 	{
 		return s_Data.ReinhardToneMapFactor;
 	}
 
+
+	void Renderer::draw2D(std::shared_ptr<Model2D> model, const std::string& shader)
+	{
+		auto myShader = ShaderArchive::Get("2D");
+		myShader->Bind();
+
+		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
+		s_Data.ModelBuffer2D->Bind();
+
+		model->m_Texture->Bind(0);
+
+		Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[0]->m_ShaderResourceView);
+
+		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+	}
+
+	void Renderer::draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind)
+	{
+		std::string useShader = shader;
+		switch (model->m_ModelBuffer->GetMeshType())
+		{
+		case MeshType::Skeletal: useShader += "Skeletal"; break;
+		case MeshType::Static: useShader += "Static"; break;
+		}
+
+		auto myShader = ShaderArchive::Get(useShader);
+		myShader->Bind();
+
+		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
+		myShader->SetParam<CBuffer::Materials>(*model->m_MaterialSet);
+		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+
+		model->m_ModelBuffer->Bind();
+
+		if (myShader->Has(Shader::Type::PixelShader))
+			model->m_MaterialSet->BindTextures(materialBind);
+
+		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+
+		myShader->Unbind();
+	}
+
+	void Renderer::SetRenderMode(RenderMode mode)
+	{
+		s_Data.Mode = mode;
+	}
+
+	void Renderer::Resize(uint32_t width, uint32_t height)
+	{
+		LOG_MISC("Renderer::Resize window {0} {1}", width, height);
+		Dx11Core::Get().Resize(width, height);
+		s_Data.GeometryBuffer->Resize(width, height);
+
+		TextureArchive::Get("ForwardTexture")->Resize(width, height);
+		TextureArchive::Get("HDRTexture")->Resize(width, height);
+	}
+
+	std::shared_ptr<Environment> Renderer::GetGlobalEnv()
+	{
+		return s_Data.GlobalEnv;
+	}
+
+	void Renderer::AdjustDepthBias(int f)
+	{
+		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(f, 0.0f);
+		LOG_TRACE("Current Depth Bias : {0}", s_Data.PLController->m_Rasterlizer.RasterDesc.DepthBias);
+	}
+
+	void Renderer::AdjustSlopeBias(float s)
+	{
+		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(0, s);
+		LOG_TRACE("Current Slope Bias : {0}", s_Data.PLController->m_Rasterlizer.RasterDesc.SlopeScaledDepthBias);
+	}
+
 	void Renderer::renderDeffered()
 	{
 		//Pass1. Render Geometry Buffer
 		s_Data.GeometryBuffer->SetRenderTarget();
+
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-
 		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
-
 		s_Data.PLController->SetBlend(BlendOpt::Alpha);
-		for (auto&[name, shader] : ShaderArchive::s_Shaders)
-			shader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+
+		std::string useShader = "Deffered";
+		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
+		skeletal->Bind();
+		skeletal->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+
+		auto static_ = ShaderArchive::Get(useShader + "Static");
+		static_->Bind();
+		static_->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+
+		auto lighting = ShaderArchive::Get(useShader + "Lighting");
+		lighting->Bind();
+		lighting->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 
 		std::string shader;
 		switch (s_Data.Mode)
@@ -502,11 +605,14 @@ namespace Engine {
 		case RenderMode::Deffered: shader = "Deffered"; break;
 		case RenderMode::Forward: shader = "Forward"; break;
 		}
-		for (auto model3D : s_Data.Queued3D) draw3D(model3D, shader);
-		
+		for (auto model3D : s_Data.Queued3D)
+			draw3D(model3D, shader);
+
 		//Pass2. Render light with gbuffer
-		if (isHdr) s_Data.PLController->SetRenderTarget("HDRTexture");
-		else s_Data.PLController->SetRenderTarget("BackBuffer");
+		if (isHdr)
+			s_Data.PLController->SetRenderTarget("HDRTexture");
+		else
+			s_Data.PLController->SetRenderTarget("BackBuffer");
 
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
 		s_Data.PLController->SetBlend(BlendOpt::GBuffer);
@@ -515,6 +621,7 @@ namespace Engine {
 		lightingShader->Bind();
 		s_Data.ModelBuffer2D->Bind();
 		s_Data.GeometryBuffer->Bind();
+		
 
 		uint32_t pointIndex = 0;
 		uint32_t spotIndex = 0;
@@ -537,150 +644,106 @@ namespace Engine {
 				break;
 			}
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
-		}	
+			renderLight(s_Data.QueuedLight[i]);
+		}
 		lightingShader->Unbind();
 
-		if (isHdr)
-		{
-			s_Data.PLController->SetRenderTarget("BackBuffer");
-			computeLum();
+		s_Data.ReinhardToneMapFactor[2] = computeLum("BackBuffer");
+		std::cout << s_Data.ReinhardToneMapFactor[2] << std::endl;
 
+		if (true)
+		{
+			//ID3D11RenderTargetView* view[1]{NULL};
+			//Dx11Core::Get().Context->OMSetRenderTargets(1, view, nullptr);
+
+			s_Data.PLController->SetRenderTarget("BackBuffer");
 			auto hdrShader = ShaderArchive::Get("HDRLighting");
 			auto hdrTexture = TextureArchive::Get("HDRTexture");
 			hdrShader->Bind();
-
+			s_Data.ReinhardToneMapFactor[2] = 5.0f;
 			hdrShader->SetParam<CBuffer::ToneMapFactor>(s_Data.ReinhardToneMapFactor);
 			hdrTexture->Bind(0);
-
+			
+			s_Data.ModelBuffer2D->Bind();
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
 		}
+		
 	}
 
 	void Renderer::renderForward()
 	{
-	}
+		std::string useShader = "Forward";
 
-	void Renderer::draw2D(std::shared_ptr<Model2D> model, const std::string& shader)
-	{
-		auto myShader = ShaderArchive::Get("2D");
-		myShader->Bind();
+		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
+		skeletal->Bind();
+		skeletal->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 
-		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
-		s_Data.ModelBuffer2D->Bind();
-		//model->m_Texture->Bind(0);
-		//Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[0]->m_Shader                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ResourceView);
+		auto static_ = ShaderArchive::Get(useShader + "Static");
+		static_->Bind();
+		static_->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 
-		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
-	}
-
-	void Renderer::draw3D(std::shared_ptr<Model3D> model, const std::string& shader)
-	{
-		std::string useShader = shader;
-		switch (model->m_ModelBuffer->GetMeshType())
+		if (s_Data.QueuedLight.empty())
 		{
-		case MeshType::Skeletal: useShader += "Skeletal"; break;
-		case MeshType::Static: useShader += "Static"; break;
+			s_Data.PLController->SetRenderTarget("BackBuffer");
+
+			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
+			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+			s_Data.PLController->SetBlend(BlendOpt::Alpha);
+
+			skeletal->SetParam<CBuffer::Light>(*s_Data.emptyLight);
+
+			static_->SetParam<CBuffer::Light>(*s_Data.emptyLight);
+
+			for (auto& model : s_Data.Queued3D)
+				draw3D(model, useShader, 1);
 		}
-
-		auto myShader = ShaderArchive::Get(useShader);
-		myShader->Bind();
-		
-		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
-		myShader->SetParam<CBuffer::Materials>(*model->m_MaterialSet);
-		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
-		
-		model->m_ModelBuffer->Bind();
-
-		if(myShader->Has(Shader::Type::PixelShader))
-			model->m_MaterialSet->BindTextures(0);
-
-		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
-		myShader->Unbind();
-	}
-
-	void Renderer::SetRenderMode(RenderMode mode)
-	{
-		s_Data.Mode = mode;
-	}
-
-	void Renderer::Resize(uint32_t width, uint32_t height)
-	{
-		LOG_MISC("Renderer::Resize window {0} {1}", width, height);
-		Dx11Core::Get().Resize(width, height);
-		s_Data.GeometryBuffer->Resize(width, height);
-	}
-
-	std::shared_ptr<Environment> Renderer::GetGlobalEnv()
-	{
-		return s_Data.GlobalEnv;
-	}
-
-	void Renderer::AdjustDepthBias(int f)
-	{
-		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(f, 0.0f);
-		LOG_TRACE("Current Depth Bias : {0}", s_Data.PLController->m_Rasterlizer.RasterDesc.DepthBias);
-	}
-
-	void Renderer::AdjustSlopeBias(float s)
-	{
-		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(0, s);
-		LOG_TRACE("Current Slope Bias : {0}", s_Data.PLController->m_Rasterlizer.RasterDesc.SlopeScaledDepthBias);
-	}
-
-	void Renderer::SetRenderingPath(RenderingPath path)
-	{
-		s_Data.Path = path;
-	}
-
-	void Renderer::FbxLoad()
-	{
-		s_Data.PLController->SetRenderTarget("BackBuffer");
-
-		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
-
-		std::string useShader = "SceneFbx";
-
-		auto myShader = ShaderArchive::Get(useShader);
-		myShader->Bind();
-		myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
-
-		for (auto& model : s_Data.Queued3D)
+		else
 		{
-			myShader->SetParam<CBuffer::Transform>(model->m_Transform);
-			myShader->SetParam<CBuffer::Materials>(*model->m_MaterialSet);
-			myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+			int type = -1;
+			int spotIdx = -1, pointIdx = -1, dirIdx = -1, curIdx = -1;
 
-			model->m_ModelBuffer->Bind();
+			for (auto& light : s_Data.QueuedLight)
+			{
+				s_Data.PLController->ClearRTT("ForwardTexture");
 
-			if (myShader->Has(Shader::Type::PixelShader))
-				model->m_MaterialSet->BindTextures(1);
+				s_Data.PLController->SetRenderTarget("ForwardTexture");
+				s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
+				s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+				s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
+				skeletal->SetParam<CBuffer::Light>(*light);
+				skeletal->SetParam<CBuffer::LightPos>(*light);
+				static_->SetParam<CBuffer::Light>(*light);
+				static_->SetParam<CBuffer::LightPos>(*light);
 
-			Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
+				switch (light->m_Type)
+				{
+				case Light::Type::Directional: type = 0;  curIdx = ++dirIdx; break;
+				case Light::Type::Point: type = 1; curIdx = ++pointIdx; break;
+				case Light::Type::Spot: type = 2; curIdx = ++spotIdx; break;
+				}
+
+				for (auto& model : s_Data.Queued3D)
+					draw3D(model, useShader, 1);
+
+				renderLight(light);
+
+				s_Data.PLController->SetRenderTarget("BackBuffer");
+				s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+				s_Data.PLController->SetBlend(BlendOpt::GBuffer);
+
+				auto blendShader = ShaderArchive::Get("ForwardBlend");
+
+				blendShader->Bind();
+				TextureArchive::Get("ForwardTexture")->Bind(0);
+
+				s_Data.ModelBuffer2D->Bind();
+				Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+			}
 		}
-		myShader->Unbind();
 	}
 
-
-	void Renderer::CurvedPn()
+	void Renderer::Some()
 	{
 	}
-
-	void Renderer::HDR()
-	{
-	}
-
-	void Renderer::Phong()
-	{
-	}
-
-	void Renderer::Animation()
-	{
-	}
-
-	void Renderer::Deffered()
-	{
-	}
-
 }

@@ -32,7 +32,7 @@ namespace Engine {
 		inline RasterlizerOpt GetRasterlizeOpt() const { return m_Rasterlizer.opt; }
 		
 		PipelineController& SetRenderTarget(const std::string& targetTextureName);
-		void ClearRTT();
+		void ClearRTT(const std::string& target = "");
 
 	private:
 		struct DepthStencil

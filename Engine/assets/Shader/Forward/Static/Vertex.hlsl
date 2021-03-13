@@ -22,7 +22,7 @@ cbuffer Transform : register(b2)
 	matrix Scale;
 };
 
-cbuffer LightPos : register(b4)
+cbuffer LightPos : register(b3)
 {
 	float4 LPosition;
 };

@@ -1,6 +1,5 @@
-
 Texture2D Texture : register(t0);
-SamplerState SampleType;
+SamplerState SampleType : register(s0);
 
 struct Input
 {
@@ -10,6 +9,5 @@ struct Input
 
 float4 main(Input input) : SV_TARGET
 {
-	float4 pixel = Texture.Sample(SampleType, input.tex);
-	return pixel;
+	return Texture.Sample(SampleType, input.tex);
 }

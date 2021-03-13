@@ -22,15 +22,15 @@ cbuffer Transform : register(b2)
 	matrix Scale;
 };
 
-cbuffer Bone : register(b3)
-{
-	matrix SkinnedTransform[100];
-}
-
-cbuffer LightPos : register(b4)
+cbuffer LightPos : register(b3)
 {
 	float4 LPosition;
 };
+
+cbuffer Bone : register(b4)
+{
+	matrix SkinnedTransform[100];
+}
 
 
 struct Input

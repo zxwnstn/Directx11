@@ -12,4 +12,6 @@ private:
 	float animationSpeed = 0.016f;
 	std::vector<std::string> ModelNames;
 	std::unordered_map<std::string, int> curAnimtionIdx;
+
+	std::shared_ptr<Engine::Model3D> floor;
 };
