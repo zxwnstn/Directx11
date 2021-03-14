@@ -100,6 +100,7 @@ namespace Engine {
 		s_Data.emptyLight.reset(new Light);
 		s_Data.emptyLight->noLight = true;
 
+		s_Data.ReinhardToneMapFactor[0] = 0.1f;
 	}
 
 	void Renderer::Shutdown()
@@ -124,6 +125,8 @@ namespace Engine {
 	}
 
 	bool isHdr = false;
+	bool isGamma = false;
+	bool isAutoMiddelGray = false;
 
 	void Renderer::ActivateHdr(bool activate)
 	{
@@ -133,6 +136,16 @@ namespace Engine {
 	void Renderer::ActivateShadow(bool activate)
 	{
 		s_Data.GlobalEnv->UseShadowMap = activate;
+	}
+
+	void Renderer::ActivateGamma(bool activate)
+	{
+		isGamma = activate;
+	}
+
+	void Renderer::ActivateAutoMiddleGray(bool activate)
+	{
+		isAutoMiddelGray = activate;
 	}
 
 	void Renderer::EndScene()
@@ -148,20 +161,15 @@ namespace Engine {
 		case RenderMode::Forward: renderForward(); break;
 		}
 
-		////Some();
-
-		//s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
-
-		//////Render 2D
-		//s_Data.PLController->SetBlend(BlendOpt::None);
-		//for (auto model : s_Data.Queued2D)
-		//	draw2D(model, "2D");
-		
+		//Render 2D
+		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+		s_Data.PLController->SetBlend(BlendOpt::None);
+		for (auto model : s_Data.Queued2D)
+			draw2D(model, "2D");
 
 		s_Data.Queued2D.clear();
 		s_Data.Queued3D.clear();
 		s_Data.QueuedLight.clear();
-		//Dx11Core::Get().Present();
 	}
 
 	void Renderer::Present()
@@ -492,9 +500,7 @@ namespace Engine {
 		s_Data.LumCsBuffer->UnSetTarget();
 		s_Data.LumCsBuffer->Unmap();
 
-		return ret /= width * height;
-		//s_Data.ReinhardToneMapFactor[1] = 1.03f - 2.0f / (2.0f + log10(s_Data.ReinhardToneMapFactor[2] + 1));
-
+		return ret;
 	}
 
 
@@ -553,6 +559,7 @@ namespace Engine {
 	void Renderer::Resize(uint32_t width, uint32_t height)
 	{
 		LOG_MISC("Renderer::Resize window {0} {1}", width, height);
+
 		Dx11Core::Get().Resize(width, height);
 		s_Data.GeometryBuffer->Resize(width, height);
 
@@ -614,20 +621,27 @@ namespace Engine {
 		else
 			s_Data.PLController->SetRenderTarget("BackBuffer");
 
-		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
-		s_Data.PLController->SetBlend(BlendOpt::GBuffer);
-
 		auto lightingShader = ShaderArchive::Get("DefferedLighting");
 		lightingShader->Bind();
 		s_Data.ModelBuffer2D->Bind();
 		s_Data.GeometryBuffer->Bind();
-		
 
+
+		uvec4 gamma;
+		if (isGamma)
+			gamma.x = 1;
+		else
+			gamma.x = 0;
+		lightingShader->SetParam<CBuffer::Gamma>(gamma);
+		
 		uint32_t pointIndex = 0;
 		uint32_t spotIndex = 0;
 
 		for (uint32_t i = 0; i < s_Data.QueuedLight.size(); ++i)
 		{
+			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+			s_Data.PLController->SetBlend(BlendOpt::GBuffer);
+
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
 			lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
 			switch (s_Data.QueuedLight[i]->m_Type)
@@ -644,30 +658,29 @@ namespace Engine {
 				break;
 			}
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
-			renderLight(s_Data.QueuedLight[i]);
+			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);	
 		}
 		lightingShader->Unbind();
 
-		s_Data.ReinhardToneMapFactor[2] = computeLum("BackBuffer");
-		std::cout << s_Data.ReinhardToneMapFactor[2] << std::endl;
-
-		if (true)
+		if (isHdr)
 		{
-			//ID3D11RenderTargetView* view[1]{NULL};
-			//Dx11Core::Get().Context->OMSetRenderTargets(1, view, nullptr);
-
 			s_Data.PLController->SetRenderTarget("BackBuffer");
+			auto averagelum = computeLum("HDRTexture");
+
 			auto hdrShader = ShaderArchive::Get("HDRLighting");
 			auto hdrTexture = TextureArchive::Get("HDRTexture");
 			hdrShader->Bind();
-			s_Data.ReinhardToneMapFactor[2] = 5.0f;
+
+			s_Data.ReinhardToneMapFactor[2] = averagelum / float(Dx11Core::Get().Width() * Dx11Core::Get().Height());
+			if (isAutoMiddelGray)
+				s_Data.ReinhardToneMapFactor[1] = 1.03f - 2.0f / (2.0f + log10(s_Data.ReinhardToneMapFactor[2] + 1));
+
 			hdrShader->SetParam<CBuffer::ToneMapFactor>(s_Data.ReinhardToneMapFactor);
 			hdrTexture->Bind(0);
 			
 			s_Data.ModelBuffer2D->Bind();
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
 		}
-		
 	}
 
 	void Renderer::renderForward()

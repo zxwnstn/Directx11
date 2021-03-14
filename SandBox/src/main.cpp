@@ -31,8 +31,11 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam
 		if(!Engine::ModuleCore::IsInitiated()) return (DefWindowProc(hWnd, iMessage, wParam, lParam));
 		width = LOWORD(lParam);
 		height = HIWORD(lParam);
-		Engine::Renderer::Resize(width, height);
-		sandBox.OnResize();
+		if (width != 0 && height != 0)
+		{
+			Engine::Renderer::Resize(width, height);
+			sandBox.OnResize();
+		}
 	}
 	return (DefWindowProc(hWnd, iMessage, wParam, lParam));
 }

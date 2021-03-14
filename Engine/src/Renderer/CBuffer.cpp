@@ -131,7 +131,7 @@ namespace Engine::CBuffer {
 
 	void ToneMapFactor::Upload(float * other)
 	{
-		WhiteSqr = other[0];
+		WhiteSqr = other[0] * other[0];
 		MiddleGray = other[1];
 		AverageLum = other[2];
 		padding = 0.0f;

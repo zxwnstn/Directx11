@@ -23,6 +23,9 @@ void main(uint3 Gid : SV_GroupID,
 		HDRTexture.Load(uint3((DTid.xy + uint2(16 * info.x, 16 * info.y)), 0.0));
 
 	accum[GI] = dot(color, BT601);
+	if (isnan(accum[GI]))
+		accum[GI] = 0.0f;
+
 	GroupMemoryBarrierWithGroupSync();
 
 	if (GI < 128)

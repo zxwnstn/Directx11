@@ -20,7 +20,7 @@ static const float3 BT601 = float3(0.299, 0.587, 0.114);
 float4 ReinHardToneMapping(float3 color)
 {
 	float scaledLum = dot(color, BT601);
-	scaledLum = scaledLum * MiddleGray / AverageLum;
+	scaledLum *= MiddleGray / AverageLum;
 
 	float compressedLum = scaledLum * (1.0f + scaledLum / WhiteSqr) / (1.0f + scaledLum);
 

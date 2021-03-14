@@ -25,6 +25,8 @@ private:
 	bool gBuffer = false;
 	bool shadow = false;
 	bool hdr = false;
+	bool gamma = false;
+	bool autoMiddleGray = false;
 	bool pnTesselation = false;
 
 	float mouseSensitive = 0.005f;

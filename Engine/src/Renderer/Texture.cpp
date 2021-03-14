@@ -197,6 +197,7 @@ namespace Engine {
 	Texture::RTTInform::RTTInform(uint32_t width, uint32_t height, ID3D11Texture2D * buffer, uint32_t arraySize)
 	{
 		//Render Target View
+		ZeroMemory(&m_RenderTargetViewDesc, sizeof(m_RenderTargetViewDesc));
 		m_RenderTargetViewDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		m_RenderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
 		m_RenderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
@@ -240,6 +241,47 @@ namespace Engine {
 		m_ViewPortDesc.TopLeftY = 0.0f;
 	}
 
+	//Texture::RTTInform::RTTInform(uint32_t width, uint32_t height, ID3D11Texture2D * buffer, DXGI_FORMAT format)
+	//{
+	//	m_RenderTargetViewDesc.Format = format;
+	//	m_RenderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	//	m_RenderTargetViewDesc.Texture2D.MipSlice = 0;
+	//	Dx11Core::Get().Device->CreateRenderTargetView(buffer, &m_RenderTargetViewDesc, &m_RenderTargetView);
+	//	ASSERT(m_RenderTargetView, "Texture::Create Texture render target view failed");
+
+	//	//Depth/Stencil Buffer
+	//	ZeroMemory(&m_DepthStencilBufferDecs, sizeof(m_DepthStencilBufferDecs));
+	//	m_DepthStencilBufferDecs.Width = width;
+	//	m_DepthStencilBufferDecs.Height = height;
+	//	m_DepthStencilBufferDecs.MipLevels = 1;
+	//	m_DepthStencilBufferDecs.ArraySize = 1;
+	//	m_DepthStencilBufferDecs.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	//	m_DepthStencilBufferDecs.SampleDesc.Count = 1;
+	//	m_DepthStencilBufferDecs.SampleDesc.Quality = 0;
+	//	m_DepthStencilBufferDecs.Usage = D3D11_USAGE_DEFAULT;
+	//	m_DepthStencilBufferDecs.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	//	m_DepthStencilBufferDecs.CPUAccessFlags = 0;
+	//	m_DepthStencilBufferDecs.MiscFlags = 0;
+	//	Dx11Core::Get().Device->CreateTexture2D(&m_DepthStencilBufferDecs, NULL, &m_DepthStecilBuffer);
+	//	ASSERT(m_DepthStecilBuffer, "Renderer::Create DepthBuffer failed");
+
+	//	//Depth/Stencil View
+	//	ZeroMemory(&m_DepthStencilViewDesc, sizeof(m_DepthStencilViewDesc));
+	//	m_DepthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	//	m_DepthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	//	m_DepthStencilViewDesc.Texture2D.MipSlice = 0;
+	//	Dx11Core::Get().Device->CreateDepthStencilView(m_DepthStecilBuffer, &m_DepthStencilViewDesc, &m_DepthStencilView);
+	//	ASSERT(m_DepthStencilView, "Renderer::Create DepthStencilViewDesc failed");
+
+	//	//Viewport
+	//	m_ViewPortDesc.Width = (float)width;
+	//	m_ViewPortDesc.Height = (float)height;
+	//	m_ViewPortDesc.MaxDepth = 1.0f;
+	//	m_ViewPortDesc.MinDepth = 0.0f;
+	//	m_ViewPortDesc.TopLeftX = 0.0f;
+	//	m_ViewPortDesc.TopLeftY = 0.0f;
+	//}
+
 	void Texture::RTTInform::Resize(uint32_t width, uint32_t height, ID3D11Texture2D* buffer)
 	{
 		Dx11Core::Get().Context->OMSetRenderTargets(0, 0, 0);
@@ -255,7 +297,7 @@ namespace Engine {
 
 			Dx11Core::Get().Device->CreateRenderTargetView(backBuffer, NULL, &m_RenderTargetView);
 			backBuffer->Release();
-			ASSERT(m_RenderTargetView, "Texture::Re-create RenderTargetView failed");
+			ASSERT(m_RenderTargetView, "Texture::Re-create BackBuffer RenderTargetView failed");
 		}
 		else
 		{
@@ -309,14 +351,15 @@ namespace Engine {
 		ASSERT(m_Buffer, "Texture::Create texture failed");
 
 		//Create Shader Resource view(SRV)
-		m_SrvDesc.Format = m_TextureDesc.Format;
+		ZeroMemory(&m_SrvDesc, sizeof(m_SrvDesc));
+		m_SrvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		m_SrvDesc.Texture2D.MostDetailedMip = 0;
 		m_SrvDesc.Texture2D.MipLevels = 1;
 		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
 		ASSERT(m_ResourceView, "Texture::Create texture view failed");
 
-		m_RTT = new RTTInform(width, height, m_Buffer, false);
+		m_RTT = new RTTInform(width, height, m_Buffer);
 	}
 
 	Texture::Texture(uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize)

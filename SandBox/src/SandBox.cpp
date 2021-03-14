@@ -83,23 +83,45 @@ void SandBox::OnImGui()
 			{
 				Engine::Renderer::ActivateShadow(shadow);
 			}
+			
 			if (ImGui::Checkbox("Hdr", &hdr))
 			{
 				Engine::Renderer::ActivateHdr(hdr);
+				if (!hdr)
+				{
+					Engine::Renderer::ActivateGamma(false);
+				}
+				else
+				{
+					Engine::Renderer::ActivateGamma(gamma);
+				}
 			}
 			if (hdr)
 			{
-				ImGui::BeginChild("", ImVec2(300, 100), true);
+				ImGui::BeginChild("", ImVec2(300, 200), true);
 				float* factor = Engine::Renderer::GetReinhardFactor();
-				ImGui::SliderFloat("White", &factor[0], 0.0f, 10.0f, nullptr, 1.0f);
-				ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 10.0f, nullptr, 1.0f);
+
 				ImGui::Text("Average Lum : %f", factor[2]);
+				ImGui::SliderFloat("White", &factor[0], 0.0f, 6.0f, nullptr, 1.0f);
+				ImGui::Text("Aproximate MiddleGray : %f", factor[1]);
+				if (ImGui::Checkbox("auto MiddleGray", &autoMiddleGray))
+				{
+					Engine::Renderer::ActivateAutoMiddleGray(autoMiddleGray);
+				}
+				if (!autoMiddleGray)
+				{
+					ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 6.0f, nullptr, 1.0f);
+				}
+
+				ImGui::Spacing();
+
+				if (ImGui::Checkbox("Gamma correction", &gamma))
+					Engine::Renderer::ActivateGamma(gamma);
+
 				ImGui::EndChild();
 			}
 		}
 	}
-
-	
 	
 	ImGui::End();
 

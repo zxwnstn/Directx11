@@ -26,6 +26,8 @@ namespace Engine {
 	public:
 		static void ActivateHdr(bool activate);
 		static void ActivateShadow(bool activate);
+		static void ActivateGamma(bool activate);
+		static void ActivateAutoMiddleGray(bool activate);
 
 	public:
 		static void BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights);

@@ -125,7 +125,9 @@ float4 main(Input input) : SV_TARGET
 
 	float depth = DepthSample.x;
 	float3 diffuse = DiffuseSample.xyz;
-	diffuse = pow(diffuse, 2.2f);
+	if (GammaCorection.x)
+		diffuse = pow(diffuse, 2.2f);
+
 	float3 normal = NormalSample.xyz;
 
 	float3 ambient = AmbientSample.xyz;
@@ -173,7 +175,10 @@ float4 main(Input input) : SV_TARGET
 	float3 finalSpecular = sf * (specular * ShadowAtt * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 	
-	return pow(float4(color, 1.0f), 0.4545);
+	if (GammaCorection.x)
+		return pow(float4(color, 1.0f), 0.4545);
+
+	return float4(color, 1.0f);
 }
 
 //float CalcShadow(float2 tex, int divide)
