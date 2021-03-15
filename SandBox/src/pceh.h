@@ -2,5 +2,5 @@
 
 #include "Engine.h"
 
-extern int width;
-extern int height;
+extern int g_Width;
+extern int g_Height;

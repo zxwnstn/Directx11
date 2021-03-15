@@ -8,26 +8,22 @@ const char* arr2[10];
 
 void FbxLoadScene::Init()
 {
-	m_Name = "FBX file load";
+	m_Name = "One model scene";
 
 	//Cam
 	float filedOfView = 3.141592f / 3.0f;
-	m_Cur_cam.reset(new Engine::Camera(filedOfView, float(width) / (float)height));
+	m_Cur_cam.reset(new Engine::Camera(filedOfView, float(g_Width) / (float)g_Height));
 	m_Cur_cam->GetTransform().SetTranslate(0.0f, 2.0f, 4.0f);
 	m_Cur_cam->GetTransform().SetRotate(0.0f, 3.14f, 0.0f);
 
 	m_Cameras.push_back(m_Cur_cam);
 
-	//Light
-	std::shared_ptr<Engine::Light> light1(new Engine::Light);
-	light1->lightCam.GetTransform().SetRotate(Engine::Util::ToRadian(315.0f), 0.0f, 0.0f);
-	light1->name = "Light1";
-	m_Lights.push_back(light1);
-
 	std::shared_ptr<Engine::Light> light2(new Engine::Light);
 	m_Lights.push_back(light2);
 	light2->m_Type = Engine::Light::Type::Point;
-	light2->name = "Light2";
+	light2->lightCam.GetTransform().SetTranslate(0.0f, 5.0f, 5.0f);
+	light2->name = "Light1";
+
 
 	//Model
 	ModelNames = Engine::SkeletonArchive::GetAllName();
@@ -60,6 +56,23 @@ void FbxLoadScene::Init()
 
 void FbxLoadScene::OnUpdate(float dt)
 {
+	if (addLight)
+	{
+		addLight = false;
+		std::shared_ptr<Engine::Light> light(new Engine::Light);
+		light->m_Type = Engine::Light::Type::Point;
+		light->lightCam.GetTransform().SetTranslate(0.0f, 5.0f, 5.0f);
+		light->name = "new light" + std::to_string(++newlightCnt);
+		m_Lights.push_back(light);
+	}
+	if (deleteLight)
+	{
+		deleteLight = false;
+		m_Lights.erase(m_Lights.begin() + selectedLight);
+		if (selectedLight == m_Lights.size())
+			--selectedLight;
+	}
+
 	m_Model3[curModelIdx]->Update(animationSpeed);
 
 	Engine::Renderer::Enque3D(m_Model3[curModelIdx]);
@@ -76,7 +89,8 @@ void FbxLoadScene::OnImGui()
 	for (int i = 0; i < animlist.size(); ++i)
 		arr2[i + 1] = animlist[i].c_str();
 
-	ImGui::Begin("Fbx");
+	ImGui::Begin("Current Scene");
+
 	ImGui::Combo("Model", &curModelIdx, arr, ModelNames.size());
 
 	if (ImGui::CollapsingHeader("Animation"))
@@ -102,7 +116,7 @@ void FbxLoadScene::OnImGui()
 		ImGui::EndChild();
 	}
 
-	if (ImGui::CollapsingHeader("TRS"))
+	if (ImGui::CollapsingHeader("Model"))
 	{
 		ImGui::BeginChild("TRSTab", ImVec2(350, 100), true);
 		auto& transform = m_Model3[curModelIdx]->m_Transform;
@@ -111,22 +125,45 @@ void FbxLoadScene::OnImGui()
 		auto& rotate = transform.GetRotate();
 		auto& scale = transform.GetScale();
 		float trans[3] = { translate.x, translate.y, translate.z };
-		float rot[3] = { rotate.x, rotate.y, rotate.z };
-		float sca[3] = { scale.x, scale.y, scale.z };
+		float rot[3] = { Engine::Util::ToDegree(rotate.x), Engine::Util::ToDegree(rotate.y), Engine::Util::ToDegree(rotate.z )};
+		float sca[3] = { scale.x * 100, scale.y * 100, scale.z * 100 };
 
-		if (ImGui::SliderFloat3("Translate", trans, -10.0f, 10.0f))
-			transform.SetTranslate(trans[0], trans[1], trans[2]);
-		if (ImGui::SliderFloat3("Rotate", rot, -3.14, 3.14))
-			transform.SetRotate(rot[0], rot[1], rot[2]);
-		if (ImGui::SliderFloat3("Scale", sca, 0.01f, 0.1f))
-			transform.SetScale(sca[0], sca[1], sca[2]);
+		ImGui::Text("Transform");
+		ImGui::InputFloat3("Translate", translate.m);
+		if (ImGui::InputFloat3("Rotate(radian)", rot))
+			transform.SetRotate(Engine::Util::ToRadian(rot[0]), Engine::Util::ToRadian(rot[1]), Engine::Util::ToRadian(rot[2]));
+		if(ImGui::InputFloat3("Scale", sca))
+			transform.SetScale(sca[0] / 100.0f, sca[1] / 100.0f, sca[2] / 100.0f);
+
+		ImGui::EndChild();
+
+		ImGui::BeginChild("Material tab", ImVec2(350, 200), true);
+
+		auto materialset = m_Model3[curModelIdx]->m_MaterialSet;
+		
+		const char* list[10];
+		int i = 0;
+		for (auto&[num, mat] : materialset->Materials)
+		{
+			list[i] = mat.Name.c_str();
+			++i;
+		}
+
+		ImGui::Text("Material");
+		ImGui::Combo("part", &selectedMat, list, materialset->Materials.size());
+		
+		auto& mat = materialset->Materials[selectedMat];
+		ImGui::ColorEdit3("Ambient", mat.Ambient.m);
+		ImGui::ColorEdit3("Diffuse", mat.Diffuse.m);
+		ImGui::SliderFloat("Specular", &mat.Specular.x, 0.0f, 1.0f);
+		ImGui::SliderFloat("Shiness", &mat.Shiness, 0.0f, 30.0f);
+
 		ImGui::EndChild();
 	}
 
 	if (ImGui::CollapsingHeader("Light"))
 	{
 		int total = 0;
-		static int selectedLight = 0;
 		const char* lightsList[20];
 
 		static const char* types[]{ "Directional", "Point", "Spot" };
@@ -138,9 +175,10 @@ void FbxLoadScene::OnImGui()
 
 		auto curLight = m_Lights[selectedLight];
 		ImGui::ListBox("Lights", &selectedLight, lightsList, total);
+		if (ImGui::Button("Add", ImVec2(50, 20)))
+			addLight = true;
 
-
-		ImGui::BeginChild("LightTab", ImVec2(350, 100), true);
+		ImGui::BeginChild("LightTab", ImVec2(350, 200), true);
 		int idx = int(curLight->m_Type);
 		if (ImGui::Combo("Type", &idx, types, 3))
 		{
@@ -149,21 +187,28 @@ void FbxLoadScene::OnImGui()
 
 		ImGui::ColorEdit3("Color", curLight->m_Color.m);
 		ImGui::SliderFloat("Intensity", &curLight->m_Intensity, 0.0f, 5.0f);
+
 		switch (m_Lights[selectedLight]->m_Type)
 		{
 		case Engine::Light::Type::Directional:
 			ImGui::SliderFloat3("Direction", curLight->lightCam.GetTransform().GetRotate().m, -3.14f, 3.14f);
 			break;
 		case Engine::Light::Type::Point:
+			ImGui::SliderFloat("Range", &curLight->m_Range, 0.0f, 100.0f);
 			ImGui::SliderFloat3("Position", curLight->lightCam.GetTransform().GetTranslate().m, -10.0f, 10.0f);
 			break;
 		case Engine::Light::Type::Spot:
+			ImGui::SliderFloat("Range", &curLight->m_Range, 0.0f, 100.0f);
 			ImGui::SliderFloat3("Position", curLight->lightCam.GetTransform().GetTranslate().m, -10.0f, 10.0f);
 			ImGui::SliderFloat3("Direction", curLight->lightCam.GetTransform().GetRotate().m, -3.14f, 3.14f);
 			ImGui::SliderFloat("InnerAngle", &curLight->m_InnerAngle, 0.0f, 1.54f);
 			ImGui::SliderFloat("OuterAngle", &curLight->m_OuterAngle, 0.0f, 1.54f);
 			break;
 		}
+
+		if (ImGui::Button("Delete", ImVec2(50, 20)))
+			deleteLight = true;
+
 		ImGui::EndChild();
 	}
 

@@ -55,7 +55,7 @@ namespace Engine::CBuffer {
 		float Intensity;
 		int Type;
 		float InnerAng;
-		float OuterAngRcp;
+		float OuterAng;
 		float RangeRcp;
 		uvec3 padding;
 

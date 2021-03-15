@@ -538,6 +538,8 @@ namespace Engine {
 		FbxDouble double1;
 		Material mat;
 
+		mat.Name = pMaterial->GetName();
+
 		if (pMaterial->GetClassId().Is(FbxSurfacePhong::ClassId))
 		{
 			LOG_MISC("Material type is phong");

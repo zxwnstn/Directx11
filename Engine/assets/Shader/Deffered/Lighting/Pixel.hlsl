@@ -30,7 +30,7 @@ cbuffer Light : register(b1)
 	float  LIntensity;
 	int    LType;	//0 Directional, 1 Point, 2 Spot
 	float  LInnerAng;
-	float  LOuterAngRcp;
+	float  LOuterAng;
 	float  LRangeRcp;
 	float  LPadding[3];
 };
@@ -78,9 +78,8 @@ float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, floa
 	float3 LVnormal = normalize(lightDir);
 	float3 LTnormal = normalize(LightTo);
 	float cos = dot(LVnormal, LTnormal);
-	cos = acos(cos);
+	attenuation = saturate((cos - LOuterAng) / (LInnerAng - LOuterAng));
 
-	attenuation = 1.0f - saturate(cos - InnerAng) * OuterAngRcp;
 	attenuation *= attenuation;
 
 	return attenuation;
@@ -149,7 +148,7 @@ float4 main(Input input) : SV_TARGET
 	if (LType == 2) //spot
 	{
 		lightAttenuation = CalcDistAttenuation(toLightDist, LRangeRcp)
-			* CalcConeAttenuation(posToLight, lightVector, LInnerAng, LOuterAngRcp);
+			* CalcConeAttenuation(posToLight, lightVector, LInnerAng, LOuterAng);
 	}
 	float3 LightColor = LColor.xyz * lightAttenuation;
 	lightVector = normalize(lightVector);

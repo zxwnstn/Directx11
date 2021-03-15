@@ -149,13 +149,12 @@ namespace Engine {
 
 	void PipelineController::Rasterlizer::AdjustShadowBias(int depth, float slope)
 	{
+		RasterDesc.FillMode = D3D11_FILL_SOLID;
 		if(Shadow)
 			Shadow->Release();
-		RasterDesc.DepthBias += depth;
-		RasterDesc.SlopeScaledDepthBias += slope;
+		RasterDesc.DepthBias = depth;
+		RasterDesc.SlopeScaledDepthBias = slope;
 
-		if (RasterDesc.DepthBias < 0.0f) RasterDesc.DepthBias = 0.0f;
-		if (RasterDesc.SlopeScaledDepthBias < 0.0f) RasterDesc.SlopeScaledDepthBias = 0.0f;
 		Dx11Core::Get().Device->CreateRasterizerState(&RasterDesc, &Shadow);
 		
 	}

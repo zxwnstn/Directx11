@@ -1,4 +1,4 @@
 #include "pceh.h"
 
-int width = 1280;
-int height = 720;
+int g_Width = 1280;
+int g_Height = 720;

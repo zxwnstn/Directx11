@@ -48,12 +48,23 @@ void SandBox::OnImGui()
 
 	//ImGui::ShowDemoWindow();
 
-	ImGui::Begin("Scene select");
-	if (ImGui::Combo("Scene", &curSceneIdx, ScenesNames, 2))
-		sceneChanged = true;
-	
-	if (ImGui::CollapsingHeader("Current camera info"))
+	ImGui::Begin("General");
+
+	if (ImGui::CollapsingHeader("Overview"))
 	{
+		auto ms = ts.elapse();
+		int fps = int(1.0f / ms);
+		ImGui::Text("Fps %d (v-sync)", fps);
+		ImGui::Text("Width : %d, Height : %d", g_Width, g_Height);
+
+		if (ImGui::Combo("Current Scene", &curSceneIdx, ScenesNames, 2))
+			sceneChanged = true;
+
+		ImGui::BeginChild("cur Camera info", ImVec2(300, 200), true);
+
+		ImGui::Text("Current camera");
+		ImGui::Spacing();
+
 		auto& camTransform = CurScene->GetCurCam()->GetTransform();
 		auto& camTranslate = camTransform.GetTranslate();
 		auto& camRotate = camTransform.GetRotate();
@@ -62,26 +73,60 @@ void SandBox::OnImGui()
 		ImGui::Text("x : %f, y : %f, z : %f", camTranslate.x, camTranslate.y, camTranslate.z);
 		ImGui::Text("Rotate(degree)");
 		ImGui::Text("x : %f, y : %f, z : %f", Engine::Util::ToDegree(camRotate.x), Engine::Util::ToDegree(camRotate.y), Engine::Util::ToDegree(camRotate.z));
+		ImGui::EndChild();
 	}
 	
 	if (ImGui::CollapsingHeader("Rendering"))
 	{
-
 		static char* rendering[] = { "Forward", "Deffered" };
 		if (ImGui::Combo("Rendering path", &renderingPath, rendering, 2))
+		{
 			pathChanged = true;
+			if (renderingPath == 0)
+			{
+				gBuffer = false;
+				Engine::Renderer::ActivateShowGBuffer(gBuffer);
+			}
+			if (renderingPath == 1)
+			{
+				pnTesselation = false;
+				Engine::Renderer::ActivateTesselation(pnTesselation);
+			}
+		}
 
 		if (renderingPath == 0)
 		{
-			ImGui::Checkbox("PhongShading", &phongShading);
-			ImGui::Checkbox("Pn Tesselation", &pnTesselation);
+			if (ImGui::Checkbox("Ligting", &lighting))
+			{
+				Engine::Renderer::ActivateLighting(lighting);
+			}
+			
+			if (ImGui::Checkbox("Pn Tesselation", &pnTesselation))
+			{
+				Engine::Renderer::ActivateTesselation(pnTesselation);
+			}
+
+			if (pnTesselation)
+			{
+				if (ImGui::SliderFloat("T-Factor", &tFactor, 1.0f, 20.0f))
+					Engine::Renderer::SetTFactor(tFactor);
+			}
 		}
 		if (renderingPath == 1)
 		{
-			ImGui::Checkbox("Show G-Buffer", &gBuffer);
-			if (ImGui::Checkbox("Shadow", &shadow))
+			if (ImGui::Checkbox("Show G-Buffer", &gBuffer))
 			{
+				Engine::Renderer::ActivateShowGBuffer(gBuffer);
+			}
+			if(ImGui::Checkbox("Shadow", &shadow))
 				Engine::Renderer::ActivateShadow(shadow);
+			
+			if (shadow)
+			{
+				if(ImGui::SliderFloat("DepthBias", &depthBias, 0.0f, 100.0f))
+					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
+				if (ImGui::SliderFloat("SlopeBias", &slopeBias, 0.0f, 100.0f))
+					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
 			}
 			
 			if (ImGui::Checkbox("Hdr", &hdr))
@@ -102,16 +147,8 @@ void SandBox::OnImGui()
 				float* factor = Engine::Renderer::GetReinhardFactor();
 
 				ImGui::Text("Average Lum : %f", factor[2]);
-				ImGui::SliderFloat("White", &factor[0], 0.0f, 6.0f, nullptr, 1.0f);
-				ImGui::Text("Aproximate MiddleGray : %f", factor[1]);
-				if (ImGui::Checkbox("auto MiddleGray", &autoMiddleGray))
-				{
-					Engine::Renderer::ActivateAutoMiddleGray(autoMiddleGray);
-				}
-				if (!autoMiddleGray)
-				{
-					ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 6.0f, nullptr, 1.0f);
-				}
+				ImGui::SliderFloat("White", &factor[0], 0.0f, 10.0f, nullptr, 1.0f);
+				ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 10.0f, nullptr, 1.0f);
 
 				ImGui::Spacing();
 
@@ -121,26 +158,25 @@ void SandBox::OnImGui()
 				ImGui::EndChild();
 			}
 		}
+		if (ImGui::Checkbox("Wire", &wire))
+		{
+			Engine::Renderer::ActivateWire(wire);
+		}
+
+		auto glov = Engine::Renderer::GetGlobalEnv();
+		
+		ImGui::ColorEdit3("Global Ambient", glov->Ambient.m);
 	}
-	
+
 	ImGui::End();
-
 	CurScene->OnImGui();
-
 	Engine::ImGuiLayer::End();
 }
 
 
 void SandBox::OnUpdate(float dt)
 {
-	if (phongShading || renderingPath == 1)
-	{
-		Engine::Renderer::BeginScene(CurScene->GetCurCam(), CurScene->GetLights());
-	}
-	else if(!phongShading)
-	{
-		Engine::Renderer::BeginScene(CurScene->GetCurCam(), std::vector<std::shared_ptr<Engine::Light>>());
-	}
+	Engine::Renderer::BeginScene(CurScene->GetCurCam(), CurScene->GetLights());
 
 	CurScene->OnUpdate(dt);
 	Engine::Renderer::EndScene();
@@ -148,6 +184,7 @@ void SandBox::OnUpdate(float dt)
 	OnImGui();
 	Engine::Renderer::Present();
 	controlUpdate(dt);
+
 
 	if (sceneChanged)
 	{
@@ -300,7 +337,7 @@ void SandBox::OnUpdate(float dt)
 void SandBox::OnResize()
 {
 	auto& cam = CurScene->GetCurCam();
-	cam->OnResize(width, height);
+	cam->OnResize(g_Width, g_Height);
 }
 //
 void SandBox::OnMouseMove(float dx, float dy)

@@ -26,7 +26,7 @@ namespace Engine {
 			ar & Specular.x; ar & Specular.y; ar & Specular.z;
 			ar & Emissive.x; ar & Emissive.y; ar & Emissive.z;
 			ar & Fresnel.x; ar & Fresnel.y; ar & Fresnel.z;
-			ar & Shiness; ar & MapMode;
+			ar & Shiness; ar & MapMode; ar & Name;
 		}
 		vec4 Ambient;
 		vec4 Diffuse;
@@ -35,6 +35,7 @@ namespace Engine {
 		vec4 Fresnel;
 		float Shiness;
 		int MapMode = 0;
+		std::string Name;
 	};
 
 	struct MaterialSet

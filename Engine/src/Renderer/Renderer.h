@@ -27,7 +27,11 @@ namespace Engine {
 		static void ActivateHdr(bool activate);
 		static void ActivateShadow(bool activate);
 		static void ActivateGamma(bool activate);
-		static void ActivateAutoMiddleGray(bool activate);
+		static void ActivateShowGBuffer(bool activate);
+		static void ActivateTesselation(bool activate);
+		static void ActivateWire(bool activate);
+		static void ActivateLighting(bool activate);
+		static void SetTFactor(float tFactor);
 
 	public:
 		static void BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights);
@@ -36,20 +40,12 @@ namespace Engine {
 		static void EndScene();
 		static void Present();
 
-		static void experiment1(std::shared_ptr<Model3D> model, float factor);
-		static void excompute();
-		static void excompute2(std::shared_ptr<Model3D> model);
-		static void exstreamout(std::shared_ptr<Model3D> model);
-		static void exavlum(const std::string& texture);
-		static void exhdr();
-
 	public:
 		static std::shared_ptr<struct Environment> GetGlobalEnv();
 		static float* GetReinhardFactor();
 
 		static void SetRenderMode(RenderMode mode);
-		static void AdjustDepthBias(int f);
-		static void AdjustSlopeBias(float s);
+		static void AdjustShadowBias(float depth, float slope);
 		static void Resize(uint32_t width, uint32_t height);
 
 	private:
@@ -57,6 +53,7 @@ namespace Engine {
 		static void renderDeffered();
 		static void renderForward();
 		static void renderShadow();
+		static void renderGBuffer();
 		static void renderLight(const std::shared_ptr<Light>& light);
 		static void draw2D(std::shared_ptr<Model2D> model, const std::string& shader);
 		static void draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind = 0);

@@ -29,11 +29,11 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam
 		break;
 	case WM_SIZE:
 		if(!Engine::ModuleCore::IsInitiated()) return (DefWindowProc(hWnd, iMessage, wParam, lParam));
-		width = LOWORD(lParam);
-		height = HIWORD(lParam);
-		if (width != 0 && height != 0)
+		g_Width = LOWORD(lParam);
+		g_Height = HIWORD(lParam);
+		if (g_Width != 0 && g_Height != 0)
 		{
-			Engine::Renderer::Resize(width, height);
+			Engine::Renderer::Resize(g_Width, g_Height);
 			sandBox.OnResize();
 		}
 	}
@@ -64,8 +64,8 @@ int main()
 		WS_OVERLAPPEDWINDOW,
 		100,
 		100,
-		width,
-		height,
+		g_Width,
+		g_Height,
 		NULL,
 		(HMENU)NULL,
 		hInstance,
@@ -74,7 +74,7 @@ int main()
 
 	ShowWindow(hWindow, SW_SHOW);
 
-	Engine::ModuleCore::Init({ width, height, (uint64_t)hWindow });
+	Engine::ModuleCore::Init({ g_Width, g_Height, (uint64_t)hWindow });
 
 	sandBox.Init();
 

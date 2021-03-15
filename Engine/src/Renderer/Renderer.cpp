@@ -100,7 +100,8 @@ namespace Engine {
 		s_Data.emptyLight.reset(new Light);
 		s_Data.emptyLight->noLight = true;
 
-		s_Data.ReinhardToneMapFactor[0] = 0.1f;
+		s_Data.ReinhardToneMapFactor[0] = 6.0f;
+		s_Data.ReinhardToneMapFactor[1] = 6.0f;
 	}
 
 	void Renderer::Shutdown()
@@ -126,7 +127,11 @@ namespace Engine {
 
 	bool isHdr = false;
 	bool isGamma = false;
-	bool isAutoMiddelGray = false;
+	bool showGBuffer = false;
+	bool tesselation = false;
+	bool isWire = false;
+	bool isLighting = false;
+	float tFactor = 1.0f;
 
 	void Renderer::ActivateHdr(bool activate)
 	{
@@ -143,9 +148,29 @@ namespace Engine {
 		isGamma = activate;
 	}
 
-	void Renderer::ActivateAutoMiddleGray(bool activate)
+	void Renderer::ActivateShowGBuffer(bool activate)
 	{
-		isAutoMiddelGray = activate;
+		showGBuffer = activate;
+	}
+
+	void Renderer::ActivateTesselation(bool activate)
+	{
+		tesselation = activate;
+	}
+
+	void Renderer::ActivateWire(bool activate)
+	{
+		isWire = activate;
+	}
+
+	void Renderer::SetTFactor(float factor)
+	{
+		tFactor = factor;
+	}
+
+	void Renderer::ActivateLighting(bool activate)
+	{
+		isLighting = activate;
 	}
 
 	void Renderer::EndScene()
@@ -167,6 +192,9 @@ namespace Engine {
 		for (auto model : s_Data.Queued2D)
 			draw2D(model, "2D");
 
+		if (showGBuffer)
+			renderGBuffer();
+
 		s_Data.Queued2D.clear();
 		s_Data.Queued3D.clear();
 		s_Data.QueuedLight.clear();
@@ -175,228 +203,6 @@ namespace Engine {
 	void Renderer::Present()
 	{
 		Dx11Core::Get().Present();
-	}
-
-	void Renderer::excompute()
-	{
-		unsigned int arr[126];
-		for (int i = 0; i < 126; ++i)
-			arr[i] = i;
-
-		unsigned int arr2[126]{ 0 };
-
-		SBuffer<unsigned int> readBuffer(SBufferType::Read, arr, 126);
-		SBuffer<unsigned int> writeBuffer(SBufferType::Write, arr2, 126);
-
-		auto shader = ShaderArchive::Get("ComputeBasic");
-		shader->Bind();
-
-		readBuffer.Bind(0);
-		writeBuffer.SetAsTarget(0);
-		shader->Dipatch(2, 3, 1);
-
-		auto v = writeBuffer.GetData();
-		for (int i = 0; i < 130; ++i)
-		{
-			std::cout << v[i] << " ";
-			if (i % 10 == 0) std::cout << "\n";
-		}
-	}
-
-	void Renderer::excompute2(std::shared_ptr<Model3D> model)
-	{
-		static bool first = true;
-		static std::shared_ptr<Texture> uav;
-		static std::shared_ptr<Texture> stone = TextureArchive::Get("stone01");
-		static std::shared_ptr<Texture> apple = TextureArchive::Get("apple");
-		if (first)
-		{
-			TextureArchive::Add("UAV", 512, 512, true, true);
-			auto shader = ShaderArchive::Get("ComputeTexture");
-			shader->Bind();
-
-			uav = TextureArchive::Get("UAV");
-			stone->SetComputeResource(0);
-			apple->SetComputeResource(1);
-			uav->SetComputeOuput();
-
-			shader->Dipatch(32, 32, 1);
-			first = false;
-			shader->Unbind();
-
-			//Notice : This Process must be needed!(Unbind Resource)
-			ID3D11UnorderedAccessView* nullUAV = nullptr;
-			Dx11Core::Get().Context->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
-		}
-
-		auto twod = ShaderArchive::Get("2D");
-		twod->Bind();
-
-		s_Data.PLController->ClearRTT();
-
-		s_Data.PLController->SetRenderTarget("BackBuffer");
-
-		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
-
-		Engine::Transform t;
-		t.SetScale(0.5f, 0.5f, 1.0f);
-
-		twod->SetParam<CBuffer::Transform>(t);
-
-		s_Data.ModelBuffer2D->Bind();
-		uav->Bind(0);
-		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
-	}
-
-	void Renderer::exstreamout(std::shared_ptr<Model3D> model)
-	{
-		s_Data.PLController->ClearRTT();
-
-		s_Data.PLController->SetRenderTarget("BackBuffer");
-
-		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
-		s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
-
-		auto shader = ShaderArchive::Get("EtcStreamout");
-		shader->Bind();
-		ID3D11PixelShader* ps = nullptr;
-
-		SOBuffer sobuffer;
-		sobuffer.Bind();
-
-		model->m_ModelBuffer->Bind();
-		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
-
-		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
-		sobuffer.Unbind();
-		shader->Unbind();
-
-		auto d = sobuffer.GetData();
-		for (int i = 0; i < 100; ++i)
-		{
-			//d[i].print();
-		}
-
-		shader = ShaderArchive::Get("EtcCheckSO");
-		shader->Bind();
-
-		uint32_t stride = 36;
-		uint32_t offset = 0;
-		Dx11Core::Get().Context->IASetVertexBuffers(0, 1, &sobuffer.m_OutstreamBuffer, &stride, &offset);
-		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		Dx11Core::Get().Context->DrawAuto();
-	}
-
-	void Renderer::exavlum(const std::string& texture)
-	{
-		auto tex = TextureArchive::Get(texture);
-
-		auto width = tex->Width;
-		auto height = tex->Height;
-
-		{
-			ENABLE_ELAPSE
-				auto shader = ShaderArchive::Get("HDRAverage");
-
-			shader->Bind();
-			float* a = nullptr;
-			SBuffer<float> buffer(SBufferType::Write, a, 20000);
-			buffer.SetAsTarget(0);
-			Dx11Core::Get().Context->CSSetShaderResources(0, 1, &tex->m_ResourceView);
-
-			uint32_t dispatchX = (uint32_t)ceil(width / 16.0f);
-			uint32_t dispatchY = (uint32_t)ceil(height / 16.0f);
-
-			uvec4 vec;
-			vec.x = dispatchX;
-			vec.y = dispatchY;
-			shader->SetParam<CBuffer::DispatchInfo>(vec);
-
-			shader->Dipatch(dispatchX, dispatchY, 1);
-			buffer.UnSetTarget();
-
-			auto data = buffer.GetData();
-			float averageLum = 0.0f;
-			for (uint32_t i = 0; i < dispatchY; ++i)
-			{
-				for (uint32_t j = 0; j < dispatchX; ++j)
-				{
-					averageLum += data[i * dispatchX + j];
-				}
-			}
-			averageLum /= width * height;
-			buffer.Unmap();
-			LOG_ELAPSE
-				LOG_INFO("{0} gpu average", averageLum);
-		}
-	}
-
-	void Renderer::exhdr()
-	{
-		uint32_t dispatchX = (uint32_t)ceil(Dx11Core::Get().Width() / 16.0f);
-		uint32_t dispatchY = (uint32_t)ceil(Dx11Core::Get().Height() / 16.0f);
-		auto shader = ShaderArchive::Get("HDRAverage");
-
-		shader->Bind();
-		SBuffer<float> buffer(SBufferType::Write, nullptr, 1);
-		buffer.Bind(0);
-		//texture.Bind(0); // HDR texture
-
-		shader->Dipatch(dispatchX, dispatchY, 1);
-		buffer.UnSetTarget();
-
-		auto data = buffer.GetData();
-		float averageLum = 0.0f;
-
-		for (uint32_t i = 0; i < dispatchY; ++i)
-		{
-			for (uint32_t j = 0; j < dispatchX; ++j)
-			{
-				averageLum += data[i * dispatchX + j];
-			}
-		}
-		averageLum /= float(Dx11Core::Get().Width() *Dx11Core::Get().Height());
-	}
-
-	void Renderer::experiment1(std::shared_ptr<Model3D> model, float tFactor)
-	{
-		s_Data.PLController->ClearRTT();
-
-		s_Data.PLController->SetRenderTarget("BackBuffer");
-
-		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-		s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
-
-		//auto d2 = ShaderArchive::Get("2D");
-		//d2->Bind();
-
-		//Transform t;
-		//t.SetScale(0.3f, 0.3f, 0.3f);
-		//d2->SetParam<CBuffer::Transform>(t);
-		//s_Data.ModelBuffer2D->Bind();
-		////model->m_Texture->Bind(0);
-		////Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[0]->m_ShaderResourceView);
-
-		//Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
-		//d2->Unbind();
-
-		auto myShader = ShaderArchive::Get("EtcPNTriangle");
-		//auto myShader = ShaderArchive::Get("Etcbasic");
-		myShader->Bind();
-		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
-		myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
-		myShader->SetParam<CBuffer::TFactor>(tFactor);
-
-		model->m_ModelBuffer->Bind();
-		Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
-		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
-
-		s_Data.Queued2D.clear();
-		s_Data.Queued3D.clear();
-		s_Data.QueuedLight.clear();
-
 	}
 
 	void Renderer::renderShadow()
@@ -436,6 +242,24 @@ namespace Engine {
 				SpotSkeletal->SetParam<CBuffer::Camera>(light->lightCam);
 				for (auto model3D : s_Data.Queued3D) draw3D(model3D, "EffectShadowSpot");
 			}
+		}
+	}
+
+	void Renderer::renderGBuffer()
+	{
+		int i = 0;
+		for (auto buffer : s_Data.GeometryBuffer->m_BindingOrder)
+		{
+			auto myShader = ShaderArchive::Get("2D");
+			myShader->Bind();
+			Transform t;
+			t.SetScale(0.15f, 0.2f, 1.0f);
+			t.SetTranslate(i * 0.3f - 0.85f, -0.8f, 0.0f);
+			myShader->SetParam<CBuffer::Transform>(t);
+			s_Data.ModelBuffer2D->Bind();
+			Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.GeometryBuffer->m_Buffers[buffer]->m_ResourceView);
+			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+			i++;
 		}
 	}
 
@@ -542,6 +366,8 @@ namespace Engine {
 		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
 
 		model->m_ModelBuffer->Bind();
+		if (tesselation)
+			Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
 
 		if (myShader->Has(Shader::Type::PixelShader))
 			model->m_MaterialSet->BindTextures(materialBind);
@@ -572,17 +398,11 @@ namespace Engine {
 		return s_Data.GlobalEnv;
 	}
 
-	void Renderer::AdjustDepthBias(int f)
+	void Renderer::AdjustShadowBias(float depth, float slope)
 	{
-		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(f, 0.0f);
-		LOG_TRACE("Current Depth Bias : {0}", s_Data.PLController->m_Rasterlizer.RasterDesc.DepthBias);
+		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(depth, slope);
 	}
 
-	void Renderer::AdjustSlopeBias(float s)
-	{
-		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(0, s);
-		LOG_TRACE("Current Slope Bias : {0}", s_Data.PLController->m_Rasterlizer.RasterDesc.SlopeScaledDepthBias);
-	}
 
 	void Renderer::renderDeffered()
 	{
@@ -590,7 +410,13 @@ namespace Engine {
 		s_Data.GeometryBuffer->SetRenderTarget();
 
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+		
+		if(isWire)
+			s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
+		else
+			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+
+
 		s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
 		std::string useShader = "Deffered";
@@ -626,7 +452,6 @@ namespace Engine {
 		s_Data.ModelBuffer2D->Bind();
 		s_Data.GeometryBuffer->Bind();
 
-
 		uvec4 gamma;
 		if (isGamma)
 			gamma.x = 1;
@@ -640,6 +465,7 @@ namespace Engine {
 		for (uint32_t i = 0; i < s_Data.QueuedLight.size(); ++i)
 		{
 			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 			s_Data.PLController->SetBlend(BlendOpt::GBuffer);
 
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
@@ -672,9 +498,6 @@ namespace Engine {
 			hdrShader->Bind();
 
 			s_Data.ReinhardToneMapFactor[2] = averagelum / float(Dx11Core::Get().Width() * Dx11Core::Get().Height());
-			if (isAutoMiddelGray)
-				s_Data.ReinhardToneMapFactor[1] = 1.03f - 2.0f / (2.0f + log10(s_Data.ReinhardToneMapFactor[2] + 1));
-
 			hdrShader->SetParam<CBuffer::ToneMapFactor>(s_Data.ReinhardToneMapFactor);
 			hdrTexture->Bind(0);
 			
@@ -685,22 +508,30 @@ namespace Engine {
 
 	void Renderer::renderForward()
 	{
+		if (isWire)
+			s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
+		else
+			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+
 		std::string useShader = "Forward";
+		if (tesselation)
+			useShader += "Tesselation";
 
 		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
 		skeletal->Bind();
 		skeletal->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		if(isWire || tesselation) skeletal->SetParam<CBuffer::TFactor>(tFactor);
 
 		auto static_ = ShaderArchive::Get(useShader + "Static");
 		static_->Bind();
 		static_->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		if(isWire || tesselation) static_->SetParam<CBuffer::TFactor>(tFactor);
 
-		if (s_Data.QueuedLight.empty())
+		if (!isLighting)
 		{
 			s_Data.PLController->SetRenderTarget("BackBuffer");
 
 			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 			s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
 			skeletal->SetParam<CBuffer::Light>(*s_Data.emptyLight);
@@ -721,7 +552,6 @@ namespace Engine {
 
 				s_Data.PLController->SetRenderTarget("ForwardTexture");
 				s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-				s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 				s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
 				skeletal->SetParam<CBuffer::Light>(*light);
@@ -739,10 +569,9 @@ namespace Engine {
 				for (auto& model : s_Data.Queued3D)
 					draw3D(model, useShader, 1);
 
-				renderLight(light);
-
 				s_Data.PLController->SetRenderTarget("BackBuffer");
 				s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
+				s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 				s_Data.PLController->SetBlend(BlendOpt::GBuffer);
 
 				auto blendShader = ShaderArchive::Get("ForwardBlend");

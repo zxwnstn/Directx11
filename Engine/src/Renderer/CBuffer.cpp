@@ -49,8 +49,8 @@ namespace Engine::CBuffer {
 		Type = other.m_Type;
 		RangeRcp = 1.0f / other.m_Range;
 
-		InnerAng = other.m_InnerAngle;
-		OuterAngRcp = 1.0f / other.m_OuterAngle;
+		InnerAng = cosf(other.m_InnerAngle);
+		OuterAng = cosf(other.m_OuterAngle);
 
 		if (other.noLight)
 		{
