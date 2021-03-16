@@ -131,7 +131,6 @@ namespace Engine {
 	bool isHdr = false;
 	bool isGamma = false;
 	bool showGBuffer = false;
-	bool tesselation = false;
 	bool isWire = false;
 	bool isLighting = false;
 	float tFactor = 1.0f;
@@ -154,11 +153,6 @@ namespace Engine {
 	void Renderer::ActivateShowGBuffer(bool activate)
 	{
 		showGBuffer = activate;
-	}
-
-	void Renderer::ActivateTesselation(bool activate)
-	{
-		tesselation = activate;
 	}
 
 	void Renderer::ActivateWire(bool activate)
@@ -275,6 +269,7 @@ namespace Engine {
 		int i = 0;
 		for (auto buffer : s_Data.GeometryBuffer->m_BindingOrder)
 		{
+			if (buffer != "Normal") continue;
 			auto myShader = ShaderArchive::Get("2D");
 			myShader->Bind();
 			Transform t;
@@ -367,7 +362,7 @@ namespace Engine {
 		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
 	}
 
-	void Renderer::draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind)
+	void Renderer::draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind, bool tess)
 	{
 		std::string useShader = shader;
 		switch (model->m_ModelBuffer->GetMeshType())
@@ -384,7 +379,7 @@ namespace Engine {
 		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
 
 		model->m_ModelBuffer->Bind();
-		if (tesselation)
+		if (tess)
 			Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
 
 		if (myShader->Has(Shader::Type::PixelShader))
@@ -482,6 +477,7 @@ namespace Engine {
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 			s_Data.PLController->SetBlend(BlendOpt::GBuffer);
 
+			lightingShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
 			lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
 			lightingShader->SetParam<CBuffer::Cascaded>(s_Data.QueuedLight[i]->m_CascadedMat);
@@ -531,18 +527,16 @@ namespace Engine {
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 
 		std::string useShader = "Forward";
-		if (tesselation)
-			useShader += "Tesselation";
 
 		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
 		skeletal->Bind();
 		skeletal->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
-		if(isWire || tesselation) skeletal->SetParam<CBuffer::TFactor>(tFactor);
+		skeletal->SetParam<CBuffer::TFactor>(tFactor);
 
 		auto static_ = ShaderArchive::Get(useShader + "Static");
 		static_->Bind();
 		static_->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
-		if(isWire || tesselation) static_->SetParam<CBuffer::TFactor>(tFactor);
+		static_->SetParam<CBuffer::TFactor>(tFactor);
 
 		if (!isLighting)
 		{
@@ -551,17 +545,15 @@ namespace Engine {
 			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
 			s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
+			static_->SetParam<CBuffer::Light>(*s_Data.emptyLight);
 			skeletal->SetParam<CBuffer::Light>(*s_Data.emptyLight);
 
-			static_->SetParam<CBuffer::Light>(*s_Data.emptyLight);
-
 			for (auto& model : s_Data.Queued3D)
-				draw3D(model, useShader, 1);
+				draw3D(model, useShader, 3, true);
 		}
 		else
 		{
-			int type = -1;
-			int spotIdx = -1, pointIdx = -1, dirIdx = -1, curIdx = -1;
+			int spotIdx = 0, pointIdx = 0, dirIdx = 0;
 
 			for (auto& light : s_Data.QueuedLight)
 			{
@@ -573,18 +565,31 @@ namespace Engine {
 
 				skeletal->SetParam<CBuffer::Light>(*light);
 				skeletal->SetParam<CBuffer::LightPos>(*light);
+				skeletal->SetParam<CBuffer::LightCam>(*light);
+				skeletal->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
 				static_->SetParam<CBuffer::Light>(*light);
 				static_->SetParam<CBuffer::LightPos>(*light);
+				static_->SetParam<CBuffer::LightCam>(*light);
+				static_->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
 
 				switch (light->m_Type)
 				{
-				case Light::Type::Directional: type = 0;  curIdx = ++dirIdx; break;
-				case Light::Type::Point: type = 1; curIdx = ++pointIdx; break;
-				case Light::Type::Spot: type = 2; curIdx = ++spotIdx; break;
+				case Light::Type::Directional:
+					Dx11Core::Get().Context->PSSetShaderResources(2, 1, &s_Data.DirShadowMaps[dirIdx]->m_ShaderResourceView);
+					dirIdx++;
+					break;
+				case Light::Type::Point:
+					Dx11Core::Get().Context->PSSetShaderResources(1, 1, &s_Data.PointShadowMaps[pointIdx]->m_ShaderResourceView);
+					pointIdx++;
+					break;
+				case Light::Type::Spot:
+					Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[spotIdx]->m_ShaderResourceView);
+					spotIdx++;
+					break;
 				}
 
 				for (auto& model : s_Data.Queued3D)
-					draw3D(model, useShader, 1);
+					draw3D(model, useShader, 3, true);
 
 				s_Data.PLController->SetRenderTarget("BackBuffer");
 				s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
@@ -622,6 +627,5 @@ namespace Engine {
 		Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.DirShadowMaps[0]->m_ShaderResourceView);
 
 		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
-
 	}
 }

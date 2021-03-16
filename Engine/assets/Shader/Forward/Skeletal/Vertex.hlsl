@@ -1,44 +1,9 @@
-
-cbuffer Environment : register(b0)
-{
-	matrix WorldMatrix;
-	float3 EAmbient;
-	bool UseShadowMap;
-	float4 Bias;
-};
-
-cbuffer Camera : register(b1)
-{
-	matrix View;
-	matrix Projection;
-	float3 Position;
-	int padding_;
-};
-
-cbuffer Transform : register(b2)
-{
-	matrix Translate;
-	matrix Rotate;
-	matrix Scale;
-};
-
-cbuffer LightPos : register(b3)
-{
-	float4 LPosition;
-};
-
-cbuffer Bone : register(b4)
-{
-	matrix SkinnedTransform[100];
-}
-
-
 struct Input
 {
-	float3 position : POSITION;
-	float2 tex : TEXCOORD;
+	float3 f3Position   : POSITION;
+	float2 f2TexCoord   : TEXCOORD;
 
-	float3 normal : NORMAL;
+	float3 f3Normal     : NORMAL;
 	float3 binormal : BINORMAL;
 	float3 tangent : TANGENT;
 
@@ -50,29 +15,45 @@ struct Input
 	uint4 boneIndicesr : BONEINDICESR;
 };
 
+//struct Output
+//{
+//	float3 f3Position   : POSITION;
+//	float2 f2TexCoord   : TEXCOORD;
+//
+//	float3 f3Normal     : NORMAL;
+//	float3 binormal : BINORMAL;
+//	float3 tangent : TANGENT;
+//
+//	int MaterialIndex : MATERIALIDX;
+//};
+
+cbuffer Bone : register(b0)
+{
+	matrix SkinnedTransform[100];
+}
+
 struct Output
 {
-
-	float4 position : SV_POSITION;
-	float2 tex : TEXCOORD;
-
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
+	float3 f3Position   : POSITION;
+	float2 f2TexCoord   : TEXCOORD;
+	
+	float3 f3Normal     : NORMAL;
 	float3 binormal : BINORMAL;
+	float3 tangent : TANGENT;
 
 	int MaterialIndex : MATERIALIDX;
 
-	float3 lightToPos : LTP;
-	float3 globalAmbient : AMBIENT;
-	
-	bool UseShadowMap : SHADOWMAP;
+	matrix skinTransform : SKINT;
 };
 
+
+
 Output main(Input input)
-{	
+{
 	Output output;
 
-	//Transform
+	//Output output;
+
 	matrix skinTransform = 0;
 	skinTransform += SkinnedTransform[input.boneIndices.x] * input.boneWeight.x;
 	skinTransform += SkinnedTransform[input.boneIndices.y] * input.boneWeight.y;
@@ -82,33 +63,17 @@ Output main(Input input)
 	skinTransform += SkinnedTransform[input.boneIndicesr.y] * input.boneWeightr.y;
 	skinTransform += SkinnedTransform[input.boneIndicesr.z] * input.boneWeightr.z;
 	skinTransform += SkinnedTransform[input.boneIndicesr.w] * input.boneWeightr.w;
+	
+	//output.f3Position = mul(input.f3Position, skinTransform);
+	output.f3Position = input.f3Position;
+	output.f3Normal = input.f3Normal;
+	output.f2TexCoord = input.f2TexCoord;
 
-	float4 pos = float4(input.position, 1.0f);
-	output.position = mul(pos, skinTransform);
-	output.position = mul(output.position, Scale);
-	output.position = mul(output.position, Rotate);
-	output.position = mul(output.position, Translate);
-
-	pos = output.position;
-	pos.x = pos.x / pos.w;
-	pos.y = pos.y / pos.w;
-	pos.z = pos.z / pos.w;
-	output.lightToPos = pos.xyz - LPosition;
-
-	output.position = mul(output.position, WorldMatrix);
-	output.position = mul(output.position, View);
-	output.position = mul(output.position, Projection);
-
-
-	//Pixel Inputs
-	output.globalAmbient = EAmbient;
+	output.skinTransform = skinTransform;
 	output.MaterialIndex = input.MaterialIndex;
-	output.tex = input.tex;
-	output.normal =		mul(input.normal, mul(skinTransform,   Rotate));
-	output.binormal =	mul(input.binormal, mul(skinTransform, Rotate));
-	output.tangent =	mul(input.tangent,	mul(skinTransform, Rotate));
+	output.binormal = input.binormal;
+	output.tangent = input.tangent;
 
-	output.UseShadowMap = UseShadowMap;
 
 	return output;
 }

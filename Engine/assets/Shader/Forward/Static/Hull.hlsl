@@ -3,31 +3,19 @@ cbuffer TFactor : register(b0)
 	float4 tessFactor;
 };
 
-struct HS_Input
+struct Input
 {
-	float3 f3Position   : POSITION;
-	float2 f2TexCoord   : TEXCOORD;
+	float3 position : POSITION;
+	float2 tex      : TEXCOORD;
 
-	float3 f3Normal     : NORMAL;
+	float3 normal   : NORMAL;
 	float3 binormal : BINORMAL;
-	float3 tangent : TANGENT;
+	float3 tangent  : TANGENT;
 
-	int MaterialIndex : MATERIALIDX;
+	int materialIndex : MATERIALIDX;
 };
 
-struct HS_ControlPointOutput
-{
-	float3 f3Position : POSITION;
-	float2 f2TexCoord : TEXCOORD0;
-
-	float3 f3Normal : NORMAL;
-	float3 binormal : BINORMAL;
-	float3 tangent : TANGENT;
-
-	int MaterialIndex : MATERIALIDX;
-};
-
-struct HS_ConstantOutput
+struct ConstantOutput
 {
 	// Tess factor for the FF HW block
 	float fTessFactor[3]    : SV_TessFactor;
@@ -48,21 +36,21 @@ struct HS_ConstantOutput
 	float3 f3N101    : NORMAL5;
 };
 
-HS_ConstantOutput HS_PNTrianglesConstant(InputPatch<HS_Input, 3> I)
+ConstantOutput PNTrianglesConstant(InputPatch<Input, 3> I)
 {
-	HS_ConstantOutput O = (HS_ConstantOutput)0;
+	ConstantOutput O = (ConstantOutput)0;
 
-	O.fTessFactor[0] = O.fTessFactor[1] = O.fTessFactor[2] = 3.0f;
+	O.fTessFactor[0] = O.fTessFactor[1] = O.fTessFactor[2] = tessFactor;
 
 	// Assign Positions
-	float3 f3B003 = I[0].f3Position;
-	float3 f3B030 = I[1].f3Position;
-	float3 f3B300 = I[2].f3Position;
+	float3 f3B003 = I[0].position;
+	float3 f3B030 = I[1].position;
+	float3 f3B300 = I[2].position;
 	
 	// And Normals
-	float3 f3N002 = I[0].f3Normal;
-	float3 f3N020 = I[1].f3Normal;
-	float3 f3N200 = I[2].f3Normal;
+	float3 f3N002 = I[0].normal;
+	float3 f3N020 = I[1].normal;
+	float3 f3N200 = I[2].normal;
 
 	// Compute the cubic geometry control points
 	// Edge control points
@@ -96,21 +84,10 @@ HS_ConstantOutput HS_PNTrianglesConstant(InputPatch<HS_Input, 3> I)
 [domain("tri")]
 [partitioning("fractional_odd")]
 [outputtopology("triangle_cw")]
-[patchconstantfunc("HS_PNTrianglesConstant")]
+[patchconstantfunc("PNTrianglesConstant")]
 [outputcontrolpoints(3)]
 [maxtessfactor(64)]
-HS_ControlPointOutput main(InputPatch<HS_Input, 3> I, uint uCPID : SV_OutputControlPointID)
+Input main(InputPatch<Input, 3> I, uint uCPID : SV_OutputControlPointID)
 {
-	HS_ControlPointOutput O = (HS_ControlPointOutput)0;
-
-	// Just pass through inputs = fast pass through mode triggered
-	O.f3Position = I[uCPID].f3Position;
-	O.f2TexCoord = I[uCPID].f2TexCoord;
-	
-	O.f3Normal = I[uCPID].f3Normal;
-	O.binormal = I[uCPID].binormal;
-	O.tangent = I[uCPID].tangent;
-	O.MaterialIndex = I[uCPID].MaterialIndex;
-
-	return O;
+	return I[uCPID];
 }

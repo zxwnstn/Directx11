@@ -8,6 +8,7 @@ namespace Engine {
 		float Elapsedtime = 0.0f;
 		float Duration = 0.0f;
 		float KeyInterval = 0.0f;
+		float Accelation = 1.0f;
 		std::string CurAnim;
 		std::string TranslatedAnim;
 		bool AnimTranslated = false;

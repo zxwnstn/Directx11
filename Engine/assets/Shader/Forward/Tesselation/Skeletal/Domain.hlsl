@@ -8,9 +8,9 @@ cbuffer Environment : register(b0)
 
 cbuffer Camera : register(b1)
 {
-	matrix View;
-	matrix Projection;
-	float3 Position;
+	matrix CView;
+	matrix CProjection;
+	float3 CPosition;
 	int padding_;
 };
 
@@ -72,6 +72,7 @@ struct Output
 
 	float3 globalAmbient : AMBIENT;
 	float3 lightToPos : LTP;
+	float3 camvector : CV;
 
 	int MaterialIndex : MATERIALIDX;
 	bool UseShadowMap : SHADOWMAP;
@@ -153,9 +154,10 @@ Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointO
 	pos.z = pos.z / pos.w;
 	output.lightToPos = pos.xyz - LPosition;
 
+	output.camvector = normalize(CPosition - pos);
 	output.position = mul(output.position, WorldMatrix);
-	output.position = mul(output.position, View);
-	output.position = mul(output.position, Projection);
+	output.position = mul(output.position, CView);
+	output.position = mul(output.position, CProjection);
 
 	//output.globalAmbient = EAmbient;
 	output.MaterialIndex = I[0].MaterialIndex;

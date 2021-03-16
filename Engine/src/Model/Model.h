@@ -40,6 +40,8 @@ namespace Engine {
 		bool SetAnimation(const std::string& animationName, bool loop);
 		void StopAnimation() { m_PlayingAnimation = false; }
 		void PlayAnimation() { m_PlayingAnimation = true; }
+		std::shared_ptr<struct AnimationInform> GetAnimInfo() { return m_Animation; }
+		std::string GetSkeletonName();
 
 	private:
 		void animationUpdate(float dt);
@@ -50,6 +52,7 @@ namespace Engine {
 		std::shared_ptr<struct MaterialSet> m_MaterialSet;
 		Transform m_Transform;
 		bool m_PlayingAnimation = false;
+		std::string m_Name;
 
 	private:
 		//Can be Shared

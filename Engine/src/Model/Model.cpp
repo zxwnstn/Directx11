@@ -45,8 +45,19 @@ namespace Engine {
 	}
 
 
+	std::string Model3D::GetSkeletonName()
+	{
+		std::string ret = "";
+		if (m_Skeleton)
+			ret = m_Skeleton->Name;
+		
+		return ret;
+	}
+
 	void Model3D::animationUpdate(float dt)
 	{
+		if (!m_Animation) return;
+
 		if (!m_PlayingAnimation)
 		{
 			for (int i = 0; i < 100; ++i)
@@ -55,7 +66,7 @@ namespace Engine {
 		}
 
 		if (!m_Animation->Expired)
-			m_Animation->Elapsedtime += dt;
+			m_Animation->Elapsedtime += dt * m_Animation->Accelation;
 
 		if (m_Animation->Elapsedtime >= m_Animation->Duration)
 		{

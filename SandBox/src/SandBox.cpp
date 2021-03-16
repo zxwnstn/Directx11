@@ -4,36 +4,38 @@
 
 #include "../../vendor/imgui/imgui.h"
 
-#include "scene/fbxload.h"
-#include "scene/3d_animation.h"
-
-
 float mFactor = 0.0f;
 float White = 1.5f;
 float Gray = 0.0f;
 
 void SandBox::Init()
 {
+	std::shared_ptr<Scene> scene(new Scene("Scene1")); 
 	{
-		std::shared_ptr<Scene> scene;
-		scene.reset(new FbxLoadScene);
-		scene->Init();
-		Scenes.push_back(scene);
-		ScenesNames[0] = "Fbx Load";
-	}
+		////Model
+		std::shared_ptr<Engine::Model3D> model = Engine::Model3D::Create()
+			.buildFromFBX()
+			.SetSkeleton("Kachujin");
 
-	{
-		std::shared_ptr<Scene> scene;
-		scene.reset(new Animation3D);
-		scene->Init();
-		Scenes.push_back(scene); 
-		ScenesNames[1] = "3D Animation play";
+		model->m_Name = "Kachujin";
+		model->m_Transform.SetScale(0.01f, 0.01f, 0.01f);
+
+		std::shared_ptr<Engine::Model3D> floor = Engine::Model3D::Create()
+			.buildFromOBJ()
+			.SetObject("Square");
+
+		floor->m_Name = "floor";
+		floor->m_Transform.SetScale(5.0f, 5.0f, 1.0f);
+		floor->m_Transform.SetRotate(1.572f, 0.0f, 0.0f);
+
+		scene->Add3DModel(model);
+		scene->Add3DModel(floor);
 	}
+	Scenes.push_back(scene);
 
 	CurScene = Scenes[0];
-
 	switch (renderingPath)
-		
+
 	{
 	case 0: Engine::Renderer::SetRenderMode(Engine::RenderMode::Forward); break;
 	case 1: Engine::Renderer::SetRenderMode(Engine::RenderMode::Deffered); break;
@@ -46,8 +48,6 @@ void SandBox::OnImGui()
 {
 	Engine::ImGuiLayer::Begin();
 
-	//ImGui::ShowDemoWindow();
-
 	ImGui::Begin("General");
 
 	if (ImGui::CollapsingHeader("Overview"))
@@ -57,8 +57,16 @@ void SandBox::OnImGui()
 		ImGui::Text("Fps %d (v-sync)", fps);
 		ImGui::Text("Width : %d, Height : %d", g_Width, g_Height);
 
-		if (ImGui::Combo("Current Scene", &curSceneIdx, ScenesNames, 2))
+		const char* ScenesNames[10];
+		int i = 0;
+		for (int i = 0; i < Scenes.size(); ++i)
+			ScenesNames[i] = Scenes[i]->GetSceneName().c_str();
+
+		if (ImGui::Combo("Current Scene", &curSceneIdx, ScenesNames, Scenes.size()))
 			sceneChanged = true;
+
+		if (ImGui::Button("Add new Scene"))
+			newScene = true;
 
 		ImGui::BeginChild("cur Camera info", ImVec2(300, 200), true);
 
@@ -94,7 +102,7 @@ void SandBox::OnImGui()
 
 		ImGui::EndChild();
 	}
-	
+
 	if (ImGui::CollapsingHeader("Rendering"))
 	{
 		static char* rendering[] = { "Forward", "Deffered" };
@@ -106,30 +114,28 @@ void SandBox::OnImGui()
 				gBuffer = false;
 				Engine::Renderer::ActivateShowGBuffer(gBuffer);
 			}
-			if (renderingPath == 1)
-			{
-				pnTesselation = false;
-				Engine::Renderer::ActivateTesselation(pnTesselation);
-			}
+		}
+
+		if (ImGui::Checkbox("Shadow", &shadow))
+			Engine::Renderer::ActivateShadow(shadow);
+
+		if (shadow)
+		{
+			if (ImGui::SliderFloat("DepthBias", &depthBias, 0.0f, 100.0f))
+				Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
+			if (ImGui::SliderFloat("SlopeBias", &slopeBias, 0.0f, 100.0f))
+				Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
 		}
 
 		if (renderingPath == 0)
 		{
-			if (ImGui::Checkbox("Ligting", &lighting))
+			if (ImGui::Checkbox("PhongShading", &lighting))
 			{
 				Engine::Renderer::ActivateLighting(lighting);
 			}
-			
-			if (ImGui::Checkbox("Pn Tesselation", &pnTesselation))
-			{
-				Engine::Renderer::ActivateTesselation(pnTesselation);
-			}
 
-			if (pnTesselation)
-			{
-				if (ImGui::SliderFloat("T-Factor", &tFactor, 1.0f, 20.0f))
-					Engine::Renderer::SetTFactor(tFactor);
-			}
+			if (ImGui::SliderFloat("T-Factor", &tFactor, 1.0f, 20.0f))
+				Engine::Renderer::SetTFactor(tFactor);
 		}
 		if (renderingPath == 1)
 		{
@@ -137,17 +143,7 @@ void SandBox::OnImGui()
 			{
 				Engine::Renderer::ActivateShowGBuffer(gBuffer);
 			}
-			if(ImGui::Checkbox("Shadow", &shadow))
-				Engine::Renderer::ActivateShadow(shadow);
-			
-			if (shadow)
-			{
-				if(ImGui::SliderFloat("DepthBias", &depthBias, 0.0f, 100.0f))
-					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
-				if (ImGui::SliderFloat("SlopeBias", &slopeBias, 0.0f, 100.0f))
-					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
-			}
-			
+
 			if (ImGui::Checkbox("Hdr", &hdr))
 			{
 				Engine::Renderer::ActivateHdr(hdr);
@@ -183,11 +179,30 @@ void SandBox::OnImGui()
 		}
 
 		auto glov = Engine::Renderer::GetGlobalEnv();
-		
+
 		ImGui::ColorEdit3("Global Ambient", glov->Ambient.m);
 	}
 
 	ImGui::End();
+
+	if (newScene)
+	{
+		ImGui::Begin("Create Scene");
+		ImGui::InputText("sceneName", newSceneBuffer, 100);
+		if (ImGui::Button("Create"))
+		{
+			std::shared_ptr<Scene> scene(new Scene(newSceneBuffer));
+			Scenes.push_back(scene);
+			memset(newSceneBuffer, 0, 100);
+			newScene = false;
+		}
+		if (ImGui::Button("Cancel"))
+		{
+			memset(newSceneBuffer, 0, 100);
+			newScene = false;
+		}
+		ImGui::End();
+	}
 	CurScene->OnImGui();
 	Engine::ImGuiLayer::End();
 }
@@ -203,7 +218,6 @@ void SandBox::OnUpdate(float dt)
 	OnImGui();
 	Engine::Renderer::Present();
 	controlUpdate(dt);
-
 
 	if (sceneChanged)
 	{
@@ -278,47 +292,3 @@ void SandBox::controlUpdate(float dt)
 	}
 }
 
-//void ShadowBiasControl()
-//{
-//
-//	static float sensitive = 0.0001f;
-//	static int ss = 1;
-//
-//	if (GetAsyncKeyState(VK_F1) & 0x8000)
-//	{
-//		sensitive *= 10.0f;
-//		std::cout << "bias sensitive" << sensitive << '\n';
-//	}
-//	if (GetAsyncKeyState(VK_F2) & 0x8000)
-//	{
-//		sensitive *= 0.1f;
-//		std::cout << "bias sensitive" << sensitive << '\n';
-//	}
-//	if (GetAsyncKeyState(VK_F3) & 0x8000)
-//	{
-//		sensitive += sensitive;
-//		std::cout << "bias sensitive" << sensitive << '\n';
-//	}
-//	if (GetAsyncKeyState(VK_F4) & 0x8000)
-//	{
-//		sensitive -= sensitive;
-//		std::cout << "bias sensitive" << sensitive << '\n';
-//	}
-//
-//	if (GetAsyncKeyState(VK_F5) & 0x8000)
-//	{
-//		Engine::Renderer::AdjustDepthBias(ss);
-//	}
-//	if (GetAsyncKeyState(VK_F6) & 0x8000)
-//	{
-//		Engine::Renderer::AdjustDepthBias(-ss);
-//	}
-//	if (GetAsyncKeyState(VK_F7) & 0x8000)
-//	{
-//		Engine::Renderer::AdjustSlopeBias(sensitive);
-//	}
-//	if (GetAsyncKeyState(VK_F8) & 0x8000)
-//	{
-//		Engine::Renderer::AdjustSlopeBias(-sensitive);
-//	}
-//}

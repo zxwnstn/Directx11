@@ -33,7 +33,7 @@ cbuffer Light : register(b1)
 	float  LInnerAng;
 	float  LOuterAng;
 	float  LRangeRcp;
-	float  LPadding[3];
+	int3  LPadding;
 };
 
 cbuffer LightCam : register(b2)
@@ -79,7 +79,7 @@ float CalcDistAttenuation(float dist, float lightRangeRcp)
 	return attenuation;
 }
 
-float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, float OuterAngRcp)
+float CalcConeAttenuation(float3 lightPos, float3 lightDir)
 {
 	float attenuation;
 
@@ -178,8 +178,8 @@ float4 main(Input input) : SV_TARGET
 
 	float3 normal = NormalSample.xyz;
 	float3 ambient = AmbientSample.xyz;
-	float specular = MiscSample.x;
-	float shiness = MiscSample.y;
+	float3 specular = MiscSample.xyz;
+	float shiness = MiscSample.w * 30.0f;
 	float3 worldPosition = WorldPositionSample.xyz;
 
 	//step2. Calc Light intensity
@@ -196,13 +196,14 @@ float4 main(Input input) : SV_TARGET
 	if (LType == 2) //spot
 	{
 		lightAttenuation = CalcDistAttenuation(toLightDist, LRangeRcp)
-			* CalcConeAttenuation(posToLight, lightVector, LInnerAng, LOuterAng);
+			* CalcConeAttenuation(posToLight, lightVector);
 	}
 	float3 LightColor = LColor.xyz * lightAttenuation;
 	lightVector = normalize(lightVector);
 
 	//Diffuse, Specular factor
 	float3 CamVector = normalize(CPosition - worldPosition);
+
 	float3 NormalProjection = max(dot(normal, lightVector), 0.0f) * normal;
 	float3 HalfVector = NormalProjection - lightVector;
 	float3 SpecularVector = normalize(2 * HalfVector + lightVector);
@@ -220,7 +221,7 @@ float4 main(Input input) : SV_TARGET
 	}
 	
 	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * ShadowAtt * LIntensity * LightColor);
-	float3 finalSpecular = sf * (specular * ShadowAtt * LIntensity * LightColor);
+	float3 finalSpecular = sf * (specular * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 	
 	if (GammaCorection.x)

@@ -136,6 +136,26 @@ namespace Engine {
 		return s_SkeletalMeshes[name];
 	}
 
+	std::vector<std::string> MeshArchive::GetStaticMeshList()
+	{
+		std::vector<std::string> ret;
+
+		for (auto&[name, mesh] : s_StaticMeshes)
+			ret.push_back(name);
+
+		return ret;
+	}
+
+	std::vector<std::string> MeshArchive::GetSkeletalMeshList()
+	{
+		std::vector<std::string> ret;
+
+		for (auto&[name, mesh] : s_SkeletalMeshes)
+			ret.push_back(name);
+
+		return ret;
+	}
+
 	bool MeshArchive::HasSkeletalMesh(const std::string & name)
 	{
 		auto find = s_SkeletalMeshes.find(name);

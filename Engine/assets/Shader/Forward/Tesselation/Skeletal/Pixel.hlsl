@@ -1,24 +1,33 @@
 
 #define MaxPart 12
 
-Texture2D ShadowMap : register(t0);
-Texture2D materialTexture[MaxPart * 3] : register(t1);
+Texture2D SpotShadowMap : register(t0);
+TextureCube PointShadowMap : register(t1);
+Texture2DArray DirShadowMap : register(t2);
+Texture2D materialTexture[MaxPart * 3] : register(t3);
 
 SamplerState SampleType : register(s0);
-SamplerState SampleTypeClamp : register(s1);
+SamplerComparisonState SampleTypePCF : register(s1);
+
+cbuffer LightCam : register(b0)
+{
+	matrix LView;
+	matrix LProjection;
+}
 
 cbuffer Light : register(b1)
 {
-	float4 Position;
+	float4 LPosition;
 	float4 LDirection;
 	float4 LColor;
 	float  LIntensity;
 	int    LType;	//0 Directional, 1 Point, 2 Spot
 	float  LInnerAng;
-	float  LOuterAngRcp;
+	float  LOuterAng;
 	float  LRangeRcp;
-	int3   LPadding;
+	int3 LPadding;
 };
+
 
 cbuffer Materials : register(b2)
 {
@@ -33,6 +42,14 @@ cbuffer Materials : register(b2)
 	int4  MMode[MaxPart / 4];
 };
 
+cbuffer Cascaded : register(b3)
+{
+	matrix ToShadowSpace;
+	float4 ToCascadeOffsetX;
+	float4 ToCascadeOffsetY;
+	float4 ToCascadeScale;
+}
+
 struct Input
 {
 	float4 position : SV_POSITION;
@@ -42,14 +59,15 @@ struct Input
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
 
-	float3 globalAmbient : AMBIENT;
-	float3 lightToPos : LTP;
-
 	int MaterialIndex : MATERIALIDX;
+
+	float3 lightToPos : LTP;
+	float3 globalAmbient : AMBIENT;
+	float3 worldPosition : WPS;
+	float3 camvector : CPS;
+
 	bool UseShadowMap : SHADOWMAP;
 };
-
-
 
 float4 GetMaterialDiffuseMap(int index, float2 tex, int mapMode)
 {
@@ -89,7 +107,7 @@ float4 GetMaterialNormalMap(int index, float2 tex, int mapMode)
 
 float4 GetMaterialSpecularMap(int index, float2 tex, int mapMode)
 {
-	float4 SpecularMap = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 SpecularMap = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	if (!(mapMode & 4))
 		return SpecularMap;
@@ -114,7 +132,7 @@ float CalcDistAttenuation(float dist, float lightRangeRcp)
 	return attenuation;
 }
 
-float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, float OuterAngRcp)
+float CalcConeAttenuation(float3 lightPos, float3 lightDir)
 {
 	float attenuation;
 
@@ -122,12 +140,78 @@ float CalcConeAttenuation(float3 lightPos, float3 lightDir, float InnerAng, floa
 	float3 LVnormal = normalize(lightDir);
 	float3 LTnormal = normalize(LightTo);
 	float cos = dot(LVnormal, LTnormal);
-	cos = acos(cos);
+	attenuation = saturate((cos - LOuterAng) / (LInnerAng - LOuterAng));
 
-	attenuation = 1.0f - saturate(cos - InnerAng) * OuterAngRcp;
 	attenuation *= attenuation;
 
 	return attenuation;
+}
+
+float CalcSpotShadow(float3 position)
+{
+	float4 worldPosition;
+	worldPosition = mul(float4(position, 1.0f), LView);
+	worldPosition = mul(worldPosition, LProjection);
+
+	float3 uv = worldPosition.xyz / worldPosition.w;
+	uv.x = uv.x * 0.5f + 0.5f;
+	uv.y = -uv.y * 0.5f + 0.5f;
+
+	if (0.0f < uv.x && uv.x < 1.0f && 0.0f < uv.y && uv.y < 1.0f)
+	{
+		return SpotShadowMap.SampleCmpLevelZero(SampleTypePCF, uv.xy, uv.z);
+	}
+	return 1.0f;
+}
+
+float CalcPointShadow(float3 ToPixel, float depth)
+{
+	float3 ToPixelAbs = abs(ToPixel);
+	float Z = max(ToPixelAbs.x, max(ToPixelAbs.y, ToPixelAbs.z));
+	float Depth = (LProjection[2][2] * Z + LProjection[3][2]) / Z;
+	float4 aa = PointShadowMap.Sample(SampleType, ToPixel);
+
+	return PointShadowMap.SampleCmpLevelZero(SampleTypePCF, ToPixel, Depth);
+}
+
+float CalcDirShadow(float3 position)
+{
+	// Transform the world position to shadow space
+	float4 posShadowSpace = mul(float4(position, 1.0), ToShadowSpace);
+
+	// Transform the shadow space position into each cascade position
+	float4 posCascadeSpaceX = (ToCascadeOffsetX + posShadowSpace.xxxx) * ToCascadeScale;
+	float4 posCascadeSpaceY = (ToCascadeOffsetY + posShadowSpace.yyyy) * ToCascadeScale;
+
+	// Check which cascade we are in
+	float4 inCascadeX = abs(posCascadeSpaceX) <= 1.0;
+	float4 inCascadeY = abs(posCascadeSpaceY) <= 1.0;
+	float4 inCascade = inCascadeX * inCascadeY;
+
+	// Prepare a mask for the highest quality cascade the position is in
+	float4 bestCascadeMask = inCascade;
+	bestCascadeMask.yzw = (1.0 - bestCascadeMask.x) * bestCascadeMask.yzw;
+	bestCascadeMask.zw = (1.0 - bestCascadeMask.y) * bestCascadeMask.zw;
+	bestCascadeMask.w = (1.0 - bestCascadeMask.z) * bestCascadeMask.w;
+	float bestCascade = dot(bestCascadeMask, float4(0.0, 1.0, 2.0, 3.0));
+
+	// Pick the position in the selected cascade
+	float3 UVD;
+	UVD.x = dot(posCascadeSpaceX, bestCascadeMask);
+	UVD.y = dot(posCascadeSpaceY, bestCascadeMask);
+	UVD.z = posShadowSpace.z;
+
+	// Convert to shadow map UV values
+	UVD.xy = 0.5 * UVD.xy + 0.5;
+	UVD.y = 1.0 - UVD.y;
+
+	// Compute the hardware PCF value
+	float shadow = DirShadowMap.SampleCmpLevelZero(SampleTypePCF, float3(UVD.xy, bestCascade), UVD.z);
+
+	// set the shadow to one (fully lit) for positions with no cascade coverage
+	shadow = saturate(shadow + 1.0 - any(bestCascadeMask));
+
+	return shadow;
 }
 
 
@@ -136,7 +220,7 @@ float4 main(Input input) : SV_TARGET
 	int materialIndex = input.MaterialIndex;
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
 
-	////step 1. Get material mapping color
+	//step 1. Get material mapping color
 	float4 diffuseMapFirst = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
 	if (LPadding.x == 1)
 	{
@@ -150,6 +234,7 @@ float4 main(Input input) : SV_TARGET
 
 	float3 Diffuse = MDiffuse[materialIndex].xyz * diffuseMap;
 	float3 Specular = MSpecular[materialIndex].xyz * specularMap;
+
 	if (mapMode & 2)
 	{
 		normalMap = normalMap * 2.0f - 1.0f;
@@ -169,14 +254,12 @@ float4 main(Input input) : SV_TARGET
 	if (LType == 2)
 	{
 		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp)
-			* CalcConeAttenuation(input.lightToPos, LightVector, LInnerAng, LOuterAngRcp);
+			* CalcConeAttenuation(input.lightToPos, LightVector);
 	}
 	float3 LightColor = LColor.xyz * LightAttenuation;
 	LightVector = normalize(LightVector);
 
 	//Step 2. Calc Halfway Vector
-	float3 CamVector = normalize(-input.position.xyz);
-
 	float3 NormalProjection = max(dot(input.normal, LightVector), 0.0f) * input.normal;
 	float3 HalfVector = NormalProjection - LightVector;
 	float3 SpecularVector = normalize(2 * HalfVector + LightVector);
@@ -185,29 +268,27 @@ float4 main(Input input) : SV_TARGET
 	float df = max(dot(LightVector, input.normal), 0.0f);	//diffuse factor 	
 
 	float shiness = MShiness[materialIndex / 4][materialIndex % 4];
-	float nn = max(dot(SpecularVector, CamVector), 0.0f);
+	float nn = max(dot(SpecularVector, input.camvector), 0.0f);
 	float sf = pow(nn, shiness);
 
-	//Step4. Calc finale caculated phong blinn
+	//step4. calc shadow
+	float ShadowAtt = 1.0f;
+	if (input.UseShadowMap)
+	{
+		if (LType == 0) ShadowAtt = saturate(0.3 + CalcDirShadow(input.worldPosition));
+		if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(input.lightToPos, input.position.w));
+		if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(input.worldPosition));
+
+		return float4(1.0f, 0.0f, 1.0f, 1.0f);
+	}
+
+	//Step5. Calc finale caculated phong blinn
 	float3 finalAmbient = input.globalAmbient * MAmbient[materialIndex];
-	float3 finalDiffuse = df * (Diffuse.xyz * LIntensity * LightColor) + finalAmbient * (Diffuse.xyz * LIntensity * LightColor);
+	//float3 finalDiffuse = df * (Diffuse.xyz * LIntensity * LightColor) + finalAmbient * (ShadowAtt * Diffuse.xyz * LIntensity * LightColor);
+	float3 finalDiffuse = (float3(df, df, df) + finalAmbient) * (Diffuse * ShadowAtt * LIntensity * LightColor);
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 
-	//step5. calc shadow
-	if (input.UseShadowMap)
-	{
-		float2 projectTexCoord;
-		projectTexCoord.x = input.position.x / 1280.0f;
-		projectTexCoord.y = input.position.y / 720.0f;
-
-		float4 shadow = ShadowMap.Sample(SampleType, projectTexCoord);
-		float shadowIntensity = shadow.r + shadow.g + shadow.b;
-		if (shadowIntensity >= 2.0f)
-		{
-			return float4(1.0f, 0.0f, 0.0f, 1.0f);
-		}
-	}
 
 	return float4(color, 1.0f);
 }

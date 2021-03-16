@@ -8,9 +8,9 @@ cbuffer Environment : register(b0)
 
 cbuffer Camera : register(b1)
 {
-	matrix View;
-	matrix Projection;
-	float3 Position;
+	matrix CView;
+	matrix CProjection;
+	float3 CPosition;
 	int padding_;
 };
 
@@ -26,7 +26,7 @@ cbuffer LightPos : register(b3)
 	float4 LPosition;
 };
 
-struct HS_ConstantOutput
+struct ConstantOutput
 {
 	// Tess factor for the FF HW block
 	float fTessFactor[3]    : SV_TessFactor;
@@ -47,18 +47,16 @@ struct HS_ConstantOutput
 	float3 f3N101    : NORMAL5;
 };
 
-struct HS_ControlPointOutput
+struct Input
 {
-	float3 f3Position   : POSITION;
-	float2 f2TexCoord   : TEXCOORD;
+	float3 position   : POSITION;
+	float2 texCoord   : TEXCOORD;
 	
-	float3 f3Normal     : NORMAL;
+	float3 normal     : NORMAL;
 	float3 binormal : BINORMAL;
 	float3 tangent : TANGENT;
 
 	int MaterialIndex : MATERIALIDX;
-
-	matrix skinTransform : SKINT;
 };
 
 struct Output
@@ -70,15 +68,18 @@ struct Output
 	float3 binormal : BINORMAL;
 	float3 tangent : TANGENT;
 
-	float3 globalAmbient : AMBIENT;
-	float3 lightToPos : LTP;
-
 	int MaterialIndex : MATERIALIDX;
+
+	float3 lightToPos : LTP;
+	float3 globalAmbient : AMBIENT;
+	float3 worldPosition : WPS;
+	float3 camvector : CV;
+
 	bool UseShadowMap : SHADOWMAP;
 };
 
 [domain("tri")]
-Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointOutput, 3> I, float3 f3BarycentricCoords : SV_DomainLocation)
+Output main(ConstantOutput HSConstantData, const OutputPatch<Input, 3> I, float3 f3BarycentricCoords : SV_DomainLocation)
 {
 	//Output output = (Output)0;
 	Output output = (Output)0;
@@ -97,9 +98,9 @@ Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointO
 	float fWW3 = fWW * 3.0f;
 
 	// Compute position from cubic control points and barycentric coords
-	float3 f3Position = I[0].f3Position * fWW * fW +
-		I[1].f3Position * fUU * fU +
-		I[2].f3Position * fVV * fV +
+	float3 f3Position = I[0].position * fWW * fW +
+		I[1].position * fUU * fU +
+		I[2].position * fVV * fV +
 		HSConstantData.f3B210 * fWW3 * fU +
 		HSConstantData.f3B120 * fW * fUU3 +
 		HSConstantData.f3B201 * fWW3 * fV +
@@ -109,9 +110,9 @@ Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointO
 		HSConstantData.f3B111 * 6.0f * fW * fU * fV;
 
 	// Compute normal from quadratic control points and barycentric coords
-	float3 f3Normal = I[0].f3Normal * fWW +
-		I[1].f3Normal * fUU +
-		I[2].f3Normal * fVV +
+	float3 f3Normal = I[0].normal * fWW +
+		I[1].normal * fUU +
+		I[2].normal * fVV +
 		HSConstantData.f3N110 * fW * fU +
 		HSConstantData.f3N011 * fU * fV +
 		HSConstantData.f3N101 * fW * fV;
@@ -130,20 +131,17 @@ Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointO
 		HSConstantData.f3N011 * fU * fV +
 		HSConstantData.f3N101 * fW * fV;
 
-
 	// Normalize the interpolated normal    
 	f3Normal = normalize(f3Normal);
 	f3BiNormal = normalize(f3BiNormal);
 	f3Tangent = normalize(f3Tangent);
 
 	// Linearly interpolate the texture coords
-	output.tex = I[0].f2TexCoord * fW + I[1].f2TexCoord * fU + I[2].f2TexCoord * fV;
+	output.tex = I[0].texCoord * fW + I[1].texCoord * fU + I[2].texCoord * fV;
 
 	// Transform model position with view-projection matrix
 	float4 pos = float4(f3Position, 1.0f);
-	matrix skinT = I[0].skinTransform * fW + I[1].skinTransform * fU + I[2].skinTransform * fV;
-	output.position = mul(pos, skinT);
-	output.position = mul(output.position, Scale);
+	output.position = mul(pos, Scale);
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);
 	
@@ -151,19 +149,22 @@ Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointO
 	pos.x = pos.x / pos.w;
 	pos.y = pos.y / pos.w;
 	pos.z = pos.z / pos.w;
-	output.lightToPos = pos.xyz - LPosition;
 
 	output.position = mul(output.position, WorldMatrix);
-	output.position = mul(output.position, View);
-	output.position = mul(output.position, Projection);
+	output.position = mul(output.position, CView);
+	output.position = mul(output.position, CProjection);
 
-	//output.globalAmbient = EAmbient;
 	output.MaterialIndex = I[0].MaterialIndex;
 	
 	output.normal = mul(f3Normal, Rotate);
 	output.binormal = mul(f3BiNormal, Rotate);
 	output.tangent = mul(f3Tangent, Rotate);
 	
+	output.lightToPos = pos.xyz - LPosition;
+	output.globalAmbient = EAmbient;
+	output.worldPosition = pos.xyz;
+	output.camvector = normalize(CPosition - pos.xyz);
+
 	output.UseShadowMap = EUseShadowMap;
 
 	return output;

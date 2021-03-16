@@ -77,7 +77,7 @@ float4 GetMaterialNormalMap(int index, float2 tex, int mapMode)
 
 float4 GetMaterialSpecularMap(int index, float2 tex, int mapMode)
 {
-	float4 SpecularMap = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 SpecularMap = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	if (!(mapMode & 4))
 		return SpecularMap;
@@ -102,29 +102,29 @@ GBuffer main(Input input) : SV_TARGET
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
 
 	float4 diffuseMap = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
-	float4 normalMap = GetMaterialNormalMap(materialIndex, input.tex, mapMode);
-	float4 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode);
+	if (diffuseMap.w < 0.9f)
+		discard;
 
-	float4 diffuseMat = MDiffuse[materialIndex];
-	float4 specularMat = MSpecular[materialIndex];
-	float4 ambientMat = MAmbient[materialIndex];
-	diffuseMat.w = 1.0f;
-	specularMat.w = 1.0f;
+	float3 normalMap = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
+	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
 
-	float4 Diffuse = diffuseMat * diffuseMap;
-	float4 Specular = specularMat * specularMap;
-	float3 Ambient = input.gAmbient * ambientMat.xyz;
+	float3 Diffuse = diffuseMap * MDiffuse[materialIndex].xyz;
+	float3 Specular = specularMap * MSpecular[materialIndex].xyz;;
+	float3 Ambient = input.gAmbient * MAmbient[materialIndex].xyz;
 	if (mapMode & 2)
 	{
 		normalMap = normalMap * 2.0f - 1.0f;
 		input.normal = normalMap.x * input.tangent + normalMap.y * input.binormal + normalMap.z * input.normal;
+		input.normal = normalize(input.normal);
 	}
 
-	output.Diffuse = Diffuse;
-	output.Normal = float4(normalize(input.normal), 1.0f);
+	output.Diffuse = float4(Diffuse, 1.0f);
+	output.Normal = float4(input.normal, 1.0f);
 	output.Ambient = float4(Ambient, 1.0f);
 	output.WorldPosition = float4(input.worldPosition, 1.0f);
-	output.Misc = float4(Specular.x, MShiness[materialIndex / 4][materialIndex % 4], 0.0f, 1.0f );
+	float shiness = MShiness[materialIndex / 4][materialIndex % 4];
+	shiness /= 30.0f;
+	output.Misc = float4(Specular, shiness);
 
 	return output;
 }

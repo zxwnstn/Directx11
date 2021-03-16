@@ -28,7 +28,6 @@ namespace Engine {
 		static void ActivateShadow(bool activate);
 		static void ActivateGamma(bool activate);
 		static void ActivateShowGBuffer(bool activate);
-		static void ActivateTesselation(bool activate);
 		static void ActivateWire(bool activate);
 		static void ActivateLighting(bool activate);
 		static void SetTFactor(float tFactor);
@@ -56,7 +55,7 @@ namespace Engine {
 		static void renderGBuffer();
 		static void renderLight(const std::shared_ptr<Light>& light);
 		static void draw2D(std::shared_ptr<Model2D> model, const std::string& shader);
-		static void draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind = 0);
+		static void draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind = 0, bool tess = false);
 
 		static void Some();
 

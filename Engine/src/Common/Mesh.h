@@ -123,6 +123,9 @@ namespace Engine {
 
 		static const SerialIndecies GetSerialIndices() { return s_SerialIndecies; }
 
+		static std::vector<std::string> GetStaticMeshList();
+		static std::vector<std::string> GetSkeletalMeshList();
+
 	private:
 		static SerialIndecies s_SerialIndecies;
 		static std::unordered_map<std::string, std::shared_ptr<StaticMesh>> s_StaticMeshes;
