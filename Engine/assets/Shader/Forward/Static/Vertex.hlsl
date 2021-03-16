@@ -41,8 +41,6 @@ struct Input
 
 struct Output
 {
-	float3 globalAmbient : AMBIENT;
-
 	float4 position : SV_POSITION;
 	float2 tex : TEXCOORD0;
 
@@ -53,6 +51,7 @@ struct Output
 	int MaterialIndex : MATERIALIDX;
 
 	float3 lightToPos : LTP;
+	float3 globalAmbient : AMBIENT;
 
 	bool UseShadowMap : SHADOWMAP;
 };

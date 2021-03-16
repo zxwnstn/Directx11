@@ -70,7 +70,7 @@ namespace Engine {
 		m_DepthStencilBufferDecs.Usage = D3D11_USAGE_DEFAULT;
 		m_DepthStencilBufferDecs.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 		m_DepthStencilBufferDecs.CPUAccessFlags = 0;
-		m_DepthStencilBufferDecs.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+		if(arraySize == 6) m_DepthStencilBufferDecs.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 		Dx11Core::Get().Device->CreateTexture2D(&m_DepthStencilBufferDecs, NULL, &m_DepthStecilBuffer);
 		ASSERT(m_DepthStecilBuffer, "Renderer::Create DepthBuffer failed");
 
@@ -86,9 +86,20 @@ namespace Engine {
 
 		//Depth/Stencil Shader Resource view
 		m_ShaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		m_ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-		m_ShaderResourceViewDesc.TextureCube.MipLevels = 1;
-		m_ShaderResourceViewDesc.TextureCube.MostDetailedMip = 0;
+		if (arraySize == 6)
+		{
+			m_ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+			m_ShaderResourceViewDesc.TextureCube.MipLevels = 1;
+			m_ShaderResourceViewDesc.TextureCube.MostDetailedMip = 0;
+		}
+		else
+		{
+			m_ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+			m_ShaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
+			m_ShaderResourceViewDesc.Texture2DArray.ArraySize = arraySize;
+			m_ShaderResourceViewDesc.Texture2DArray.MipLevels = 1;
+			m_ShaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0;
+		}
 		Dx11Core::Get().Device->CreateShaderResourceView(m_DepthStecilBuffer, &m_ShaderResourceViewDesc, &m_ShaderResourceView);
 		ASSERT(m_ShaderResourceView, "Texture::Create Texture render target view failed");
 

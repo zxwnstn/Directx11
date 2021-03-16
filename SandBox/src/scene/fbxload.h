@@ -13,6 +13,7 @@ private:
 	int newlightCnt = 0;
 	int selectedLight = 0;
 	int selectedMat = 0;
+	int selectedCamera = 0;
 	bool addLight = false;
 	bool deleteLight = false;
 	std::vector<std::string> ModelNames;

@@ -369,10 +369,37 @@ namespace Engine::Util {
 		rotate.z += radian;
 	}
 
+	vec3 TransformCoord(mat4 & mat, vec3& vec)
+	{
+		DirectX::XMMATRIX xmmat = ToXMMatrix(mat);
+		DirectX::XMVECTOR xmvec = ToXMVector(vec);
+
+		auto ret = DirectX::XMVector3TransformCoord(xmvec, xmmat);
+
+		return ToVector3(ret);
+	}
+
+	vec4 TransformCoord(mat4 & mat, vec4& vec)
+	{
+		DirectX::XMMATRIX xmmat = ToXMMatrix(mat);
+		DirectX::XMVECTOR xmvec = ToXMVector(vec);
+
+		auto ret = DirectX::XMVector3TransformCoord(xmvec, xmmat);
+
+		return ToVector4(ret);
+	}
+
 	mat4 Transpose(const mat4& mat)
 	{
 		DirectX::XMMATRIX ret = ToXMMatrix(mat);
 		ret = DirectX::XMMatrixTranspose(ret);
+		return ToMatrix(ret);
+	}
+
+	mat4 Inverse(const mat4 & mat)
+	{
+		DirectX::XMMATRIX ret = ToXMMatrix(mat);
+		ret = DirectX::XMMatrixInverse(nullptr, ret);
 		return ToMatrix(ret);
 	}
 
@@ -384,5 +411,11 @@ namespace Engine::Util {
 		ret.m[2][2] = 1.0f;
 		ret.m[3][3] = 1.0f;
 		return ret;
+	}
+	float Length(const vec3 & vec)
+	{
+		auto xmvec = ToXMVector(vec);
+		auto ret = DirectX::XMVector3Length(xmvec);
+		return ret.m128_f32[0];
 	}
 }

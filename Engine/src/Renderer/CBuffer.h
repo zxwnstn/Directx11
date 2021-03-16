@@ -10,7 +10,7 @@ namespace Engine::CBuffer {
 	enum class Type
 	{
 		Camera, CubeCamera, Transform, Bone, TFactor, DispatchInfo, ToneMapFactor, Gamma,
-		Environment, Light, LightCam, LightColor, LightPos, Material, Materials,
+		Environment, Light, LightCam, LightColor, LightPos, Material, Materials, CascadedViewProj, Cascaded,
 		TextureInform, None
 	};
 
@@ -36,6 +36,23 @@ namespace Engine::CBuffer {
 		mat4 Projection;
 
 		void Upload(Engine::Camera& other);
+	};
+
+	struct Cascaded
+	{
+		mat4 ToShadowSpace;
+		vec4 ToCascadeOffsetX;
+		vec4 ToCascadeOffsetY;
+		vec4 ToCascadeScale;
+
+		void Upload(Engine::CascadedMatrix& matrix);
+	};
+
+	struct CascadedViewProj
+	{
+		mat4 ViewProj[3];
+
+		void Upload(Engine::CascadedMatrix& matrix);
 	};
 
 	struct Transform
@@ -203,6 +220,16 @@ namespace Engine::CBuffer {
 		{
 			static const Type value = Type::LightColor;
 		};
+		template<>
+		struct GetType<CBuffer::Cascaded>
+		{
+			static const Type value = Type::Cascaded;
+		};
+		template<>
+		struct GetType<CBuffer::CascadedViewProj>
+		{
+			static const Type value = Type::CascadedViewProj;
+		};
 		
 		template<>
 		struct GetType<CBuffer::Bone>
@@ -249,5 +276,6 @@ namespace Engine::CBuffer {
 		{
 			static const Type value = Type::Gamma;
 		};
+
 	}
 }

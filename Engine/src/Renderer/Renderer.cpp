@@ -27,6 +27,7 @@ namespace Engine {
 
 		std::vector<std::shared_ptr<ShadowMap>> SpotShadowMaps;
 		std::vector<std::shared_ptr<ShadowMap>> PointShadowMaps;
+		std::vector<std::shared_ptr<ShadowMap>> DirShadowMaps;
 
 		std::shared_ptr<ModelBuffer> ModelBuffer2D;
 		std::shared_ptr<Model2D> SkyCube;
@@ -91,6 +92,8 @@ namespace Engine {
 			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(2048, 2048));
 		for (uint32_t i = 0; i < 10; ++i)
 			s_Data.PointShadowMaps.emplace_back(new ShadowMap(4096, 4096, 6));
+		for (uint32_t i = 0; i < 10; ++i)
+			s_Data.DirShadowMaps.emplace_back(new ShadowMap(4096, 4096, 4));
 
 		TextureArchive::Add("HDRTexture", prop.Width, prop.Height);
 		TextureArchive::Add("ForwardTexture", prop.Width, prop.Height);
@@ -168,17 +171,27 @@ namespace Engine {
 		tFactor = factor;
 	}
 
+	void Renderer::SetRenderMode(RenderMode mode)
+	{
+		s_Data.Mode = mode;
+	}
+
 	void Renderer::ActivateLighting(bool activate)
 	{
 		isLighting = activate;
 	}
 
+	float* Renderer::GetReinhardFactor()
+	{
+		return s_Data.ReinhardToneMapFactor;
+	}
+
 	void Renderer::EndScene()
 	{
+		renderShadow();
+
 		for (auto&[name, shader] : ShaderArchive::s_Shaders)
 			shader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
-
-		renderShadow();
 
 		switch (s_Data.Mode)
 		{
@@ -207,6 +220,9 @@ namespace Engine {
 
 	void Renderer::renderShadow()
 	{
+		for (auto&[name, shader] : ShaderArchive::s_Shaders)
+			shader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
+
 		Dx11Core::Get().Context->PSSetShader(nullptr, nullptr, 0);
 
 		s_Data.PLController->SetRasterize(RasterlizerOpt::Shadow);
@@ -216,17 +232,26 @@ namespace Engine {
 		auto SpotSkeletal = ShaderArchive::Get("EffectShadowSpotSkeletal");
 		auto PointStatic = ShaderArchive::Get("EffectShadowPointStatic");
 		auto PointSkeletal = ShaderArchive::Get("EffectShadowPointSkeletal");
+		auto DirStatic = ShaderArchive::Get("EffectShadowDirectionalStatic");
+		auto DirSkeletal = ShaderArchive::Get("EffectShadowDirectionalSkeletal");
 
 		uint32_t spotIndex = 0;
 		uint32_t pointIndex = 0;
+		uint32_t dirIndex = 0;
 		for (auto light : s_Data.QueuedLight)
 		{
 			if (light->m_Type == Light::Type::Directional)
 			{
-				//for (auto model2D : s_Data.Queued2D) draw2D(model2D, "EffectShadowDirectional");
-				//for (auto model3D : s_Data.Queued3D) draw3D(model3D, "EffectShadowDirectional");
+				s_Data.DirShadowMaps[dirIndex++]->SetRenderTarget();
+				
+				light->UpdateCascade(s_Data.ActiveCamera);
+				DirStatic->SetParam<CBuffer::CascadedViewProj>(light->m_CascadedMat);
+				DirSkeletal->SetParam<CBuffer::CascadedViewProj>(light->m_CascadedMat);
+				
+				for (auto model3D : s_Data.Queued3D)
+					draw3D(model3D, "EffectShadowDirectional");
 			}
-			if (light->m_Type == Light::Type::Point)
+			else if (light->m_Type == Light::Type::Point)
 			{
 				s_Data.PointShadowMaps[pointIndex++]->SetRenderTarget();
 
@@ -234,7 +259,7 @@ namespace Engine {
 				PointSkeletal->SetParam<CBuffer::CubeCamera>(light->lightCam);
 				for (auto model3D : s_Data.Queued3D) draw3D(model3D, "EffectShadowPoint");
 			}
-			if (light->m_Type == Light::Type::Spot)
+			else if (light->m_Type == Light::Type::Spot)
 			{
 				s_Data.SpotShadowMaps[spotIndex++]->SetRenderTarget();
 
@@ -327,13 +352,6 @@ namespace Engine {
 		return ret;
 	}
 
-
-	float* Renderer::GetReinhardFactor()
-	{
-		return s_Data.ReinhardToneMapFactor;
-	}
-
-
 	void Renderer::draw2D(std::shared_ptr<Model2D> model, const std::string& shader)
 	{
 		auto myShader = ShaderArchive::Get("2D");
@@ -375,11 +393,6 @@ namespace Engine {
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
 
 		myShader->Unbind();
-	}
-
-	void Renderer::SetRenderMode(RenderMode mode)
-	{
-		s_Data.Mode = mode;
 	}
 
 	void Renderer::Resize(uint32_t width, uint32_t height)
@@ -461,6 +474,7 @@ namespace Engine {
 		
 		uint32_t pointIndex = 0;
 		uint32_t spotIndex = 0;
+		uint32_t dirIndex = 0;
 
 		for (uint32_t i = 0; i < s_Data.QueuedLight.size(); ++i)
 		{
@@ -470,9 +484,12 @@ namespace Engine {
 
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
 			lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
+			lightingShader->SetParam<CBuffer::Cascaded>(s_Data.QueuedLight[i]->m_CascadedMat);
 			switch (s_Data.QueuedLight[i]->m_Type)
 			{
 			case Light::Type::Directional:
+				Dx11Core::Get().Context->PSSetShaderResources(8, 1, &s_Data.DirShadowMaps[dirIndex]->m_ShaderResourceView);
+				dirIndex++;
 				break;
 			case Light::Type::Point:
 				Dx11Core::Get().Context->PSSetShaderResources(7, 1, &s_Data.PointShadowMaps[pointIndex]->m_ShaderResourceView);
@@ -587,5 +604,24 @@ namespace Engine {
 
 	void Renderer::Some()
 	{
+		s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
+
+		s_Data.PLController->SetRenderTarget("BackBuffer");
+		
+		auto myShader = ShaderArchive::Get("2D");
+		myShader->Bind();
+		//myShader->SetParam<CBuffer::temp>(mtemp);
+		Transform t;
+		t.SetScale(0.2f, 0.3f, 1.0f);
+		t.SetTranslate(-0.5f, -0.5f, 0.0f);
+
+		myShader->SetParam<CBuffer::Transform>(t);
+		s_Data.ModelBuffer2D->Bind();
+
+		Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.DirShadowMaps[0]->m_ShaderResourceView);
+
+		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+
 	}
 }

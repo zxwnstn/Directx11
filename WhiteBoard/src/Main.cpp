@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <DirectXMath.h>
 
 class Some 
 {
@@ -19,14 +20,23 @@ public:
 
 };
 
+struct A
+{
+	int x;
+
+	A& operator-()
+	{
+		x = -x;
+		return *this;
+	}
+};
+
 
 int main()
 {
-	std::vector<std::shared_ptr<Some>> s;
-
-	std::shared_ptr<Some> ptr;
-	ptr.reset(new SS);
-
-	s.push_back(ptr);
+	auto v1 = DirectX::XMMatrixOrthographicLH(5000.0f, 5000.0f, -5000.0f, 5000.0f);
+	auto v2 = DirectX::XMMatrixOrthographicLH(1, 1, -5000.0f, 5000.0f);
+	auto v3 = DirectX::XMMatrixOrthographicLH(5000.0f, 5000.0f, -1, 1);
+	auto v4 = DirectX::XMMatrixOrthographicLH(5000.0f, 5000.0f, -5000.0f, 5000.0f);
 
 }

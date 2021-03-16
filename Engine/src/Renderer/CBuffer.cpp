@@ -156,5 +156,21 @@ namespace Engine::CBuffer {
 		color.w = 1.0f;
 	}
 
+	void CascadedViewProj::Upload(Engine::CascadedMatrix& matrix)
+	{
+		for (int i = 0; i < 3; ++i)
+		{
+			ViewProj[i] = Util::Transpose(matrix.m_arrWorldToCascadeProj[i]);
+		}
+	}
+
+	void Cascaded::Upload(Engine::CascadedMatrix& matrix)
+	{
+		ToShadowSpace = Util::Transpose(matrix.m_WorldToShadowSpace);
+		ToCascadeOffsetX = matrix.m_vToCascadeOffsetX;
+		ToCascadeOffsetY = matrix.m_vToCascadeOffsetY;
+		ToCascadeScale = matrix.m_vToCascadeScale;
+	}
+
 }
 

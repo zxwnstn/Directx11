@@ -19,6 +19,8 @@ namespace Engine {
 		case CBuffer::Type::LightPos: return sizeof(CBuffer::LightPos);
 		case CBuffer::Type::LightCam: return sizeof(CBuffer::LightCam);
 		case CBuffer::Type::LightColor: return sizeof(CBuffer::LightColor);
+		case CBuffer::Type::Cascaded: return sizeof(CBuffer::Cascaded);
+		case CBuffer::Type::CascadedViewProj: return sizeof(CBuffer::CascadedViewProj);
 		case CBuffer::Type::Bone: return sizeof(CBuffer::Bone);
 		case CBuffer::Type::Environment: return sizeof(CBuffer::Environment);
 		case CBuffer::Type::Material: return sizeof(CBuffer::Material);
@@ -40,6 +42,8 @@ namespace Engine {
 		if (name == "LightPos") return CBuffer::Type::LightPos;
 		if (name == "LightCam") return CBuffer::Type::LightCam;
 		if (name == "LightColor") return CBuffer::Type::LightColor;
+		if (name == "CascadedViewProj") return CBuffer::Type::CascadedViewProj;
+		if (name == "Cascaded") return CBuffer::Type::Cascaded;
 		if (name == "Transform") return CBuffer::Type::Transform;
 		if (name == "Bone") return CBuffer::Type::Bone;
 		if (name == "Environment") return CBuffer::Type::Environment;

@@ -9,6 +9,7 @@ Texture2D WorldPosition : register(t4);
 Texture2D Misc : register(t5);
 Texture2D SpotShadowMap : register(t6);
 TextureCube PointShadowMap : register(t7);
+Texture2DArray DirShadowMap : register(t8);
 
 SamplerState SampleTypeClamp : register(s0);
 SamplerComparisonState SampleTypePCF : register(s1);
@@ -54,6 +55,14 @@ cbuffer Environment : register(b4)
 	bool UseShadowMap;
 	float4 Bias;
 };
+
+cbuffer Cascaded : register(b5)
+{
+	matrix ToShadowSpace;
+	float4 ToCascadeOffsetX;
+	float4 ToCascadeOffsetY;
+	float4 ToCascadeScale;
+}
 
 struct Input
 {
@@ -111,6 +120,46 @@ float CalcPointShadow(float3 ToPixel, float depth)
 	return PointShadowMap.SampleCmpLevelZero(SampleTypePCF, ToPixel, Depth);
 }
 
+float CalcDirShadow(float3 position)
+{
+	// Transform the world position to shadow space
+	float4 posShadowSpace = mul(float4(position, 1.0), ToShadowSpace);
+
+	// Transform the shadow space position into each cascade position
+	float4 posCascadeSpaceX = (ToCascadeOffsetX + posShadowSpace.xxxx) * ToCascadeScale;
+	float4 posCascadeSpaceY = (ToCascadeOffsetY + posShadowSpace.yyyy) * ToCascadeScale;
+
+	// Check which cascade we are in
+	float4 inCascadeX = abs(posCascadeSpaceX) <= 1.0;
+	float4 inCascadeY = abs(posCascadeSpaceY) <= 1.0;
+	float4 inCascade = inCascadeX * inCascadeY;
+
+	// Prepare a mask for the highest quality cascade the position is in
+	float4 bestCascadeMask = inCascade;
+	bestCascadeMask.yzw = (1.0 - bestCascadeMask.x) * bestCascadeMask.yzw;
+	bestCascadeMask.zw = (1.0 - bestCascadeMask.y) * bestCascadeMask.zw;
+	bestCascadeMask.w = (1.0 - bestCascadeMask.z) * bestCascadeMask.w;
+	float bestCascade = dot(bestCascadeMask, float4(0.0, 1.0, 2.0, 3.0));
+
+	// Pick the position in the selected cascade
+	float3 UVD;
+	UVD.x = dot(posCascadeSpaceX, bestCascadeMask);
+	UVD.y = dot(posCascadeSpaceY, bestCascadeMask);
+	UVD.z = posShadowSpace.z;
+
+	// Convert to shadow map UV values
+	UVD.xy = 0.5 * UVD.xy + 0.5;
+	UVD.y = 1.0 - UVD.y;
+
+	// Compute the hardware PCF value
+	float shadow = DirShadowMap.SampleCmpLevelZero(SampleTypePCF, float3(UVD.xy, bestCascade), UVD.z);
+
+	// set the shadow to one (fully lit) for positions with no cascade coverage
+	shadow = saturate(shadow + 1.0 - any(bestCascadeMask));
+
+	return shadow;
+}
+
 
 float4 main(Input input) : SV_TARGET
 {
@@ -128,7 +177,6 @@ float4 main(Input input) : SV_TARGET
 		diffuse = pow(diffuse, 2.2f);
 
 	float3 normal = NormalSample.xyz;
-
 	float3 ambient = AmbientSample.xyz;
 	float specular = MiscSample.x;
 	float shiness = MiscSample.y;
@@ -166,6 +214,7 @@ float4 main(Input input) : SV_TARGET
 	float ShadowAtt = 1.0f;
 	if (UseShadowMap)
 	{
+		if (LType == 0) ShadowAtt = saturate(0.3 + CalcDirShadow(worldPosition));
 		if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
 		if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
 	}
@@ -180,38 +229,3 @@ float4 main(Input input) : SV_TARGET
 	return float4(color, 1.0f);
 }
 
-//float CalcShadow(float2 tex, int divide)
-//{
-//	float2 closer;
-//
-//	float width = 1.0f / 1280.0f;
-//	float heigt = 1.0f / 720.0f;
-//	float totalSample = (float)divide * divide;
-//	float count = 0.0f;
-//
-//	for (int i = 0; i < divide; ++i)
-//	{
-//		for (int j = 0; j < divide; ++j)
-//		{
-//			float2 closer;
-//			closer.x = tex.x + (i - divide / 2) * width;
-//			closer.y = tex.y + (j - divide / 2) * heigt;
-//
-//			float4 PositionSample = WorldPosition.Sample(SampleTypeClamp, closer);
-//
-//			PositionSample = mul(PositionSample, LView);
-//			PositionSample = mul(PositionSample, LProjection);
-//
-//			float3 uv = PositionSample.xyz / PositionSample.w;
-//			uv.x = uv.x * 0.5f + 0.5f;
-//			uv.y = -uv.y * 0.5f + 0.5f;
-//
-//			if (0.0f < uv.x && uv.x < 1.0f && 0.0f < uv.y && uv.y < 1.0f)
-//			{
-//				if (SpotShadowMap.Sample(SampleTypeClamp, uv.xy).r < uv.z)
-//					count += 1.0f;
-//			}
-//		}
-//	}
-//	return 1.0f - count / totalSample;
-//}

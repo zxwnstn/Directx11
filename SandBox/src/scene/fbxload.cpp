@@ -12,15 +12,19 @@ void FbxLoadScene::Init()
 
 	//Cam
 	float filedOfView = 3.141592f / 3.0f;
-	m_Cur_cam.reset(new Engine::Camera(filedOfView, float(g_Width) / (float)g_Height));
+	//m_Cur_cam.reset(new Engine::Camera(100, float(g_Width) / (float)g_Height, true));
+	m_Cur_cam.reset(new Engine::Camera(filedOfView, float(g_Width) / (float)g_Height, 0.1f, 500.0f, "Main Camera"));
 	m_Cur_cam->GetTransform().SetTranslate(0.0f, 2.0f, 4.0f);
 	m_Cur_cam->GetTransform().SetRotate(0.0f, 3.14f, 0.0f);
 
+	std::shared_ptr<Engine::Camera> sub(new Engine::Camera(10, float(g_Width) / (float)g_Height, true, 0.1f, 1000.0f, "Sub Camera"));
+
 	m_Cameras.push_back(m_Cur_cam);
+	m_Cameras.push_back(sub);
 
 	std::shared_ptr<Engine::Light> light2(new Engine::Light);
 	m_Lights.push_back(light2);
-	light2->m_Type = Engine::Light::Type::Point;
+	light2->m_Type = Engine::Light::Type::Directional;
 	light2->lightCam.GetTransform().SetTranslate(0.0f, 5.0f, 5.0f);
 	light2->name = "Light1";
 
@@ -83,20 +87,81 @@ void FbxLoadScene::OnUpdate(float dt)
 
 void FbxLoadScene::OnImGui()
 {
-	auto animlist = Engine::SkeletalAnimationArchive::GetAnimList(ModelNames[curModelIdx]);
-
-	arr2[0] = "T-Pose";
-	for (int i = 0; i < animlist.size(); ++i)
-		arr2[i + 1] = animlist[i].c_str();
 
 	ImGui::Begin("Current Scene");
 
-	ImGui::Combo("Model", &curModelIdx, arr, ModelNames.size());
-
-	if (ImGui::CollapsingHeader("Animation"))
+	if (ImGui::CollapsingHeader("Camera"))
 	{
+		const char* camlist[10];
+		int i = 0;
+		for (auto& cam : m_Cameras)
+			camlist[i++] = cam->GetName().c_str();
+
+		ImGui::Combo("Camera list", &selectedCamera, camlist, m_Cameras.size());
+		ImGui::BeginChild("CameraTab", ImVec2(350, 250), true);
+
+		if (ImGui::Button("Set as main camera"))
+			m_Cur_cam = m_Cameras[selectedCamera];
+
+		auto curCam = m_Cameras[selectedCamera];
+		const char* camtype[] = { "Ortho", "Perspective" };
+		int _type = curCam->GetCamType();
+		if (ImGui::Combo("Type", &_type, camtype, 2))
+			curCam->SetType(static_cast<Engine::CameraType>(_type));
+
+		float aspect = curCam->GetScreenAspect();
+		ImGui::Text("Screen aspect : %f", aspect);
+
+		if (_type == 0)
+		{
+			float mag = curCam->GetMag();
+			if (ImGui::SliderFloat("Magnification", &mag, 0.1f, 100.0f))
+				curCam->SetMagnification(mag);
+		}
+		else
+		{
+			float fov = curCam->GetFov();
+			if (ImGui::SliderFloat("Field of view", &fov, 0.0f, 3.14f))
+				curCam->SetFov(fov);
+		}
+
+		float _near = curCam->GetNear();
+		if (ImGui::InputFloat("Near", &_near))
+			curCam->SetNear(_near);
+		
+		float _far = curCam->GetFar();
+		if (ImGui::InputFloat("Far", &_far))
+			curCam->SetFar(_far);
+
+		ImGui::Spacing();
+		ImGui::Text("Camera Transform");
+
+		auto& transform = curCam->GetTransform();
+
+		auto& translate = transform.GetTranslate();
+		auto& rotate = transform.GetRotate();
+		float trans[3] = { translate.x, translate.y, translate.z };
+		float rot[3] = { Engine::Util::ToDegree(rotate.x), Engine::Util::ToDegree(rotate.y), Engine::Util::ToDegree(rotate.z) };
+
+		ImGui::InputFloat3("Translate", translate.m);
+		if (ImGui::InputFloat3("Rotate(radian)", rot))
+			transform.SetRotate(Engine::Util::ToRadian(rot[0]), Engine::Util::ToRadian(rot[1]), Engine::Util::ToRadian(rot[2]));
+
+		ImGui::EndChild();
+	}
+
+	if (ImGui::CollapsingHeader("Model"))
+	{
+		auto animlist = Engine::SkeletalAnimationArchive::GetAnimList(ModelNames[curModelIdx]);
+
+		arr2[0] = "T-Pose";
+		for (int i = 0; i < animlist.size(); ++i)
+			arr2[i + 1] = animlist[i].c_str();
+		ImGui::Combo("model", &curModelIdx, arr, ModelNames.size());
+
 		ImGui::BeginChild("AnimationTab", ImVec2(350, 100), true);
-		if (ImGui::Combo("motion", &curAnimtionIdx[ModelNames[curModelIdx]], arr2, animlist.size() + 1))
+		ImGui::Text("Animation");
+		if (ImGui::Combo("anim", &curAnimtionIdx[ModelNames[curModelIdx]], arr2, animlist.size() + 1))
 		{
 			if (curAnimtionIdx[ModelNames[curModelIdx]] == 0)
 			{
@@ -114,10 +179,7 @@ void FbxLoadScene::OnImGui()
 			ImGui::SliderFloat("Play Speed (ms)", &animationSpeed, 0.0f, 0.1f);
 		}
 		ImGui::EndChild();
-	}
 
-	if (ImGui::CollapsingHeader("Model"))
-	{
 		ImGui::BeginChild("TRSTab", ImVec2(350, 100), true);
 		auto& transform = m_Model3[curModelIdx]->m_Transform;
 
@@ -128,7 +190,7 @@ void FbxLoadScene::OnImGui()
 		float rot[3] = { Engine::Util::ToDegree(rotate.x), Engine::Util::ToDegree(rotate.y), Engine::Util::ToDegree(rotate.z )};
 		float sca[3] = { scale.x * 100, scale.y * 100, scale.z * 100 };
 
-		ImGui::Text("Transform");
+		ImGui::Text("Model Transform");
 		ImGui::InputFloat3("Translate", translate.m);
 		if (ImGui::InputFloat3("Rotate(radian)", rot))
 			transform.SetRotate(Engine::Util::ToRadian(rot[0]), Engine::Util::ToRadian(rot[1]), Engine::Util::ToRadian(rot[2]));
@@ -190,8 +252,15 @@ void FbxLoadScene::OnImGui()
 
 		switch (m_Lights[selectedLight]->m_Type)
 		{
-		case Engine::Light::Type::Directional:
+		case Engine::Light::Type::Directional: 
+		{
+			auto& cascademat = curLight->m_CascadedMat;
 			ImGui::SliderFloat3("Direction", curLight->lightCam.GetTransform().GetRotate().m, -3.14f, 3.14f);
+			ImGui::SliderFloat("Cascade border1", &cascademat.m_arrCascadeRanges[1], 0.2f, 100.0f);
+			ImGui::SliderFloat("Cascade border2", &cascademat.m_arrCascadeRanges[2], 0.3f, 100.1f);
+			if (cascademat.m_arrCascadeRanges[1] >= cascademat.m_arrCascadeRanges[2])
+				cascademat.m_arrCascadeRanges[2] = cascademat.m_arrCascadeRanges[1] + 0.1f;
+		}
 			break;
 		case Engine::Light::Type::Point:
 			ImGui::SliderFloat("Range", &curLight->m_Range, 0.0f, 100.0f);

@@ -34,6 +34,50 @@ namespace Engine {
 				float x, y, z;
 			};
 		};
+
+		vec3 operator * (const float scalar)
+		{
+			vec3 ret = *this;
+
+			ret.x *= scalar;
+			ret.y *= scalar;
+			ret.z *= scalar;
+
+			return ret;
+		}
+
+		vec3 operator + (const vec3& other)
+		{
+			vec3 ret = *this;
+
+			ret.x += other.x;
+			ret.y += other.y;
+			ret.z += other.z;
+
+			return ret;
+		}
+
+		vec3 operator - (const vec3& other)
+		{
+			vec3 ret = *this;
+
+			ret.x -= other.x;
+			ret.y -= other.y;
+			ret.z -= other.z;
+
+			return ret;
+		}
+
+		vec3 operator-()
+		{
+			vec3 ret = *this;
+
+			ret.x = -x;
+			ret.y = -y;
+			ret.z = -z;
+
+			return ret;
+		}
 	};
 
 	struct vec4
@@ -53,6 +97,54 @@ namespace Engine {
 			};
 		};
 		vec4() = default;
+
+		vec4 operator * (const float scalar)
+		{
+			vec4 ret = *this;
+
+			ret.x *= scalar;
+			ret.y *= scalar;
+			ret.z *= scalar;
+			ret.w *= scalar;
+
+			return ret;
+		}
+
+		vec4 operator + (const vec4& other)
+		{
+			vec4 ret = *this;
+
+			ret.x += other.x;
+			ret.y += other.y;
+			ret.z += other.z;
+			ret.w += other.w;
+
+			return ret;
+		}
+
+		vec4 operator-(const vec4& other)
+		{
+			vec4 ret = *this;
+
+			ret.x -= other.x;
+			ret.y -= other.y;
+			ret.z -= other.z;
+			ret.w -= other.w;
+
+			return ret;
+		}
+
+		vec4 operator-()
+		{
+			vec4 ret = *this;
+
+			ret.x = -x;
+			ret.y = -y;
+			ret.z = -z;
+			ret.w = -w;
+
+			return ret;
+		}
 	};
 
 	struct mat4
@@ -86,6 +178,18 @@ namespace Engine {
 					if (i == j)
 						m[i][j] = 1.0f;
 				}
+			}
+		}
+
+		void print()
+		{
+			for (int i = 0; i < 4; ++i)
+			{
+				for (int j = 0; j < 4; ++j)
+				{
+					std::cout << m[i][j] << " ";
+				}
+				std::cout << "\n";
 			}
 		}
 	};

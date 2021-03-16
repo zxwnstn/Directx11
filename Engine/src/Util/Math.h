@@ -42,6 +42,12 @@ namespace Engine::Util {
 	void RotateLocalY(vec3& rotate, float radian);
 	void RotateLocalZ(vec3& rotate, float radian);
 
+	vec3 TransformCoord(mat4& mat, vec3& vec);
+	vec4 TransformCoord(mat4& mat, vec4& vec);
+
 	mat4 Transpose(const mat4& mat);
+	mat4 Inverse(const mat4& mat);
 	mat4 Identity();
+
+	float Length(const vec3& vec);
 }

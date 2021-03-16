@@ -10,6 +10,7 @@ public:
 
 	const std::string GetName() const { return m_Name; }
 	std::shared_ptr<class Engine::Camera> GetCurCam() { return m_Cur_cam; }
+	std::vector<std::shared_ptr<class Engine::Camera>>& GetCams() { return m_Cameras; }
 	std::vector<std::shared_ptr<struct Engine::Light>>& GetLights() { return m_Lights; }
 
 protected:
