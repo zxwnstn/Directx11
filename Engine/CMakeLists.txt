@@ -91,7 +91,7 @@ set_target_properties(
 
 target_link_libraries(
     ${PROJECT_NAME}
-    PRIVATE
+    PUBLIC
     stb_image
     spdlog
 	ImGui
@@ -105,13 +105,13 @@ target_precompile_headers(
 
 target_include_directories(
 	${PROJECT_NAME} 
-	PRIVATE 
-	"${CMAKE_CURRENT_SOURCE_DIR}/src"
-	"${CMAKE_SOURCE_DIR}/vendor/Boost"
-	"${CMAKE_SOURCE_DIR}/vendor/FbxSDK/include"
-	"${CMAKE_SOURCE_DIR}/vendor/stb_image"
-	"${CMAKE_SOURCE_DIR}/vendor/spdlog/include"
-	"${CMAKE_SOURCE_DIR}/vendor/imgui"
+	PUBLIC 
+	${CMAKE_CURRENT_SOURCE_DIR}/src
+	${CMAKE_SOURCE_DIR}/vendor/Boost
+	${CMAKE_SOURCE_DIR}/vendor/FbxSDK/include
+	${CMAKE_SOURCE_DIR}/vendor/stb_image
+	${CMAKE_SOURCE_DIR}/vendor/spdlog/include
+	${CMAKE_SOURCE_DIR}/vendor/imgui
 )
 
 set_target_properties(

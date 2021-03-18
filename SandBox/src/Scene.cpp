@@ -12,7 +12,7 @@ void Scene::Add2DModel(std::shared_ptr<Engine::Model2D> model)
 
 void Scene::Add3DModel(std::shared_ptr<Engine::Model3D> model)
 {
-	if (!model->GetSkeletonName().empty())
+	if (!model->m_Animation)
 		curAnimtionIdx[model->m_Name] = 0;
 	m_Model3.push_back(model);
 }
@@ -53,6 +53,8 @@ Scene::Scene()
 	m_Lights.push_back(light);
 }
 
+
+
 Scene::Scene(const std::string & name)
 	: Scene()
 {
@@ -74,7 +76,7 @@ void Scene::OnUpdate(float dt)
 
 void Scene::OnImGui()
 {
-	ImGui::Begin("Current Scene");
+	ImGui::Begin("Inspector");
 
 	if (ImGui::CollapsingHeader("Camera"))
 	{
@@ -87,7 +89,10 @@ void Scene::OnImGui()
 		ImGui::BeginChild("CameraTab", ImVec2(350, 250), true);
 
 		if (ImGui::Button("Set as main camera"))
+		{
 			m_Curcam = m_Cameras[selectedCamera];
+			curcamIdx = selectedCamera;
+		}
 
 		auto curCam = m_Cameras[selectedCamera];
 		const char* camtype[] = { "Ortho", "Perspective" };
@@ -332,14 +337,28 @@ void Scene::OnImGui()
 	{
 		ImGui::Begin("Create New Model");
 
+		auto staticList = Engine::MeshArchive::GetStaticMeshList();
+		auto skeletalList = Engine::MeshArchive::GetSkeletalMeshList();
+
 		const char* type[] = { "Skeletal", "Static" };
-		ImGui::Combo("Type", &newModelType, type, 2);
+		if (ImGui::Combo("Type", &newModelType, type, 2)) 
+		{
+			if (newModelType)
+			{
+				selectedStatic = 0;
+				selectedName = staticList[selectedStatic];
+			}
+			else
+			{
+				selectedSkeletal = 0;
+				selectedName = skeletalList[selectedSkeletal];
+			}
+		}
 		
 		const char* StaticModels[100];
 		const char* SkeltalModels[100];
 		if (newModelType)
 		{
-			auto staticList = Engine::MeshArchive::GetStaticMeshList();
 			int i = 0;
 			for (auto& name : staticList)
 				StaticModels[i++] = name.c_str();
@@ -351,7 +370,6 @@ void Scene::OnImGui()
 		}
 		else 
 		{
-			auto skeletalList = Engine::MeshArchive::GetSkeletalMeshList();
 			int i = 0;
 			for (auto& name : skeletalList)
 				SkeltalModels[i++] = name.c_str();
@@ -449,3 +467,208 @@ void Scene::OnImGui()
 
 }
 
+SceneInform Scene::Save()
+{
+	SceneInform inform;
+	inform.SceneName = m_Name;
+	inform.CurrentCamIdx = curcamIdx;
+	for (auto cam : m_Cameras)
+	{
+		CameraInform camInform;
+		camInform.Name = cam->GetName();
+		camInform.Far = cam->GetFar();
+		camInform.Near = cam->GetNear();
+		camInform.Mag = cam->GetMag();
+		camInform.Fov = cam->GetFov();
+		camInform.Rotate = cam->GetTransform().GetRotate();
+		camInform.Translate = cam->GetTransform().GetTranslate();
+		camInform.Type = cam->GetCamType();
+		inform.Camera.push_back(camInform);
+	}
+	for (auto model : m_Model3)
+	{
+		Model3DInform modelInform;
+		modelInform.Name = model->m_Name;
+		modelInform.MeshName = model->m_MeshName;
+		{
+			auto anim = model->GetAnimInfo();
+			modelInform.MeshType = 1;
+			if (anim)
+			{
+				modelInform.MeshType = 0;
+
+				int animIdx = curAnimtionIdx[model->m_Name];
+
+				if (animIdx)
+				{
+					modelInform.AnimInfo.CurAnimation = anim->AnimList[animIdx - 1];
+				}
+				else
+				{
+					modelInform.AnimInfo.CurAnimation = "T-Pose";
+				}
+				modelInform.AnimInfo.Curtime = anim->Elapsedtime;
+				modelInform.AnimInfo.Loop = anim->Loop;
+				modelInform.AnimInfo.PlaySpeed = anim->Accelation;
+			}
+		}
+		modelInform.Translate = model->m_Transform.GetTranslate();
+		modelInform.Scale = model->m_Transform.GetScale();
+		modelInform.Rotate = model->m_Transform.GetRotate();
+
+		auto material = model->m_MaterialSet;
+		for (int i = 0; i < material->Materials.size(); ++i)
+		{
+			MaterialInform matInform;
+			matInform.Name = material->Materials[i].Name;
+			matInform.Ambient = material->Materials[i].Ambient;
+			matInform.Diffuse = material->Materials[i].Diffuse;
+			matInform.Mapmode = material->Materials[i].MapMode;
+			matInform.Specular = material->Materials[i].Specular;
+			matInform.Shiness = material->Materials[i].Shiness;
+			modelInform.Material.push_back(matInform);
+		}
+
+		inform.Model3d.push_back(modelInform);
+	}
+	for (auto light : m_Lights)
+	{
+		LightInform lightInform;
+
+		lightInform.Name = light->name;
+		lightInform.type = static_cast<int>(light->m_Type);
+		lightInform.CasBorder1 = light->m_CascadedMat.m_arrCascadeRanges[1];
+		lightInform.CasBorder2 = light->m_CascadedMat.m_arrCascadeRanges[2];
+		lightInform.Color = light->m_Color;
+		lightInform.Direction = light->lightCam.GetTransform().GetRotate();
+		lightInform.InnerAngle = light->m_InnerAngle;
+		lightInform.OuterAngle = light->m_OuterAngle;
+		lightInform.Position = light->lightCam.GetTransform().GetTranslate();
+		lightInform.Range = light->m_Range;
+		lightInform.Intensity = light->m_Intensity;
+
+		inform.Light.push_back(lightInform);
+	}
+	return inform;
+}
+
+Scene::Scene(const SceneInform & _inform)
+{
+	m_Name = _inform.SceneName;
+	for (auto& inform : _inform.Camera)
+	{
+		float screenAspect = (float)g_Width / (float)g_Height;
+		std::shared_ptr<Engine::Camera> cam(new Engine::Camera(inform.Fov, screenAspect));
+		cam->SetFar(inform.Far);
+		cam->SetFov(inform.Fov);
+		cam->SetMagnification(inform.Mag);
+		cam->SetName(inform.Name);
+		cam->SetNear(inform.Near);
+		cam->GetTransform().SetRotate(inform.Rotate);
+		cam->GetTransform().SetTranslate(inform.Translate);
+		cam->SetType(static_cast<Engine::CameraType>(inform.Type));
+		cam->UpdateViewProj();
+		m_Cameras.push_back(cam);
+	}
+	m_Curcam = m_Cameras[_inform.CurrentCamIdx];
+
+	for (auto& inform : _inform.Model3d)
+	{
+		std::shared_ptr<Engine::Model3D> model;
+		if (inform.MeshType == 0)
+		{
+			if (!Engine::MeshArchive::HasSkeletalMesh(inform.MeshName))
+			{
+				LOG_CRITICAL("LoadScene::There is no cashed skeletal mesh! {0}", inform.MeshName);
+				continue;
+			}
+
+			model = Engine::Model3D::Create()
+				.buildFromFBX()
+				.SetSkeleton(inform.MeshName);
+
+			auto animInform = model->GetAnimInfo();
+			curAnimtionIdx[model->m_Name] = 0;
+			if (animInform)
+			{
+				bool findCurAnim = false;
+				int animIdx = 1;
+				for (auto anim : animInform->AnimList)
+				{
+					if (anim == inform.AnimInfo.CurAnimation)
+					{
+						animInform->CurAnim = inform.AnimInfo.CurAnimation;
+						findCurAnim = true;
+						curAnimtionIdx[model->m_Name] = animIdx;
+						break;
+					}
+					++animIdx;
+				}
+				if (!findCurAnim)
+				{
+					model->StopAnimation();
+					LOG_CRITICAL("LoadScene::There is no cashed animation {0}'s {1}", inform.MeshName, inform.AnimInfo.CurAnimation);
+				}
+				else
+				{
+					model->PlayAnimation();
+					model->SetAnimation(inform.AnimInfo.CurAnimation, true);
+				}
+
+				
+				animInform->Elapsedtime = inform.AnimInfo.Curtime;
+				animInform->Loop = inform.AnimInfo.Loop;
+				animInform->Accelation = inform.AnimInfo.PlaySpeed;
+			}
+		}
+		else
+		{
+			if (!Engine::MeshArchive::HasStaticMesh(inform.MeshName))
+			{
+				LOG_CRITICAL("LoadScene::There is no cashed static mesh! {0}", inform.MeshName);
+				continue;
+			}
+
+			model = Engine::Model3D::Create()
+				.buildFromOBJ()
+				.SetObject(inform.MeshName);
+		}
+		
+		model->m_Name = inform.Name;
+		model->m_MaterialSet = Engine::MaterialArchive::GetSetCopy(model->m_MeshName);
+		auto materialset = model->m_MaterialSet;
+		for (int i = 0; i < inform.Material.size(); ++i)
+		{
+			auto& mat = materialset->Materials[i];
+			mat.Ambient = inform.Material[i].Ambient;
+			mat.Diffuse = inform.Material[i].Diffuse;
+			mat.Specular = inform.Material[i].Specular;
+			mat.MapMode = inform.Material[i].Mapmode;
+			mat.Shiness = inform.Material[i].Shiness;
+		}
+		
+		model->m_Transform.SetTranslate(inform.Translate);
+		model->m_Transform.SetRotate(inform.Rotate);
+		model->m_Transform.SetScale(inform.Scale);
+		
+		m_Model3.push_back(model);
+	}
+
+	for (auto& inform : _inform.Light)
+	{
+		std::shared_ptr<Engine::Light> light(new Engine::Light);
+		light->name = inform.Name;
+		light->m_CascadedMat.m_arrCascadeBoundRadius[1] = inform.CasBorder1;
+		light->m_CascadedMat.m_arrCascadeBoundRadius[2] = inform.CasBorder2;
+		light->m_Color = inform.Color;
+		light->lightCam.GetTransform().SetRotate(inform.Direction);
+		light->m_InnerAngle = inform.InnerAngle;
+		light->m_Intensity = inform.Intensity;
+		light->m_OuterAngle = inform.OuterAngle;
+		light->lightCam.GetTransform().SetTranslate(inform.Position);
+		light->m_Range = inform.Range;
+		light->m_Type = static_cast<Engine::Light::Type>(inform.type);
+		m_Lights.push_back(light);
+	}
+
+}

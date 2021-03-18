@@ -78,10 +78,21 @@ namespace Engine {
 			std::cout << "Doesn't exist " << name << " material set!";
 			return nullptr;
 		}
-
+		
 		return s_MaterialSets[name];
 	}
 
+	std::shared_ptr<MaterialSet> MaterialArchive::GetSetCopy(const std::string & name)
+	{
+		if (!HasSet(name))
+		{
+			std::cout << "Doesn't exist " << name << " material set!";
+			return nullptr;
+		}
+		std::shared_ptr<MaterialSet> ret;
+		ret.reset(new MaterialSet(*s_MaterialSets[name]));
+		return ret;
+	}
 	
 
 }

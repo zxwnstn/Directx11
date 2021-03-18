@@ -1,13 +1,170 @@
 #pragma once
 
+struct CameraInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & Name;
+		ar & Type;
+		ar & Mag;
+		ar & Fov;
+		ar & Near;
+		ar & Far;
+		ar & Translate;
+		ar & Rotate;
+	}
+
+	std::string Name;
+	int Type;
+	float Mag;
+	float Fov;
+	float Near;
+	float Far;
+	Engine::vec3 Translate;
+	Engine::vec3 Rotate;
+};
+
+struct Model2DInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & Name;
+		ar & Texture;
+		ar & Scale;
+		ar & Translate;
+		ar & Rotate;
+	}
+	std::string Name;
+	std::string Texture;
+	Engine::vec3 Scale;
+	Engine::vec3 Translate;
+	Engine::vec3 Rotate;
+};
+
+struct MaterialInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & Name;
+		ar & Ambient;
+		ar & Diffuse;
+		ar & Specular;
+		ar & Shiness;
+		ar & Mapmode;
+	}
+	std::string Name;
+	Engine::vec4 Ambient;
+	Engine::vec4 Diffuse;
+	Engine::vec4 Specular;
+	float Shiness;
+	int Mapmode;
+};
+
+struct AnimationInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & CurAnimation;
+		ar & PlaySpeed;
+		ar & Curtime;
+		ar & Loop;
+	}
+	std::string CurAnimation = "";
+	float PlaySpeed = 0.0f;
+	float Curtime = 0.0f;
+	bool Loop = false;
+};
+
+struct Model3DInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & Name;
+		ar & MeshType;
+		ar & MeshName;
+		ar & Scale;
+		ar & Translate;
+		ar & Rotate;
+		ar & Material;
+		ar & AnimInfo;
+	}
+
+	std::string Name;
+	int MeshType; //0 sekeltal, 1 static
+	std::string MeshName;
+	Engine::vec3 Scale;
+	Engine::vec3 Translate;
+	Engine::vec3 Rotate;
+	std::vector<MaterialInform> Material;
+	AnimationInform AnimInfo;
+};
+
+struct LightInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & Name;
+		ar & type;
+		ar & Color;
+		ar & Intensity;
+		ar & CasBorder1;
+		ar & CasBorder2;
+		ar & Range;
+		ar & Position;
+		ar & Direction;
+		ar & InnerAngle;
+		ar & OuterAngle;
+	}
+	std::string Name;
+	int type;
+	Engine::vec4 Color;
+	float Intensity;
+	float CasBorder1;
+	float CasBorder2;
+	float Range;
+	Engine::vec3 Position;
+	Engine::vec3 Direction;
+	float InnerAngle;
+	float OuterAngle;
+};
+
+
+struct SceneInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & SceneName;
+		ar & CurrentCamIdx;
+		ar & Model3d;
+		ar & Light;
+		ar & Camera;
+	}
+
+	std::string SceneName;
+	int CurrentCamIdx;
+	std::vector<Model2DInform> Model2d;
+	std::vector<Model3DInform> Model3d;
+	std::vector<LightInform> Light;
+	std::vector<CameraInform> Camera;
+};
+
 class Scene
 {
 public:
 	Scene();
+	Scene(const SceneInform& inform);
 	Scene(const std::string& name);
 
 	void OnUpdate(float dt);
 	void OnImGui();
+	SceneInform Save();
 
 	void Add2DModel(std::shared_ptr<Engine::Model2D> model);
 	void Add3DModel(std::shared_ptr<Engine::Model3D> model);
@@ -36,6 +193,7 @@ private:
 	int selectedLight = 0;
 	int selectedMat = 0;
 	int selectedCamera = 0;
+	int curcamIdx = 0;
 	bool newLight = false;
 	bool deleteLight = false;
 
@@ -50,5 +208,5 @@ private:
 	std::string selectedName;
 
 	std::unordered_map<std::string, int> curAnimtionIdx;
-	std::shared_ptr<Engine::Model3D> floor;
 };
+

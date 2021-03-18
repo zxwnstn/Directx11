@@ -33,11 +33,12 @@ namespace Engine {
 			delete myModel;
 			return FinalModelBuilder(nullptr);
 		}
+		myModel->m_MeshName = skeletonName;
 
 		myModel->m_ModelBuffer = ModelBuffer::Create(MeshType::Skeletal)
 			.SetMesh(MeshArchive::GetSkeletalMesh(skeletonName));
 
-		myModel->m_MaterialSet = MaterialArchive::GetSet(skeletonName);
+		myModel->m_MaterialSet = MaterialArchive::GetSetCopy(skeletonName);
 		myModel->m_Animation.reset(new AnimationInform);
 
 		auto& animList = SkeletalAnimationArchive::GetAnimList(skeletonName);
@@ -69,7 +70,9 @@ namespace Engine {
 		myModel->m_ModelBuffer = ModelBuffer::Create(MeshType::Static)
 			.SetMesh(MeshArchive::GetStaticMesh(objectName));
 
-		myModel->m_MaterialSet = MaterialArchive::GetSet(objectName);
+		myModel->m_MeshName = objectName;
+
+		myModel->m_MaterialSet = MaterialArchive::GetSetCopy(objectName);
 
 		return FinalModelBuilder(myModel);
 	}

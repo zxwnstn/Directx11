@@ -27,8 +27,8 @@ namespace Engine {
 
 	void Camera::OnResize(uint32_t width, uint32_t height)
 	{
-		m_ScreenAspect = width / (float)height;	
-		recalculateProjectionMatrix();
+		m_ScreenAspect = width / (float)height;
+		isChangedProj = true;
 	}
 
 	void Camera::SetType(CameraType type)
@@ -43,16 +43,15 @@ namespace Engine {
 			if (m_Fov == -1.0f) m_Fov = 3.141592f / 3.0f;
 			break;
 		}
-		recalculateProjectionMatrix();
+		isChangedProj = true;
 	}
 
 	void Camera::SetFov(float fov)
 	{
 		if (m_Type != CameraType::Perspective)
 			return;
-
 		m_Fov = fov;
-		recalculateProjectionMatrix();
+		isChangedProj = true;
 	}
 
 	void Camera::SetMagnification(float magnification)
@@ -60,18 +59,24 @@ namespace Engine {
 		if (m_Type != CameraType::Ortho)
 			return;
 		m_Magnification = magnification;
-		recalculateProjectionMatrix();
+		isChangedProj = true;
 	}
 
 	void Camera::SetNear(float _near)
 	{
 		m_Near = _near;
-		recalculateProjectionMatrix();
+		isChangedProj = true;
 	}
 
 	void Camera::SetFar(float _far)
 	{
 		m_Far = _far;
+		isChangedProj = true;
+	}
+
+	void Camera::UpdateViewProj()
+	{
+		recalculateViewMatrix();
 		recalculateProjectionMatrix();
 	}
 
@@ -89,7 +94,7 @@ namespace Engine {
 
 	const mat4& Camera::GetProjectionMatrix()
 	{
-		recalculateViewMatrix();
+		recalculateProjectionMatrix();
 		return m_ProjectionMatrix;
 	}
 
@@ -103,6 +108,9 @@ namespace Engine {
 
 	void Camera::recalculateProjectionMatrix()
 	{
+		if (!isChangedProj)
+			return;
+
 		switch (m_Type)
 		{
 		case Engine::CameraType::Ortho:
@@ -112,8 +120,9 @@ namespace Engine {
 			m_ProjectionMatrix = Util::GetPerspective(m_Fov, m_ScreenAspect, m_Near, m_Far);
 			break;
 		}
+		isChangedProj = false;
 	}
-	
+
 
 
 }

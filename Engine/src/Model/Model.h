@@ -53,7 +53,8 @@ namespace Engine {
 		Transform m_Transform;
 		bool m_PlayingAnimation = false;
 		std::string m_Name;
-
+		std::string m_MeshName;
+		
 	private:
 		//Can be Shared
 		std::shared_ptr<struct Skeleton> m_Skeleton;

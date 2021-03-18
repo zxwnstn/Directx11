@@ -4,6 +4,7 @@
 
 #include "../../vendor/imgui/imgui.h"
 
+
 float mFactor = 0.0f;
 float White = 1.5f;
 float Gray = 0.0f;
@@ -57,17 +58,6 @@ void SandBox::OnImGui()
 		ImGui::Text("Fps %d (v-sync)", fps);
 		ImGui::Text("Width : %d, Height : %d", g_Width, g_Height);
 
-		const char* ScenesNames[10];
-		int i = 0;
-		for (int i = 0; i < Scenes.size(); ++i)
-			ScenesNames[i] = Scenes[i]->GetSceneName().c_str();
-
-		if (ImGui::Combo("Current Scene", &curSceneIdx, ScenesNames, Scenes.size()))
-			sceneChanged = true;
-
-		if (ImGui::Button("Add new Scene"))
-			newScene = true;
-
 		ImGui::BeginChild("cur Camera info", ImVec2(300, 200), true);
 
 		ImGui::Text("Camera info");
@@ -116,6 +106,12 @@ void SandBox::OnImGui()
 			}
 		}
 
+		auto glov = Engine::Renderer::GetGlobalEnv();
+		ImGui::ColorEdit3("Global Ambient", glov->Ambient.m);
+
+		if (ImGui::Checkbox("WireFrame", &wire))
+			Engine::Renderer::ActivateWire(wire);
+
 		if (ImGui::Checkbox("Shadow", &shadow))
 			Engine::Renderer::ActivateShadow(shadow);
 
@@ -134,7 +130,7 @@ void SandBox::OnImGui()
 				Engine::Renderer::ActivateLighting(lighting);
 			}
 
-			if (ImGui::SliderFloat("T-Factor", &tFactor, 1.0f, 20.0f))
+			if (ImGui::SliderFloat("TsellationFactor", &tFactor, 1.0f, 20.0f))
 				Engine::Renderer::SetTFactor(tFactor);
 		}
 		if (renderingPath == 1)
@@ -143,6 +139,9 @@ void SandBox::OnImGui()
 			{
 				Engine::Renderer::ActivateShowGBuffer(gBuffer);
 			}
+
+			if (ImGui::Checkbox("Gamma correction", &gamma))
+				Engine::Renderer::ActivateGamma(gamma);
 
 			if (ImGui::Checkbox("Hdr", &hdr))
 			{
@@ -156,6 +155,7 @@ void SandBox::OnImGui()
 					Engine::Renderer::ActivateGamma(gamma);
 				}
 			}
+
 			if (hdr)
 			{
 				ImGui::BeginChild("", ImVec2(300, 200), true);
@@ -165,22 +165,62 @@ void SandBox::OnImGui()
 				ImGui::SliderFloat("White", &factor[0], 0.0f, 10.0f, nullptr, 1.0f);
 				ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 10.0f, nullptr, 1.0f);
 
-				ImGui::Spacing();
-
-				if (ImGui::Checkbox("Gamma correction", &gamma))
-					Engine::Renderer::ActivateGamma(gamma);
-
 				ImGui::EndChild();
 			}
-		}
-		if (ImGui::Checkbox("Wire", &wire))
+		}		
+	}
+
+	if (ImGui::CollapsingHeader("Scene"))
+	{
+		const char* ScenesNames[100];
+		int i = 0;
+		for (int i = 0; i < Scenes.size(); ++i)
+			ScenesNames[i] = Scenes[i]->GetSceneName().c_str();
+
+		if (ImGui::Combo("", &curSceneIdx, ScenesNames, Scenes.size()))
+			sceneChanged = true;
+
+		ImGui::SameLine();
+		if (ImGui::Button("Re-name"))
+			newName = true;
+
+		if (ImGui::Button("New", ImVec2(55.0f, 20.0f)))
+			newScene = true;
+
+		ImGui::SameLine();
+		if (ImGui::Button("Delete", ImVec2(55.0f, 20.0f)))
 		{
-			Engine::Renderer::ActivateWire(wire);
+			if (Scenes.size() != 1)
+			{
+				Scenes.erase(Scenes.begin() + curSceneIdx);
+
+				if (curSceneIdx == Scenes.size())
+				{
+					--curSceneIdx;
+				}
+
+				CurScene = Scenes[curSceneIdx];
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Save", ImVec2(55.0f, 20.0f)))
+		{
+			if (!onSave)
+			{
+				onSave = true;
+				Engine::File::OpenSaveFileDialog(Engine::File::GetCommonPath(Engine::File::CommonPathType::Scene));
+			}
 		}
 
-		auto glov = Engine::Renderer::GetGlobalEnv();
-
-		ImGui::ColorEdit3("Global Ambient", glov->Ambient.m);
+		ImGui::SameLine();
+		if (ImGui::Button("Load", ImVec2(55.0f, 20.0f)))
+		{
+			if (!onLoad)
+			{
+				onLoad = true;
+				Engine::File::OpenReadFileDialog(Engine::File::GetCommonPath(Engine::File::CommonPathType::Scene));
+			}
+		}
 	}
 
 	ImGui::End();
@@ -189,17 +229,38 @@ void SandBox::OnImGui()
 	{
 		ImGui::Begin("Create Scene");
 		ImGui::InputText("sceneName", newSceneBuffer, 100);
-		if (ImGui::Button("Create"))
+		if (ImGui::Button("Ok"))
 		{
 			std::shared_ptr<Scene> scene(new Scene(newSceneBuffer));
 			Scenes.push_back(scene);
+			CurScene = scene;
+			curSceneIdx = Scenes.size() - 1;
 			memset(newSceneBuffer, 0, 100);
 			newScene = false;
 		}
+		ImGui::SameLine();
 		if (ImGui::Button("Cancel"))
 		{
 			memset(newSceneBuffer, 0, 100);
 			newScene = false;
+		}
+		ImGui::End();
+	}
+	if (newName)
+	{
+		ImGui::Begin("Create Scene");
+		ImGui::InputText("sceneName", newSceneBuffer, 100);
+		if (ImGui::Button("Ok"))
+		{
+			CurScene->SetSceneName(newSceneBuffer);
+			memset(newSceneBuffer, 0, 100);
+			newName = false;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel"))
+		{
+			memset(newSceneBuffer, 0, 100);
+			newName = false;
 		}
 		ImGui::End();
 	}
@@ -218,6 +279,28 @@ void SandBox::OnUpdate(float dt)
 	OnImGui();
 	Engine::Renderer::Present();
 	controlUpdate(dt);
+
+	if (onSave || onLoad)
+	{
+		auto path = Engine::File::GetDialogResult();
+		if (!path.empty())
+		{
+			if (onSave)
+			{
+				auto extension = path.find(".scene");
+				if (extension == std::string::npos)
+					path += ".scene";
+				SaveScene(path);
+			}
+			if (onLoad)
+				LoadScene(path);
+
+
+			onSave = false;
+			onLoad = false;
+		}
+	}
+
 
 	if (sceneChanged)
 	{
@@ -290,5 +373,31 @@ void SandBox::controlUpdate(float dt)
 	{
 		camTransform.AddTranslate(0.0f, -0.1f, 0.0f);
 	}
+}
+
+void SandBox::SaveScene(const std::string& path)
+{
+	auto slash = path.rfind('\\');
+	auto extension = path.rfind('.');
+	auto saveSceneName = path.substr(slash + 1, extension - slash - 1);
+	auto inform = CurScene->Save();
+	inform.SceneName = saveSceneName;
+
+	Engine::Serializer::Write(path, inform);
+
+	LOG_INFO("{0} Scene saved complete!(Path : {1})", saveSceneName, path);
+}
+
+void SandBox::LoadScene(const std::string& path)
+{
+	SceneInform inform;
+	Engine::Serializer::Read(path, inform);
+	std::shared_ptr<Scene> scene(new Scene(inform));
+	Scenes.push_back(scene);
+
+	CurScene = scene;
+	curSceneIdx = Scenes.size() - 1;
+
+	LOG_INFO("{0} Load scene complete!(Path : {1})", inform.SceneName, path);
 }
 

@@ -41,6 +41,11 @@ namespace Engine {
 		TextureArchive::Get("BackBuffer")->Resize(width, height);
 	}
 
+	HWND Dx11Core::GetHWND()
+	{
+		return HWND(WinProp->hWnd);
+	}
+
 	void Dx11Core::GetUserDeviceInform()
 	{
 		IDXGIFactory* factory;

@@ -28,6 +28,7 @@ namespace Engine {
 		void SetNear(float _near);
 		void SetFar(float _near);
 		void SetType(CameraType type);
+		void UpdateViewProj();
 
 		Transform& GetTransform();
 		const mat4& GetViewMatrix();
@@ -39,7 +40,7 @@ namespace Engine {
 		float GetFar() { return m_Far; }
 		float GetScreenAspect() { return m_ScreenAspect; }
 		const std::string& GetName() { return m_Cameraname; }
-		const std::string& SetName(const std::string& name) { m_Cameraname = name; }
+		void SetName(const std::string& name) { m_Cameraname = name; }
 
 	private:
 		void recalculateViewMatrix();
@@ -54,6 +55,7 @@ namespace Engine {
 		float m_Near;
 		float m_Far;
 		bool isChangedView = false;
+		bool isChangedProj = false;
 		std::string m_Cameraname;
 
 		Transform m_Transform;

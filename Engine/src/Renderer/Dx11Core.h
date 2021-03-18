@@ -27,6 +27,8 @@ namespace Engine {
 		void Present();
 		void Resize(uint32_t width, uint32_t height);
 
+		HWND GetHWND();
+
 	private:
 		void GetUserDeviceInform();
 		void CreateDeviceContext();

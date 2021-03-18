@@ -15,6 +15,11 @@ cbuffer Materials : register(b0)
 	int4  MMode[MaxPart / 4];
 };
 
+cbuffer Gamma : register(b1)
+{
+	uint4 GammaCorection;
+};
+
 struct GBuffer
 {
 	float4 Diffuse : SV_TARGET0;
@@ -100,10 +105,17 @@ GBuffer main(Input input) : SV_TARGET
 
 	int materialIndex = input.MaterialIndex;
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
-
+	
 	float4 diffuseMap = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
 	if (diffuseMap.w < 0.9f)
 		discard;
+	bool gammaCorected = false;
+	if (GammaCorection.x == 1 && (diffuseMap.x + diffuseMap.y + diffuseMap.z) != 3.0f)
+	{
+		diffuseMap = pow(diffuseMap, 2.2f);
+		gammaCorected = true;
+	}
+
 
 	float3 normalMap = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
 	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
@@ -119,6 +131,9 @@ GBuffer main(Input input) : SV_TARGET
 	}
 
 	output.Diffuse = float4(Diffuse, 1.0f);
+	if (gammaCorected)
+		output.Diffuse.w = 0.99f;
+
 	output.Normal = float4(input.normal, 1.0f);
 	output.Ambient = float4(Ambient, 1.0f);
 	output.WorldPosition = float4(input.worldPosition, 1.0f);

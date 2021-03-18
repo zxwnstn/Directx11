@@ -35,7 +35,7 @@ namespace Engine {
 		vec4 Fresnel;
 		float Shiness = 20.0f;
 		int MapMode = 0;
-		std::string Name;
+		std::string Name = "default";
 	};
 
 	struct MaterialSet
@@ -65,5 +65,6 @@ namespace Engine {
 
 		static std::shared_ptr<Material> Get(const std::string& name);
 		static std::shared_ptr<MaterialSet> GetSet(const std::string& name);
+		static std::shared_ptr<MaterialSet> GetSetCopy(const std::string& name);
 	};
 }

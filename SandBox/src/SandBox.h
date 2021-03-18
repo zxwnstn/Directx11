@@ -14,6 +14,9 @@ public:
 
 	void controlUpdate(float dt);
 
+	void SaveScene(const std::string& path);
+	void LoadScene(const std::string& path);
+
 private:
 	std::shared_ptr<Scene> CurScene;
 	std::vector<std::shared_ptr<Scene>> Scenes;
@@ -36,6 +39,9 @@ private:
 	int renderingPath = 0;
 
 	bool newScene = false;
+	bool newName = false;
+	bool onSave = false;
+	bool onLoad = false;
 	char newSceneBuffer[100]{ 0, };
 
 	Engine::Timestep ts;

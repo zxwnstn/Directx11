@@ -157,8 +157,6 @@ namespace Engine {
 
 	void SkeletalAnimationPlayer::Play(const std::string& skeletonName, std::shared_ptr<AnimationInform> inform)
 	{
-		using namespace DirectX;
-
 		std::vector<KeyFramePair> keyFrames = SkeletalAnimationArchive::s_Animations[skeletonName + "/" + inform->CurAnim]->GetKeyFrames(inform->Elapsedtime);
 		int i = 0;
 		for (auto&[first, second]: keyFrames)

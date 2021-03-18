@@ -42,12 +42,6 @@ cbuffer LightCam : register(b2)
 	matrix LProjection;
 }
 
-cbuffer Gamma : register(b3)
-{
-	uint4 GammaCorection;
-};
-
-
 cbuffer Environment : register(b4)
 {
 	matrix WorldMatrix;
@@ -173,8 +167,6 @@ float4 main(Input input) : SV_TARGET
 
 	float depth = DepthSample.x;
 	float3 diffuse = DiffuseSample.xyz;
-	if (GammaCorection.x)
-		diffuse = pow(diffuse, 2.2f);
 
 	float3 normal = NormalSample.xyz;
 	float3 ambient = AmbientSample.xyz;
@@ -210,7 +202,7 @@ float4 main(Input input) : SV_TARGET
 
 	float df = max(dot(lightVector, normal), 0.0f);	//diffuse factor 	
 	float specCos = max(dot(SpecularVector, CamVector), 0.0f);
-	float sf = pow(specCos, shiness);
+	float sf = pow(specCos, shiness); //specular factor
 
 	float ShadowAtt = 1.0f;
 	if (UseShadowMap)
@@ -221,10 +213,11 @@ float4 main(Input input) : SV_TARGET
 	}
 	
 	float3 finalDiffuse = (float3(df, df, df) + ambient) * (diffuse * ShadowAtt * LIntensity * LightColor);
+	//float3 finalDiffuse = df * ambient * (diffuse * ShadowAtt * LIntensity * LightColor);
 	float3 finalSpecular = sf * (specular * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 	
-	if (GammaCorection.x)
+	if (DiffuseSample.w != 1.0f)
 		return pow(float4(color, 1.0f), 0.4545);
 
 	return float4(color, 1.0f);

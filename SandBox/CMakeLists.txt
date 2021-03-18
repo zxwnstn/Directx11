@@ -42,7 +42,6 @@ target_include_directories(
 	PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/Engine/src
-	 ${CMAKE_SOURCE_DIR}/vendor/imgui
 )
 
 set_target_properties(

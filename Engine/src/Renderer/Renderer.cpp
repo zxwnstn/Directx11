@@ -269,7 +269,6 @@ namespace Engine {
 		int i = 0;
 		for (auto buffer : s_Data.GeometryBuffer->m_BindingOrder)
 		{
-			if (buffer != "Normal") continue;
 			auto myShader = ShaderArchive::Get("2D");
 			myShader->Bind();
 			Transform t;
@@ -427,14 +426,22 @@ namespace Engine {
 
 		s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
+		uvec4 gamma;
+		if (isGamma)
+			gamma.x = 1;
+		else
+			gamma.x = 0;
+
 		std::string useShader = "Deffered";
 		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
 		skeletal->Bind();
 		skeletal->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		skeletal->SetParam<CBuffer::Gamma>(gamma);
 
 		auto static_ = ShaderArchive::Get(useShader + "Static");
 		static_->Bind();
 		static_->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		static_->SetParam<CBuffer::Gamma>(gamma);
 
 		auto lighting = ShaderArchive::Get(useShader + "Lighting");
 		lighting->Bind();
@@ -459,14 +466,7 @@ namespace Engine {
 		lightingShader->Bind();
 		s_Data.ModelBuffer2D->Bind();
 		s_Data.GeometryBuffer->Bind();
-
-		uvec4 gamma;
-		if (isGamma)
-			gamma.x = 1;
-		else
-			gamma.x = 0;
-		lightingShader->SetParam<CBuffer::Gamma>(gamma);
-		
+	
 		uint32_t pointIndex = 0;
 		uint32_t spotIndex = 0;
 		uint32_t dirIndex = 0;

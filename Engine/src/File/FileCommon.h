@@ -10,7 +10,8 @@ namespace Engine::File {
 		Obj,
 		FBXCache,
 		Shader,
-		Log
+		Log,
+		Scene
 	};
 
 	bool isExistFile(const std::string& filename);
@@ -19,6 +20,10 @@ namespace Engine::File {
 	void CreateFile_(const std::string& path);
 	void TryCreateDir(const std::string& path);
 	void TryCreateFile(const std::string& file);
+
+	void OpenSaveFileDialog(const std::string& path);
+	void OpenReadFileDialog(const std::string& path);
+	std::string GetDialogResult();
 
 	std::string GetCommonPath(CommonPathType pathType);
 }
