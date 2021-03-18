@@ -653,4 +653,12 @@ namespace Engine {
 		s_Textures.clear();
 	}
 
+	std::vector<std::string> TextureArchive::GetTextureList()
+	{
+		std::vector<std::string> ret;
+		for (auto&[name, texture]: s_Textures)
+			ret.push_back(name);
+		return ret;
+	}
+
 }

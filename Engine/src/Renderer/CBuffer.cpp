@@ -172,5 +172,10 @@ namespace Engine::CBuffer {
 		ToCascadeScale = matrix.m_vToCascadeScale;
 	}
 
+	void SkyBoxInfo::Upload(vec4 & color)
+	{
+		Color = color;
+	}
+
 }
 

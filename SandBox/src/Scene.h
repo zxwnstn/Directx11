@@ -54,6 +54,9 @@ struct MaterialInform
 		ar & Specular;
 		ar & Shiness;
 		ar & Mapmode;
+		ar & DiffuseMap;
+		ar & NormalMap;
+		ar & SpecularMap;
 	}
 	std::string Name;
 	Engine::vec4 Ambient;
@@ -61,6 +64,9 @@ struct MaterialInform
 	Engine::vec4 Specular;
 	float Shiness;
 	int Mapmode;
+	std::string DiffuseMap;
+	std::string NormalMap;
+	std::string SpecularMap;
 };
 
 struct AnimationInform

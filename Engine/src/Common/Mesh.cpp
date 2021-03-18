@@ -95,6 +95,10 @@ namespace Engine {
 		}
 
 		s_StaticMeshes[name].reset(new StaticMesh);
+
+		if (name == "SkyBox")
+			s_StaticMeshes[name]->Type = MeshType::SkyBox;
+
 		return s_StaticMeshes[name];
 	}
 
@@ -169,6 +173,7 @@ namespace Engine {
 		case Engine::MeshType::Skeletal: return sizeof(SkeletalVertex);
 		case Engine::MeshType::Static: return sizeof(Vertex);
 		case Engine::MeshType::Sqaure: return 20;
+		case Engine::MeshType::SkyBox: return sizeof(Vertex);
 		}
 		return 0;
 	}

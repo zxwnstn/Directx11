@@ -42,6 +42,7 @@ namespace Engine {
 		void PlayAnimation() { m_PlayingAnimation = true; }
 		std::shared_ptr<struct AnimationInform> GetAnimInfo() { return m_Animation; }
 		std::string GetSkeletonName();
+		int GetMeshType(); //0 - skeletal, 1 - static, 2 - skybox
 
 	private:
 		void animationUpdate(float dt);
@@ -54,7 +55,7 @@ namespace Engine {
 		bool m_PlayingAnimation = false;
 		std::string m_Name;
 		std::string m_MeshName;
-		
+
 	private:
 		//Can be Shared
 		std::shared_ptr<struct Skeleton> m_Skeleton;

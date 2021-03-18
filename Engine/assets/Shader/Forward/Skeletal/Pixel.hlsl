@@ -157,11 +157,7 @@ float CalcSpotShadow(float3 position)
 	uv.x = uv.x * 0.5f + 0.5f;
 	uv.y = -uv.y * 0.5f + 0.5f;
 
-	if (0.0f < uv.x && uv.x < 1.0f && 0.0f < uv.y && uv.y < 1.0f)
-	{
-		return SpotShadowMap.SampleCmpLevelZero(SampleTypePCF, uv.xy, uv.z);
-	}
-	return 1.0f;
+	return SpotShadowMap.SampleCmpLevelZero(SampleTypePCF, uv.xy, uv.z);
 }
 
 float CalcPointShadow(float3 ToPixel, float depth)

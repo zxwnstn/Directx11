@@ -155,8 +155,8 @@ void Scene::OnImGui()
 		if (!m_Model3.empty())
 		{
 			auto curModel = m_Model3[curModelIdx];
-			auto sekeltonName = curModel->GetSkeletonName();
-			if (!sekeltonName.empty())
+			auto meshType = curModel->GetMeshType();
+			if (meshType == 0)
 			{
 				auto& animlist = curModel->GetAnimInfo()->AnimList;
 
@@ -166,7 +166,7 @@ void Scene::OnImGui()
 				for (int i = 0; i < animlist.size(); ++i)
 					animationList[i + 1] = animlist[i].c_str();
 
-				ImGui::BeginChild("AnimationTab", ImVec2(350, 150), true);
+				ImGui::BeginChild("AnimationTab", ImVec2(350, 100), true);
 				ImGui::Text("Animation");
 				std::string modelStr = curModel->m_Name;
 				if (ImGui::Combo("anim", &curAnimtionIdx[modelStr], animationList, animlist.size() + 1))
@@ -227,7 +227,6 @@ void Scene::OnImGui()
 			ImGui::EndChild();
 
 			ImGui::BeginChild("Material tab", ImVec2(350, 250), true);
-
 			auto materialset = m_Model3[curModelIdx]->m_MaterialSet;
 
 			const char* list[10];
@@ -252,11 +251,65 @@ void Scene::OnImGui()
 			bool diffuseMap = 1 & mappingMode;
 			bool normalMap = 2 & mappingMode;
 			bool specularMap = 4 & mappingMode;
-			ImGui::Checkbox("DiffuseTexture", &diffuseMap);
-			ImGui::Checkbox("NormalTexture", &normalMap);
-			ImGui::Checkbox("SpecularTexture", &specularMap);
+			if(!materialset->MaterialTextures[selectedMat][0].Name.empty())
+				ImGui::Checkbox("DiffuseTexture", &diffuseMap);
+			if (!materialset->MaterialTextures[selectedMat][1].Name.empty())
+				ImGui::Checkbox("NormalTexture", &normalMap);
+			if (!materialset->MaterialTextures[selectedMat][2].Name.empty())
+				ImGui::Checkbox("SpecularTexture", &specularMap);
 
 			mat.MapMode = (int)diffuseMap | (int)normalMap * 2 | (int)specularMap * 4;
+
+			static bool ChangeTexture = false;
+			if (ImGui::Button("Mapping Texture change"))
+			{
+				ChangeTexture = true;
+			}
+
+			if (ChangeTexture)
+			{
+				ImGui::Begin("Select texture");
+				auto list = Engine::TextureArchive::GetTextureList();
+				const char* target[] = { "DiffuseMap", "NormalMap", "SpecularMap" };
+				const char* textures[100];
+				static int curTarget = 0;
+				static int curTexture = 0;
+
+				int i = 0;
+				for (auto it = list.begin(); it != list.end(); ++it)
+				{
+					if (*it == "BackBuffer" || *it == "HDRTexture" || *it == "ForwardTexture" || *it == "images")
+						continue;
+					textures[i++] = it->c_str();
+				}
+
+				auto currentTextureNamestr = materialset->MaterialTextures[selectedMat][curTarget].Name;
+				const char* currentTextureName;
+				if (currentTextureNamestr.empty())
+					currentTextureName = "none";
+				else
+					currentTextureName = currentTextureNamestr.c_str();
+
+				ImGui::BulletText("Current texture %s", currentTextureName);
+				ImGui::Combo("Target", &curTarget, target, 3);
+				ImGui::Combo("Texture", &curTexture, textures, i);
+
+				if (ImGui::Button("Ok", ImVec2(30.0f, 20.0f)))
+				{
+					materialset->MaterialTextures[selectedMat][curTarget].Name = textures[curTexture];
+					curTarget = 0;
+					curTexture = 0;
+					ChangeTexture = false;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Cancel", ImVec2(30.0f, 20.0f)))
+				{
+					curTarget = 0;
+					curTexture = 0;
+					ChangeTexture = false;
+				}
+				ImGui::End();
+			}
 
 			ImGui::EndChild();
 
@@ -526,6 +579,10 @@ SceneInform Scene::Save()
 			matInform.Mapmode = material->Materials[i].MapMode;
 			matInform.Specular = material->Materials[i].Specular;
 			matInform.Shiness = material->Materials[i].Shiness;
+			matInform.DiffuseMap = material->MaterialTextures[i][0].Name;
+			matInform.NormalMap = material->MaterialTextures[i][1].Name;
+			matInform.SpecularMap = material->MaterialTextures[i][2].Name;
+
 			modelInform.Material.push_back(matInform);
 		}
 
@@ -640,11 +697,15 @@ Scene::Scene(const SceneInform & _inform)
 		for (int i = 0; i < inform.Material.size(); ++i)
 		{
 			auto& mat = materialset->Materials[i];
+			auto& texture = materialset->MaterialTextures;
 			mat.Ambient = inform.Material[i].Ambient;
 			mat.Diffuse = inform.Material[i].Diffuse;
 			mat.Specular = inform.Material[i].Specular;
 			mat.MapMode = inform.Material[i].Mapmode;
 			mat.Shiness = inform.Material[i].Shiness;
+			texture[i][0].Name = inform.Material[i].DiffuseMap;
+			texture[i][1].Name = inform.Material[i].NormalMap;
+			texture[i][2].Name = inform.Material[i].SpecularMap;
 		}
 		
 		model->m_Transform.SetTranslate(inform.Translate);

@@ -41,7 +41,7 @@ namespace Engine {
 		std::shared_ptr<SBuffer<float>> LumCsBuffer;
 		std::shared_ptr<Light> emptyLight;
 		std::shared_ptr<Model3D> lightModel;
-
+		vec4 SkyColor;
 
 		RenderMode Mode;
 		RenderingPath Path;
@@ -105,6 +105,11 @@ namespace Engine {
 
 		s_Data.ReinhardToneMapFactor[0] = 6.0f;
 		s_Data.ReinhardToneMapFactor[1] = 6.0f;
+
+		s_Data.SkyColor.x = 1.0f;
+		s_Data.SkyColor.y = 1.0f;
+		s_Data.SkyColor.z = 1.0f;
+		s_Data.SkyColor.w = 1.0f;
 	}
 
 	void Renderer::Shutdown()
@@ -165,6 +170,11 @@ namespace Engine {
 		tFactor = factor;
 	}
 
+	vec4 & Renderer::GetSkyColor()
+	{
+		return s_Data.SkyColor;
+	}
+
 	void Renderer::SetRenderMode(RenderMode mode)
 	{
 		s_Data.Mode = mode;
@@ -192,6 +202,8 @@ namespace Engine {
 		case RenderMode::Deffered: renderDeffered(); break;
 		case RenderMode::Forward: renderForward(); break;
 		}
+
+		Some();
 
 		//Render 2D
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
@@ -243,7 +255,10 @@ namespace Engine {
 				DirSkeletal->SetParam<CBuffer::CascadedViewProj>(light->m_CascadedMat);
 				
 				for (auto model3D : s_Data.Queued3D)
+				{
+					if (model3D->GetMeshType() == 2) continue;
 					draw3D(model3D, "EffectShadowDirectional");
+				}
 			}
 			else if (light->m_Type == Light::Type::Point)
 			{
@@ -251,7 +266,11 @@ namespace Engine {
 
 				PointStatic->SetParam<CBuffer::CubeCamera>(light->lightCam);
 				PointSkeletal->SetParam<CBuffer::CubeCamera>(light->lightCam);
-				for (auto model3D : s_Data.Queued3D) draw3D(model3D, "EffectShadowPoint");
+				for (auto model3D : s_Data.Queued3D)
+				{
+					if (model3D->GetMeshType() == 2) continue;
+					draw3D(model3D, "EffectShadowPoint");
+				}
 			}
 			else if (light->m_Type == Light::Type::Spot)
 			{
@@ -259,7 +278,11 @@ namespace Engine {
 
 				SpotStatic->SetParam<CBuffer::Camera>(light->lightCam);
 				SpotSkeletal->SetParam<CBuffer::Camera>(light->lightCam);
-				for (auto model3D : s_Data.Queued3D) draw3D(model3D, "EffectShadowSpot");
+				for (auto model3D : s_Data.Queued3D)
+				{
+					if (model3D->GetMeshType() == 2) continue;
+					draw3D(model3D, "EffectShadowSpot");
+				}
 			}
 		}
 	}
@@ -364,10 +387,12 @@ namespace Engine {
 	void Renderer::draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind, bool tess)
 	{
 		std::string useShader = shader;
-		switch (model->m_ModelBuffer->GetMeshType())
+		auto meshType = model->m_ModelBuffer->GetMeshType();
+		switch (meshType)
 		{
 		case MeshType::Skeletal: useShader += "Skeletal"; break;
 		case MeshType::Static: useShader += "Static"; break;
+		case MeshType::SkyBox: useShader += "SkyBox"; break;
 		}
 
 		auto myShader = ShaderArchive::Get(useShader);
@@ -376,13 +401,27 @@ namespace Engine {
 		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
 		myShader->SetParam<CBuffer::Materials>(*model->m_MaterialSet);
 		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+		if (meshType == MeshType::SkyBox)
+		{
+			myShader->SetParam<CBuffer::SkyBoxInfo>(s_Data.SkyColor);
+			myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+			auto skyTexture = model->m_MaterialSet->MaterialTextures[0][0].Name;
+
+			if(!skyTexture.empty())
+				TextureArchive::Get(skyTexture)->Bind(0);
+		}
+		else
+		{
+			if (myShader->Has(Shader::Type::PixelShader))
+				model->m_MaterialSet->BindTextures(materialBind);
+		}
 
 		model->m_ModelBuffer->Bind();
-		if (tess)
+		if (tess && meshType != MeshType::SkyBox)
+		{
 			Dx11Core::Get().Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
-
-		if (myShader->Has(Shader::Type::PixelShader))
-			model->m_MaterialSet->BindTextures(materialBind);
+		}
+		
 
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
 
@@ -479,11 +518,10 @@ namespace Engine {
 
 			lightingShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
-			lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
-			lightingShader->SetParam<CBuffer::Cascaded>(s_Data.QueuedLight[i]->m_CascadedMat);
 			switch (s_Data.QueuedLight[i]->m_Type)
 			{
 			case Light::Type::Directional:
+				lightingShader->SetParam<CBuffer::Cascaded>(s_Data.QueuedLight[i]->m_CascadedMat);
 				Dx11Core::Get().Context->PSSetShaderResources(8, 1, &s_Data.DirShadowMaps[dirIndex]->m_ShaderResourceView);
 				dirIndex++;
 				break;
@@ -492,6 +530,7 @@ namespace Engine {
 				pointIndex++;
 				break;
 			case Light::Type::Spot:
+				lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
 				Dx11Core::Get().Context->PSSetShaderResources(6, 1, &s_Data.SpotShadowMaps[spotIndex]->m_ShaderResourceView);
 				spotIndex++;
 				break;
@@ -564,17 +603,19 @@ namespace Engine {
 				s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
 				skeletal->SetParam<CBuffer::Light>(*light);
-				skeletal->SetParam<CBuffer::LightPos>(*light);
-				skeletal->SetParam<CBuffer::LightCam>(*light);
-				skeletal->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
 				static_->SetParam<CBuffer::Light>(*light);
+
+				skeletal->SetParam<CBuffer::LightPos>(*light);
 				static_->SetParam<CBuffer::LightPos>(*light);
+
+				skeletal->SetParam<CBuffer::LightCam>(*light);
 				static_->SetParam<CBuffer::LightCam>(*light);
-				static_->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
 
 				switch (light->m_Type)
 				{
 				case Light::Type::Directional:
+					skeletal->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
+					static_->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
 					Dx11Core::Get().Context->PSSetShaderResources(2, 1, &s_Data.DirShadowMaps[dirIdx]->m_ShaderResourceView);
 					dirIdx++;
 					break;
@@ -583,6 +624,7 @@ namespace Engine {
 					pointIdx++;
 					break;
 				case Light::Type::Spot:
+					
 					Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[spotIdx]->m_ShaderResourceView);
 					spotIdx++;
 					break;
@@ -616,7 +658,6 @@ namespace Engine {
 		
 		auto myShader = ShaderArchive::Get("2D");
 		myShader->Bind();
-		//myShader->SetParam<CBuffer::temp>(mtemp);
 		Transform t;
 		t.SetScale(0.2f, 0.3f, 1.0f);
 		t.SetTranslate(-0.5f, -0.5f, 0.0f);
@@ -624,7 +665,7 @@ namespace Engine {
 		myShader->SetParam<CBuffer::Transform>(t);
 		s_Data.ModelBuffer2D->Bind();
 
-		Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.DirShadowMaps[0]->m_ShaderResourceView);
+		Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[0]->m_ShaderResourceView);
 
 		Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
 	}

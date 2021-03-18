@@ -31,6 +31,7 @@ namespace Engine {
 		static void ActivateWire(bool activate);
 		static void ActivateLighting(bool activate);
 		static void SetTFactor(float tFactor);
+		static struct vec4& GetSkyColor();
 
 	public:
 		static void BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights);

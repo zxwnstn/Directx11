@@ -108,6 +108,7 @@ void SandBox::OnImGui()
 
 		auto glov = Engine::Renderer::GetGlobalEnv();
 		ImGui::ColorEdit3("Global Ambient", glov->Ambient.m);
+		ImGui::ColorEdit3("Sky Color", Engine::Renderer::GetSkyColor().m);
 
 		if (ImGui::Checkbox("WireFrame", &wire))
 			Engine::Renderer::ActivateWire(wire);

@@ -54,6 +54,12 @@ namespace Engine {
 		return ret;
 	}
 
+	int Model3D::GetMeshType()
+	{
+		return static_cast<int>(m_ModelBuffer->GetMeshType());
+	}
+
+	
 	void Model3D::animationUpdate(float dt)
 	{
 		if (!m_Animation) return;

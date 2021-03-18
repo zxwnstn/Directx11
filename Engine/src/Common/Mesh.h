@@ -5,7 +5,8 @@ namespace Engine {
 	enum class MeshType
 	{
 		Skeletal,
-		Static, 
+		Static,
+		SkyBox,
 		Sqaure
 	};
 
@@ -84,7 +85,7 @@ namespace Engine {
 		uint32_t* Indices;
 		uint32_t IndiceCount;
 
-		const MeshType Type = MeshType::Skeletal;
+		MeshType Type = MeshType::Skeletal;
 
 		friend class MeshArchive;
 	};
@@ -99,7 +100,7 @@ namespace Engine {
 		uint32_t* Indices;
 		uint32_t IndiceCount;
 
-		const MeshType Type = MeshType::Static;
+		MeshType Type = MeshType::Static;
 
 		friend class MeshArchive;
 	};

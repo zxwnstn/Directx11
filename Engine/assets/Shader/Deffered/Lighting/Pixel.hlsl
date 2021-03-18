@@ -165,6 +165,9 @@ float4 main(Input input) : SV_TARGET
 	float4 WorldPositionSample = WorldPosition.Sample(SampleTypeClamp, input.tex);
 	float4 MiscSample = Misc.Sample(SampleTypeClamp, input.tex);
 
+	if (DiffuseSample.w == 0.9f)
+		return DiffuseSample;
+
 	float depth = DepthSample.x;
 	float3 diffuse = DiffuseSample.xyz;
 

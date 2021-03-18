@@ -121,6 +121,8 @@ namespace Engine {
 			ImGuiLayer::Init((int)prop.hWnd);
 		}
 
+		MeshArchive::GetStaticMesh("SkyBox")->Type = MeshType::SkyBox;
+
 		isInited = true;
 		LOG_CRITICAL("Initiation ModuleCore succesfully Complete {0}sec", Timestep::TotalElapse());
 	}

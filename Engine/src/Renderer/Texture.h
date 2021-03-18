@@ -129,6 +129,7 @@ namespace Engine {
 
 		static bool Has(const std::string& name);
 		static std::shared_ptr<Texture> Get(const std::string& name);
+		static std::vector<std::string> GetTextureList();
 		static void Shutdown();
 
 		friend class Dx11Core;

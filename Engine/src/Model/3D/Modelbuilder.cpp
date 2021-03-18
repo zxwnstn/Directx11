@@ -67,7 +67,10 @@ namespace Engine {
 
 	FinalModelBuilder ObjModelBuilder::SetObject(const std::string & objectName)
 	{
-		myModel->m_ModelBuffer = ModelBuffer::Create(MeshType::Static)
+		MeshType type = MeshType::Static;
+		if (objectName == "SkyBox")
+			type = MeshType::SkyBox;
+		myModel->m_ModelBuffer = ModelBuffer::Create(type)
 			.SetMesh(MeshArchive::GetStaticMesh(objectName));
 
 		myModel->m_MeshName = objectName;

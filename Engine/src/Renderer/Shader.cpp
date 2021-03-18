@@ -30,6 +30,7 @@ namespace Engine {
 		case CBuffer::Type::DispatchInfo: return sizeof(CBuffer::DispatchInfo);
 		case CBuffer::Type::ToneMapFactor: return sizeof(CBuffer::ToneMapFactor);
 		case CBuffer::Type::Gamma: return sizeof(CBuffer::Gamma);
+		case CBuffer::Type::SkyBoxInfo: return sizeof(CBuffer::SkyBoxInfo);
 		}
 		return 0;
 	}
@@ -54,6 +55,7 @@ namespace Engine {
 		if (name == "DispatchInfo") return CBuffer::Type::DispatchInfo;
 		if (name == "ToneMapFactor") return CBuffer::Type::ToneMapFactor;
 		if (name == "Gamma") return CBuffer::Type::Gamma;
+		if (name == "SkyBoxInfo") return CBuffer::Type::SkyBoxInfo;
 		return CBuffer::Type::None;
 	}
 
