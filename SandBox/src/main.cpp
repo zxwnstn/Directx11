@@ -33,8 +33,15 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam
 		g_Height = HIWORD(lParam);
 		if (g_Width != 0 && g_Height != 0)
 		{
+			Engine::Renderer::AppMinimized(false);
 			Engine::Renderer::Resize(g_Width, g_Height);
 			sandBox.OnResize();
+			LOG_INFO("Application Resized! width : {0}, height {1}", g_Width, g_Height);
+		}
+		if (g_Width == 0 && g_Height == 0)
+		{
+			Engine::Renderer::AppMinimized(true);
+			LOG_INFO("Application Minizied!");
 		}
 	}
 	return (DefWindowProc(hWnd, iMessage, wParam, lParam));
@@ -75,8 +82,10 @@ int main()
 	ShowWindow(hWindow, SW_SHOW);
 
 	Engine::ModuleCore::Init({ g_Width, g_Height, (uint64_t)hWindow });
-
 	sandBox.Init();
+
+	Engine::Renderer::Resize(g_Width, g_Height);
+	sandBox.OnResize();
 
 	Engine::Timestep::SetTimePoint();
 

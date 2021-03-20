@@ -149,11 +149,11 @@ float CalcConeAttenuation(float3 lightPos, float3 lightDir)
 
 float CalcSpotShadow(float3 position)
 {
-	float4 worldPosition;
-	worldPosition = mul(float4(position, 1.0f), LView);
-	worldPosition = mul(worldPosition, LProjection);
+	float4 lightPosition;
+	lightPosition = mul(float4(position, 1.0f), LView);
+	lightPosition = mul(lightPosition, LProjection);
 
-	float3 uv = worldPosition.xyz / worldPosition.w;
+	float3 uv = lightPosition.xyz / lightPosition.w;
 	uv.x = uv.x * 0.5f + 0.5f;
 	uv.y = -uv.y * 0.5f + 0.5f;
 
@@ -242,12 +242,12 @@ float4 main(Input input) : SV_TARGET
 	float LightAttenuation = 1.0f; // no light decrease
 	float3 LightVector = -LDirection.xyz;
 
-	if (LType == 1)
+	if (LType == 1) //Point
 	{
 		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp);
 		LightVector = -input.lightToPos;
 	}
-	if (LType == 2)
+	if (LType == 2) //Spot
 	{
 		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp)
 			* CalcConeAttenuation(input.lightToPos, LightVector);

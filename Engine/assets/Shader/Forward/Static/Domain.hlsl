@@ -146,9 +146,6 @@ Output main(ConstantOutput HSConstantData, const OutputPatch<Input, 3> I, float3
 	output.position = mul(output.position, Translate);
 	
 	pos = output.position;
-	pos.x = pos.x / pos.w;
-	pos.y = pos.y / pos.w;
-	pos.z = pos.z / pos.w;
 
 	output.position = mul(output.position, WorldMatrix);
 	output.position = mul(output.position, CView);
@@ -160,9 +157,9 @@ Output main(ConstantOutput HSConstantData, const OutputPatch<Input, 3> I, float3
 	output.binormal = mul(f3BiNormal, Rotate);
 	output.tangent = mul(f3Tangent, Rotate);
 	
+	output.worldPosition = pos.xyz;
 	output.lightToPos = pos.xyz - LPosition;
 	output.globalAmbient = EAmbient;
-	output.worldPosition = pos.xyz;
 	output.camvector = normalize(CPosition - pos.xyz);
 
 	output.UseShadowMap = EUseShadowMap;

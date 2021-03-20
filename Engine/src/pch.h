@@ -46,6 +46,7 @@
 #include <ctime>
 
 #include "Util/MathType.h"
+#include "Util/Misc.h"
 #include "Core/Log.h"
 #include "Core/Base.h"
 

@@ -39,7 +39,7 @@ Output main(Input input)
 	float4 pos = float4(input.position, 1.0f);
 	output.position = mul(pos, Scale);
 	output.position = mul(output.position, Rotate);
-	output.position = output.position + float4(CPosition, 0.0f);
+	output.position = mul(output.position, Translate);
 	output.position = mul(output.position, CView);
 	output.position = mul(output.position, CProjection);
 

@@ -11,8 +11,10 @@ namespace Engine {
 	}
 
 	Light::Light()
-		: lightCam(3.141592f / 2.0f, 1.0f)
+		: lightCam(1.0f, 1.0f)
 	{
+		SetOuterAngle(m_OuterAngle);
+		lightCam.GetTransform().SetScale(0.2f, 0.2f, 0.2f);
 	}
 
 	void Light::UpdateCascade(std::shared_ptr<Camera> curcamera)
@@ -20,6 +22,27 @@ namespace Engine {
 		m_CascadedMat.Update(lightCam.GetTransform().GetRotate(), curcamera);
 	}
 
+	void Light::SetOuterAngle(float outerAngle)
+	{
+		m_OuterAngle = outerAngle;
+		lightCam.SetFov(m_OuterAngle * 2.0f);
+	}
+
+	void Light::SetType(Type type)
+	{
+		m_Type = type;
+		switch (type)
+		{
+		case Engine::Light::Directional:
+			break;
+		case Engine::Light::Point:
+			lightCam.SetFov(3.141592f * 0.5f);
+			break;
+		case Engine::Light::Spot:
+			lightCam.SetFov(m_OuterAngle * 2.0f);
+			break;
+		}
+	}
 
 	CascadedMatrix::CascadedMatrix()
 	{

@@ -156,6 +156,7 @@ float CalcSpotShadow(float3 position)
 	float3 uv = worldPosition.xyz / worldPosition.w;
 	uv.x = uv.x * 0.5f + 0.5f;
 	uv.y = -uv.y * 0.5f + 0.5f;
+	//uv.y = 1.0f -uv.y;
 	
 	return SpotShadowMap.SampleCmpLevelZero(SampleTypePCF, uv.xy, uv.z);
 }

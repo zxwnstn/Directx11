@@ -37,6 +37,7 @@ namespace Engine {
 
 	private:
 		Shader(const std::string& path, const std::string& name);
+		void Release();
 
 	public:
 		BufferBuilder CreateCompotibleBuffer();
@@ -90,6 +91,7 @@ namespace Engine {
 		std::string Name;
 		uint8_t TypeKey = 0;
 		InputLayout Layout;
+		bool Created = true;
 
 		std::unordered_map<Type, ShaderVar> Shaders;
 		std::unordered_map<CBuffer::Type, ContantBuffer> CBuffers;
@@ -107,6 +109,7 @@ namespace Engine {
 		static std::shared_ptr<Shader> Add(const std::string& path, const std::string& name);
 		static std::shared_ptr<Shader> Get(const std::string& name);
 		static bool Has(const std::string& name);
+		static void RecomplieShader(const std::string& path);
 
 	private:
 		static std::unordered_map<std::string, std::shared_ptr<Shader>> s_Shaders;

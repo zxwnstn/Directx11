@@ -32,6 +32,8 @@ namespace Engine {
 		ENABLE_ELAPSE
 		LOG_CRITICAL("Hello Directx11 Engine! initiation ModuleCore start");
 
+		LOG_INFO("Initiated window size width : {0}, height : {1}", prop.Width, prop.Height);
+
 		LOG_INFO("Init Renderer") {
 			Renderer::Init(prop);
 		}
@@ -52,7 +54,9 @@ namespace Engine {
 							break;
 						shaderName = stem + shaderName;
 					}
-					ShaderArchive::Add(dir.path().parent_path().string(), shaderName);
+
+					auto abspath = std::filesystem::absolute(dir.path().parent_path());
+					ShaderArchive::Add(abspath.string(), shaderName);
 				}
 			}
 		}

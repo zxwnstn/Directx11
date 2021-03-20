@@ -8,7 +8,7 @@ namespace Engine {
 	{
 		vec3 Ambient{ 0.0f, 0.0f, 0.0f};
 		mat4 WorldMatrix;
-		bool UseShadowMap = false;
+		bool UseShadowMap = true;
 		vec4 bias;
 		Environment();
 	};
@@ -54,6 +54,8 @@ namespace Engine {
 			Spot
 		};
 		void UpdateCascade(std::shared_ptr<Camera> curcamera);
+		void SetOuterAngle(float outerAngle);
+		void SetType(Type type);
 
 		CascadedMatrix m_CascadedMat;
 		Camera lightCam;

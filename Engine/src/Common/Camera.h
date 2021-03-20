@@ -42,6 +42,9 @@ namespace Engine {
 		const std::string& GetName() { return m_Cameraname; }
 		void SetName(const std::string& name) { m_Cameraname = name; }
 
+		bool isChangedView = false;
+		bool isChangedProj = false;
+
 	private:
 		void recalculateViewMatrix();
 		void recalculateProjectionMatrix();
@@ -54,8 +57,7 @@ namespace Engine {
 		float m_Magnification = -1.0f; //only for Orthographic
 		float m_Near;
 		float m_Far;
-		bool isChangedView = false;
-		bool isChangedProj = false;
+		
 		std::string m_Cameraname;
 
 		Transform m_Transform;

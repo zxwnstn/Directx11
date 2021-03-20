@@ -102,6 +102,8 @@ namespace Engine::CBuffer {
 
 	void LightCam::Upload(Engine::Light & other)
 	{
+
+		auto transform = other.lightCam.GetTransform();
 		LightView = Util::Transpose(other.lightCam.GetViewMatrix());
 		LightProjection = Util::Transpose(other.lightCam.GetProjectionMatrix());
 	}
@@ -172,9 +174,12 @@ namespace Engine::CBuffer {
 		ToCascadeScale = matrix.m_vToCascadeScale;
 	}
 
-	void SkyBoxInfo::Upload(vec4 & color)
+	void SkyBoxInfo::Upload(vec3 & color)
 	{
-		Color = color;
+		Color.x = color.x;
+		Color.y = color.y;
+		Color.z = color.z;
+		Color.w = 1.0f;
 	}
 
 }

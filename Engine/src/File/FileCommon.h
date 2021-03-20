@@ -21,8 +21,8 @@ namespace Engine::File {
 	void TryCreateDir(const std::string& path);
 	void TryCreateFile(const std::string& file);
 
-	void OpenSaveFileDialog(const std::string& path);
-	void OpenReadFileDialog(const std::string& path);
+	void OpenSaveFileDialog(const std::string& path, wchar_t* extensionInform);
+	void OpenReadFileDialog(const std::string& path, wchar_t* extensionInform);
 	std::string GetDialogResult();
 
 	std::string GetCommonPath(CommonPathType pathType);

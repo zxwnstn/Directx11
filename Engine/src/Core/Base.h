@@ -7,9 +7,13 @@
 //TODO create option cmake
 #define ASSERT_ENABLE
 #define LOGGING_MISC false
+	
 
 #ifdef _DEBUG
 	#define DEBUG_FEATURE
+	#define RELEASE false
+#else
+	#define RELEASE true
 #endif
 
 #ifdef DEBUG_FEATURE		

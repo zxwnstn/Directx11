@@ -11,26 +11,19 @@ float Gray = 0.0f;
 
 void SandBox::Init()
 {
-	std::shared_ptr<Scene> scene(new Scene("Scene1")); 
+	std::shared_ptr<Scene> scene(new Scene("Default Scene")); 
 	{
-		////Model
-		std::shared_ptr<Engine::Model3D> model = Engine::Model3D::Create()
-			.buildFromFBX()
-			.SetSkeleton("Kachujin");
-
-		model->m_Name = "Kachujin";
-		model->m_Transform.SetScale(0.01f, 0.01f, 0.01f);
-
-		std::shared_ptr<Engine::Model3D> floor = Engine::Model3D::Create()
+		std::shared_ptr<Engine::Model3D> cube = Engine::Model3D::Create()
 			.buildFromOBJ()
-			.SetObject("Square");
+			.SetObject("Cube_t6");
 
-		floor->m_Name = "floor";
-		floor->m_Transform.SetScale(5.0f, 5.0f, 1.0f);
-		floor->m_Transform.SetRotate(1.572f, 0.0f, 0.0f);
+		cube->m_Name = "cube";
+		cube->m_Transform.SetTranslate(0.0f, 1.0f, 0.0f);
+		cube->m_MaterialSet->Materials[0].Diffuse.x = 0.8f;
+		cube->m_MaterialSet->Materials[0].Diffuse.y = 0.8f;
+		cube->m_MaterialSet->Materials[0].Diffuse.z = 0.8f;	
 
-		scene->Add3DModel(model);
-		scene->Add3DModel(floor);
+		scene->Add3DModel(cube);
 	}
 	Scenes.push_back(scene);
 
@@ -41,8 +34,16 @@ void SandBox::Init()
 	case 0: Engine::Renderer::SetRenderMode(Engine::RenderMode::Forward); break;
 	case 1: Engine::Renderer::SetRenderMode(Engine::RenderMode::Deffered); break;
 	}
-	Engine::Renderer::ActivateHdr(hdr);
+	Engine::Renderer::ActivateLighting(lighting);
 	Engine::Renderer::ActivateShadow(shadow);
+	Engine::Renderer::ActivateHdr(hdr);
+	Engine::Renderer::ActivateGamma(gamma);
+	Engine::Renderer::ActivateShowGBuffer(gBuffer);
+	Engine::Renderer::ActivateVSync(v_Sync);
+	Engine::Renderer::ActivateWire(wire);
+	Engine::Renderer::SetTFactor(tFactor);
+	Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
+
 }
 
 void SandBox::OnImGui()
@@ -53,44 +54,24 @@ void SandBox::OnImGui()
 
 	if (ImGui::CollapsingHeader("Overview"))
 	{
-		auto ms = ts.elapse();
-		int fps = int(1.0f / ms);
+		auto framespeed = ts.elapse();
+		auto delay = ts2.elapse(false);
+		static int fps = 60;
+		if (delay > 0.5f)
+		{
+			fps = int(1.0f / framespeed);
+			ts2.update();
+		}
+		
 		ImGui::Text("Fps %d (v-sync)", fps);
+		if (ImGui::Checkbox("Verticla Sync", &v_Sync))
+			Engine::Renderer::ActivateVSync(v_Sync);
 		ImGui::Text("Width : %d, Height : %d", g_Width, g_Height);
 
-		ImGui::BeginChild("cur Camera info", ImVec2(300, 200), true);
-
-		ImGui::Text("Camera info");
-		ImGui::Spacing();
-
 		auto& curCam = CurScene->GetCurCam();
-		auto& camTransform = curCam->GetTransform();
-		auto& camTranslate = camTransform.GetTranslate();
-		auto& camRotate = camTransform.GetRotate();
-
-		const char* type;
-		int camtype = curCam->GetCamType();
-		switch (camtype)
-		{
-		case 0: type = "Otho"; break;
-		case 1: type = "Perspective"; break;
-		}
-
-		ImGui::Text("Camera name : %s", curCam->GetName().c_str());
-		ImGui::Text("Camera Tpye : %s", type);
-		if (camtype == 0)
-			ImGui::Text("Magnification : %f", curCam->GetMag());
-		else
-			ImGui::Text("Fov : %f", curCam->GetFov());
-		ImGui::Text("near : %f", curCam->GetNear());
-		ImGui::Text("far: %f", curCam->GetFar());
-
-		ImGui::Text("Translate");
-		ImGui::Text("x : %f, y : %f, z : %f", camTranslate.x, camTranslate.y, camTranslate.z);
-		ImGui::Text("Rotate(degree)");
-		ImGui::Text("x : %f, y : %f, z : %f", Engine::Util::ToDegree(camRotate.x), Engine::Util::ToDegree(camRotate.y), Engine::Util::ToDegree(camRotate.z));
-
-		ImGui::EndChild();
+		
+		ImGui::Text("Current Scene : %s", CurScene->GetSceneName().c_str());
+		ImGui::Text("Activated Camera : %s", curCam->GetName().c_str());
 	}
 
 	if (ImGui::CollapsingHeader("Rendering"))
@@ -106,11 +87,7 @@ void SandBox::OnImGui()
 			}
 		}
 
-		auto glov = Engine::Renderer::GetGlobalEnv();
-		ImGui::ColorEdit3("Global Ambient", glov->Ambient.m);
-		ImGui::ColorEdit3("Sky Color", Engine::Renderer::GetSkyColor().m);
-
-		if (ImGui::Checkbox("WireFrame", &wire))
+		if (ImGui::Checkbox("Render as WireFrame", &wire))
 			Engine::Renderer::ActivateWire(wire);
 
 		if (ImGui::Checkbox("Shadow", &shadow))
@@ -118,7 +95,7 @@ void SandBox::OnImGui()
 
 		if (shadow)
 		{
-			if (ImGui::SliderFloat("DepthBias", &depthBias, 0.0f, 100.0f))
+			if (ImGui::SliderInt("DepthBias", &depthBias, 0, 100))
 				Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
 			if (ImGui::SliderFloat("SlopeBias", &slopeBias, 0.0f, 100.0f))
 				Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
@@ -126,7 +103,7 @@ void SandBox::OnImGui()
 
 		if (renderingPath == 0)
 		{
-			if (ImGui::Checkbox("PhongShading", &lighting))
+			if (ImGui::Checkbox("Lighting", &lighting))
 			{
 				Engine::Renderer::ActivateLighting(lighting);
 			}
@@ -178,7 +155,7 @@ void SandBox::OnImGui()
 		for (int i = 0; i < Scenes.size(); ++i)
 			ScenesNames[i] = Scenes[i]->GetSceneName().c_str();
 
-		if (ImGui::Combo("", &curSceneIdx, ScenesNames, Scenes.size()))
+		if (ImGui::Combo("", &curSceneIdx, ScenesNames, (int)Scenes.size()))
 			sceneChanged = true;
 
 		ImGui::SameLine();
@@ -209,7 +186,7 @@ void SandBox::OnImGui()
 			if (!onSave)
 			{
 				onSave = true;
-				Engine::File::OpenSaveFileDialog(Engine::File::GetCommonPath(Engine::File::CommonPathType::Scene));
+				Engine::File::OpenSaveFileDialog(Engine::File::GetCommonPath(Engine::File::CommonPathType::Scene), sceneExt);
 			}
 		}
 
@@ -219,8 +196,17 @@ void SandBox::OnImGui()
 			if (!onLoad)
 			{
 				onLoad = true;
-				Engine::File::OpenReadFileDialog(Engine::File::GetCommonPath(Engine::File::CommonPathType::Scene));
+				Engine::File::OpenReadFileDialog(Engine::File::GetCommonPath(Engine::File::CommonPathType::Scene), sceneExt);
 			}
+		}
+	}
+
+	if (ImGui::CollapsingHeader("RecompileSahder"))
+	{
+		if (ImGui::Button("Select Shader"))
+		{
+			onShaderLoad = true;
+			Engine::File::OpenReadFileDialog(Engine::File::GetCommonPath(Engine::File::CommonPathType::Scene), shaderExt);
 		}
 	}
 
@@ -233,9 +219,10 @@ void SandBox::OnImGui()
 		if (ImGui::Button("Ok"))
 		{
 			std::shared_ptr<Scene> scene(new Scene(newSceneBuffer));
+			LOG_INFO("Scene create! {0}", newSceneBuffer);
 			Scenes.push_back(scene);
 			CurScene = scene;
-			curSceneIdx = Scenes.size() - 1;
+			curSceneIdx = (int)Scenes.size() - 1;
 			memset(newSceneBuffer, 0, 100);
 			newScene = false;
 		}
@@ -253,6 +240,7 @@ void SandBox::OnImGui()
 		ImGui::InputText("sceneName", newSceneBuffer, 100);
 		if (ImGui::Button("Ok"))
 		{
+			LOG_INFO("Scene renamed! {0} onto {1}", CurScene->GetSceneName(), newSceneBuffer);
 			CurScene->SetSceneName(newSceneBuffer);
 			memset(newSceneBuffer, 0, 100);
 			newName = false;
@@ -281,24 +269,32 @@ void SandBox::OnUpdate(float dt)
 	Engine::Renderer::Present();
 	controlUpdate(dt);
 
-	if (onSave || onLoad)
+	if (onSave || onLoad || onShaderLoad)
 	{
 		auto path = Engine::File::GetDialogResult();
 		if (!path.empty())
 		{
+			if (path == "%~#%#@^^@&")
+			{
+				onSave = false;
+				onLoad = false;
+				onShaderLoad = false;
+			}
 			if (onSave)
 			{
 				auto extension = path.find(".scene");
-				if (extension == std::string::npos)
+				if (extension == std::wstring::npos)
 					path += ".scene";
 				SaveScene(path);
 			}
 			if (onLoad)
 				LoadScene(path);
-
+			if (onShaderLoad)
+				Engine::ShaderArchive::RecomplieShader(path);
 
 			onSave = false;
 			onLoad = false;
+			onShaderLoad = false;
 		}
 	}
 
@@ -366,11 +362,11 @@ void SandBox::controlUpdate(float dt)
 		camTransform.MoveRight(0.1f);
 	}
 
-	if (GetAsyncKeyState('Q') & 0x8000)
+	if (GetAsyncKeyState('E') & 0x8000)
 	{
 		camTransform.AddTranslate(0.0f, 0.1f, 0.0f);
 	}
-	if (GetAsyncKeyState('E') & 0x8000)
+	if (GetAsyncKeyState('Q') & 0x8000)
 	{
 		camTransform.AddTranslate(0.0f, -0.1f, 0.0f);
 	}
@@ -397,7 +393,7 @@ void SandBox::LoadScene(const std::string& path)
 	Scenes.push_back(scene);
 
 	CurScene = scene;
-	curSceneIdx = Scenes.size() - 1;
+	curSceneIdx = (int)Scenes.size() - 1;
 
 	LOG_INFO("{0} Load scene complete!(Path : {1})", inform.SceneName, path);
 }

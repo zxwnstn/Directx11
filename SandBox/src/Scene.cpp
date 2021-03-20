@@ -8,6 +8,7 @@
 void Scene::Add2DModel(std::shared_ptr<Engine::Model2D> model)
 {
 	m_Model2.push_back(model);
+	LOG_TRACE("On {0} scene added 2D-model", m_Name);
 }
 
 void Scene::Add3DModel(std::shared_ptr<Engine::Model3D> model)
@@ -15,35 +16,58 @@ void Scene::Add3DModel(std::shared_ptr<Engine::Model3D> model)
 	if (!model->m_Animation)
 		curAnimtionIdx[model->m_Name] = 0;
 	m_Model3.push_back(model);
+	LOG_TRACE("On {0} scene added 3D-model : {1}", m_Name, model->m_Name);
 }
 
 void Scene::AddLight(std::shared_ptr<Engine::Light> light)
 {
+	LOG_TRACE("On {0} scene added light : {1}", m_Name, light->name);
 	m_Lights.push_back(light);
 }
 
 void Scene::AddCamera(std::shared_ptr<Engine::Camera> camera)
 {
+	LOG_TRACE("On {0} scene added Camera : {1}", m_Name, camera->GetName());
 	m_Cameras.push_back(camera);
 }
 
 void Scene::SetSceneName(const std::string & name)
 {
+	LOG_TRACE("On {0} scene renamed into {1}", m_Name, name);
 	m_Name = name;
 }
 
 Scene::Scene()
 {
+	//floor
+	std::shared_ptr<Engine::Model3D> floor = Engine::Model3D::Create()
+		.buildFromOBJ()
+		.SetObject("Square");
+
+	floor->m_Name = "floor";
+	floor->m_Transform.SetScale(10.0f, 1.0f, 10.0f);
+
+	//skybox
+	std::shared_ptr<Engine::Model3D> skybox = Engine::Model3D::Create()
+		.buildFromOBJ()
+		.SetObject("SkyBox");
+
+	skybox->m_Name = "SkyBox";
+	skybox->m_Transform.SetScale(100.0f, 100.0f, 100.0f);
+	skybox->m_MaterialSet->MaterialTextures[0][0].Name = "skyBox";
+
+
 	//Cam
 	float filedOfView = 3.141592f / 3.0f;
 	std::shared_ptr<Engine::Camera> mainCam(new Engine::Camera(filedOfView, float(g_Width) / (float)g_Height, 0.1f, 1000.0f, "Main Camera"));
-	mainCam->GetTransform().SetTranslate(0.0f, 2.0f, 4.0f);
-	mainCam->GetTransform().SetRotate(0.0f, 3.14f, 0.0f);
+	mainCam->GetTransform().SetTranslate(0.0f, 13.0f, -14.0f);
+	mainCam->GetTransform().SetRotate(35.0f / 180.0f * 3.141592f, 0.0f, 0.0f);
 	std::shared_ptr<Engine::Camera> subCam(new Engine::Camera(10, float(g_Width) / (float)g_Height, true, -1.0f, 1.0f, "Sub Camera"));
 	std::shared_ptr<Engine::Light> light(new Engine::Light);
 	
+	//light
 	light->m_Type = Engine::Light::Type::Directional;
-	light->lightCam.GetTransform().SetRotate(0.8f, 0.0f, 0.0f);
+	light->lightCam.GetTransform().SetRotate(Engine::Util::ToRadian(120.0f), Engine::Util::ToRadian(35.0f), 0.0f);
 	light->name = "Main Light";
 
 	m_Curcam = mainCam;
@@ -51,6 +75,8 @@ Scene::Scene()
 	m_Cameras.push_back(mainCam);
 	m_Cameras.push_back(subCam);
 	m_Lights.push_back(light);
+	m_Model3.push_back(floor);
+	m_Model3.push_back(skybox);
 }
 
 
@@ -63,6 +89,10 @@ Scene::Scene(const std::string & name)
 
 void Scene::OnUpdate(float dt)
 {
+	auto globalenv = Engine::Renderer::GetGlobalEnv();
+	Engine::Renderer::GetSkyColor() = m_worldInform.SkyColor;
+	globalenv->WorldMatrix = Engine::Util::GetTransform(m_worldInform.WorldTranslate, m_worldInform.WorldRotate, m_worldInform.WorldScale, true);
+	globalenv->Ambient = m_worldInform.GlobalAmbient;
 
 	for(auto model : m_Model3)
 		model->Update(dt);
@@ -78,6 +108,31 @@ void Scene::OnImGui()
 {
 	ImGui::Begin("Inspector");
 
+	if (ImGui::CollapsingHeader("World"))
+	{
+		ImGui::BeginChild("World Tab", ImVec2(350, 150), true);
+		ImGui::BulletText("World Transform");
+		ImGui::InputFloat3("Translate", m_worldInform.WorldTranslate.m);
+		Engine::vec3 temp;
+		{
+			temp.x = Engine::Util::ToDegree(m_worldInform.WorldRotate.x);
+			temp.y = Engine::Util::ToDegree(m_worldInform.WorldRotate.y);
+			temp.z = Engine::Util::ToDegree(m_worldInform.WorldRotate.z);
+		}
+		if (ImGui::SliderFloat3("Rotate(degree)", temp.m, 0.0f, 360.0f))
+		{
+			m_worldInform.WorldRotate.x = Engine::Util::ToRadian(temp.x);
+			m_worldInform.WorldRotate.y = Engine::Util::ToRadian(temp.y);
+			m_worldInform.WorldRotate.z = Engine::Util::ToRadian(temp.z);
+		}
+		ImGui::SliderFloat3("Scale", m_worldInform.WorldScale.m, 0.1f, 1.0f);
+
+		ImGui::ColorEdit3("SkyColor", m_worldInform.SkyColor.m);
+		ImGui::ColorEdit3("Global Ambient", m_worldInform.GlobalAmbient.m);
+
+		ImGui::EndChild();
+	}
+
 	if (ImGui::CollapsingHeader("Camera"))
 	{
 		const char* camlist[10];
@@ -85,15 +140,31 @@ void Scene::OnImGui()
 		for (auto& cam : m_Cameras)
 			camlist[i++] = cam->GetName().c_str();
 
-		ImGui::Combo("Camera list", &selectedCamera, camlist, m_Cameras.size());
+		ImGui::Combo("Camera list", &selectedCamera, camlist, (int)m_Cameras.size());
 		ImGui::BeginChild("CameraTab", ImVec2(350, 250), true);
 
-		if (ImGui::Button("Set as main camera"))
-		{
-			m_Curcam = m_Cameras[selectedCamera];
-			curcamIdx = selectedCamera;
-		}
+		if (ImGui::Button("New Camera"))
+			newCam = true;
 
+		ImGui::SameLine();
+		if(m_Cameras.size() > 1)
+		{
+			if (ImGui::Button("delete"))
+			{
+				if (activateCamIdx >= selectedCamera)
+					--activateCamIdx;
+
+				std::string camname = m_Cameras[selectedCamera]->GetName();
+				m_Cameras.erase(m_Cameras.begin() + selectedCamera);
+				if (m_Cameras.size() == selectedCamera)
+					--selectedCamera;
+
+				m_Curcam = m_Cameras[activateCamIdx];
+
+				LOG_TRACE("On {0} scene deleted 3D-model : {1}", m_Name, camname);
+			}
+		}
+		ImGui::Spacing();
 		auto curCam = m_Cameras[selectedCamera];
 		const char* camtype[] = { "Ortho", "Perspective" };
 		int _type = curCam->GetCamType();
@@ -112,7 +183,7 @@ void Scene::OnImGui()
 		else
 		{
 			float fov = curCam->GetFov();
-			if (ImGui::SliderFloat("Field of view", &fov, 0.0f, 3.14f))
+			if (ImGui::SliderFloat("Field of view", &fov, 0.1f, 3.14f))
 				curCam->SetFov(fov);
 		}
 
@@ -131,12 +202,17 @@ void Scene::OnImGui()
 
 		auto& translate = transform.GetTranslate();
 		auto& rotate = transform.GetRotate();
-		float trans[3] = { translate.x, translate.y, translate.z };
 		float rot[3] = { Engine::Util::ToDegree(rotate.x), Engine::Util::ToDegree(rotate.y), Engine::Util::ToDegree(rotate.z) };
-
+		
 		ImGui::InputFloat3("Translate", translate.m);
-		if (ImGui::InputFloat3("Rotate(radian)", rot))
+		if (ImGui::SliderFloat3("Rotate(Degree)", rot, 0.0f, 360.0f))
 			transform.SetRotate(Engine::Util::ToRadian(rot[0]), Engine::Util::ToRadian(rot[1]), Engine::Util::ToRadian(rot[2]));
+
+		if (ImGui::Button("Set as main camera"))
+		{
+			m_Curcam = m_Cameras[selectedCamera];
+			activateCamIdx = selectedCamera;
+		}
 
 		ImGui::EndChild();
 	}
@@ -147,10 +223,24 @@ void Scene::OnImGui()
 		for (int i = 0; i < m_Model3.size(); ++i)
 			modelName[i] = m_Model3[i]->m_Name.c_str();
 		
-		ImGui::Combo("model", &curModelIdx, modelName, m_Model3.size());
+		ImGui::Combo("model", &curModelIdx, modelName, (int)m_Model3.size());
 
-		if (ImGui::Button("Add New"))
+		if (ImGui::Button("New Model"))
 			newModel = true;
+		
+		if (!m_Model3.empty())
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("delete"))
+			{
+				std::string modelName = m_Model3[curModelIdx]->m_Name;
+				m_Model3.erase(m_Model3.begin() + curModelIdx);
+				if (curModelIdx == m_Model3.size())
+					--curModelIdx;
+				deleteModel = false;
+				LOG_TRACE("On {0} scene deleted 3D-model : {1}", m_Name, modelName);
+			}
+		}
 
 		if (!m_Model3.empty())
 		{
@@ -166,10 +256,10 @@ void Scene::OnImGui()
 				for (int i = 0; i < animlist.size(); ++i)
 					animationList[i + 1] = animlist[i].c_str();
 
-				ImGui::BeginChild("AnimationTab", ImVec2(350, 100), true);
+				ImGui::BeginChild("AnimationTab", ImVec2(350, 130), true);
 				ImGui::Text("Animation");
 				std::string modelStr = curModel->m_Name;
-				if (ImGui::Combo("anim", &curAnimtionIdx[modelStr], animationList, animlist.size() + 1))
+				if (ImGui::Combo("anim", &curAnimtionIdx[modelStr], animationList, (int)animlist.size() + 1))
 				{
 					if (curAnimtionIdx[modelStr] == 0)
 					{
@@ -209,7 +299,7 @@ void Scene::OnImGui()
 
 			ImGui::Text("Model Transform");
 			ImGui::InputFloat3("Translate", translate.m);
-			if (ImGui::InputFloat3("Rotate(degree)", rot))
+			if (ImGui::SliderFloat3("Rotate(degree)", rot, 0.0f, 360.0f))
 				transform.SetRotate(Engine::Util::ToRadian(rot[0]), Engine::Util::ToRadian(rot[1]), Engine::Util::ToRadian(rot[2]));
 			if (curModel->m_Animation)
 			{
@@ -238,7 +328,7 @@ void Scene::OnImGui()
 			}
 
 			ImGui::Text("Material");
-			ImGui::Combo("part", &selectedMat, list, materialset->Materials.size());
+			ImGui::Combo("part", &selectedMat, list, (int)materialset->Materials.size());
 
 			auto& mat = materialset->Materials[selectedMat];
 			ImGui::ColorEdit3("Ambient", mat.Ambient.m);
@@ -294,7 +384,7 @@ void Scene::OnImGui()
 				ImGui::Combo("Target", &curTarget, target, 3);
 				ImGui::Combo("Texture", &curTexture, textures, i);
 
-				if (ImGui::Button("Ok", ImVec2(30.0f, 20.0f)))
+				if (ImGui::Button("Ok"))
 				{
 					materialset->MaterialTextures[selectedMat][curTarget].Name = textures[curTexture];
 					curTarget = 0;
@@ -302,7 +392,7 @@ void Scene::OnImGui()
 					ChangeTexture = false;
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Cancel", ImVec2(30.0f, 20.0f)))
+				if (ImGui::Button("Cancel"))
 				{
 					curTarget = 0;
 					curTexture = 0;
@@ -312,9 +402,6 @@ void Scene::OnImGui()
 			}
 
 			ImGui::EndChild();
-
-			if (ImGui::Button("delete"))
-				deleteModel = true;
 		}
 	}
 
@@ -331,55 +418,106 @@ void Scene::OnImGui()
 		}
 
 		ImGui::Combo("Lights", &selectedLight, lightsList, total);
-		if (ImGui::Button("Add", ImVec2(50, 20)))
+		if (ImGui::Button("New Light"))
 		{
 			newLight = true;		
 		}
 
 		if (total)
 		{
+			ImGui::SameLine();
+			if (ImGui::Button("Delete", ImVec2(50, 20)))
+				deleteLight = true;
+
 			auto curLight = m_Lights[selectedLight];
-			ImGui::BeginChild("LightTab", ImVec2(350, 200), true);
+			ImGui::BeginChild("LightTab", ImVec2(350, 400), true);
 			int idx = int(curLight->m_Type);
 			if (ImGui::Combo("Type", &idx, ltypes, 3))
 			{
-				curLight->m_Type = static_cast<Engine::Light::Type>(idx);
+				curLight->SetType(static_cast<Engine::Light::Type>(idx));
 			}
 
 			ImGui::ColorEdit3("Color", curLight->m_Color.m);
-			ImGui::SliderFloat("Intensity", &curLight->m_Intensity, 0.0f, 5.0f);
 
+			float renderscale = curLight->lightCam.GetTransform().GetScale().x * 5.0f;
+			if(ImGui::SliderFloat("RenderScale", &renderscale, 0.0f, 10.0f))
+				curLight->lightCam.GetTransform().SetScale(renderscale * 0.2f, renderscale * 0.2f, renderscale * 0.2f);
+
+			ImGui::SliderFloat("Intensity", &curLight->m_Intensity, 0.0f, 5.0f);
+			
 			switch (m_Lights[selectedLight]->m_Type)
 			{
 			case Engine::Light::Type::Directional:
 			{
-				auto& cascademat = curLight->m_CascadedMat;
-				ImGui::SliderFloat3("Direction", curLight->lightCam.GetTransform().GetRotate().m, -3.14f, 3.14f);
-				ImGui::SliderFloat("Cascade border1", &cascademat.m_arrCascadeRanges[1], 0.2f, 100.0f);
-				ImGui::SliderFloat("Cascade border2", &cascademat.m_arrCascadeRanges[2], 0.3f, 100.1f);
-				if (cascademat.m_arrCascadeRanges[1] >= cascademat.m_arrCascadeRanges[2])
-					cascademat.m_arrCascadeRanges[2] = cascademat.m_arrCascadeRanges[1] + 0.1f;
+				auto& rotate = curLight->lightCam.GetTransform().GetRotate();
+				float rot[] = { Engine::Util::ToDegree(rotate.x),  Engine::Util::ToDegree(rotate.y) ,  Engine::Util::ToDegree(rotate.z) };
+				if (ImGui::SliderFloat3("Direction(Degree)", rot, 0.0f, 360.0f))
+				{
+					rotate.x = Engine::Util::ToRadian(rot[0]);
+					rotate.y = Engine::Util::ToRadian(rot[1]);
+					rotate.z = Engine::Util::ToRadian(rot[2]);
+				}			
 			}
 			break;
 			case Engine::Light::Type::Point:
 				ImGui::SliderFloat("Range", &curLight->m_Range, 0.0f, 100.0f);
-				ImGui::SliderFloat3("Position", curLight->lightCam.GetTransform().GetTranslate().m, -10.0f, 10.0f);
+				ImGui::InputFloat3("Position", curLight->lightCam.GetTransform().GetTranslate().m);
 				break;
 			case Engine::Light::Type::Spot:
+			{
 				ImGui::SliderFloat("Range", &curLight->m_Range, 0.0f, 100.0f);
-				ImGui::SliderFloat3("Position", curLight->lightCam.GetTransform().GetTranslate().m, -10.0f, 10.0f);
-				ImGui::SliderFloat3("Direction", curLight->lightCam.GetTransform().GetRotate().m, -3.14f, 3.14f);
+				ImGui::InputFloat3("Position", curLight->lightCam.GetTransform().GetTranslate().m);
+				
+				auto rotate = curLight->lightCam.GetTransform().GetRotate();
+				float rot[] = { Engine::Util::ToDegree(rotate.x),  Engine::Util::ToDegree(rotate.y) ,  Engine::Util::ToDegree(rotate.z) };
+				if(ImGui::SliderFloat3("Direction", curLight->lightCam.GetTransform().GetRotate().m, 0.0f, 360.0f))
+				{
+					rotate.x = Engine::Util::ToRadian(rot[0]);
+					rotate.y = Engine::Util::ToRadian(rot[1]);
+					rotate.z = Engine::Util::ToRadian(rot[2]);
+				}
 				ImGui::SliderFloat("InnerAngle", &curLight->m_InnerAngle, 0.1f, 1.54f);
-				ImGui::SliderFloat("OuterAngle", &curLight->m_OuterAngle, 0.1f, 1.55f);
+				
+				static float outerAng = 1.0f;
+				outerAng = curLight->m_OuterAngle;
+				if (ImGui::SliderFloat("OuterAngle", &outerAng, 0.1f, 1.55f))
+					curLight->SetOuterAngle(outerAng);
+
 				if (curLight->m_InnerAngle > curLight->m_OuterAngle)
 					curLight->m_OuterAngle = curLight->m_InnerAngle + 0.1f;
-
+			}
 				break;
 			}
 
-			if (ImGui::Button("Delete", ImVec2(50, 20)))
-				deleteLight = true;
+			if(ImGui::TreeNode("Light Cam Detail"))
+			{
+				static float n, a, m;
+				n = curLight->lightCam.GetNear();
+				if (ImGui::InputFloat("Near", &n, 0.1f, 1.0f))
+					curLight->lightCam.SetNear(n);
 
+				a = curLight->lightCam.GetScreenAspect();
+				if (ImGui::InputFloat("ScreenAspect", &a, 0.1f, 1.0f))
+					curLight->lightCam.OnResize(a, 1.0f);
+
+				m = curLight->lightCam.GetMag();
+				if (ImGui::InputFloat("Magnification", &m, 0.1f, 1.0f))
+					curLight->lightCam.SetMagnification(m);
+
+				static float f;
+				f = curLight->lightCam.GetFov();
+				if (ImGui::InputFloat("Fov", &f, 0.1f, 1.0f))
+					curLight->lightCam.SetFov(f);
+
+				auto& cascademat = curLight->m_CascadedMat;
+				ImGui::SliderFloat("Cascade Shadow border1", &cascademat.m_arrCascadeRanges[1], 0.2f, 100.0f);
+				ImGui::SliderFloat("Cascade Shadow border2", &cascademat.m_arrCascadeRanges[2], 0.3f, 100.1f);
+				if (cascademat.m_arrCascadeRanges[1] >= cascademat.m_arrCascadeRanges[2])
+					cascademat.m_arrCascadeRanges[2] = cascademat.m_arrCascadeRanges[1] + 0.1f;
+
+				ImGui::TreePop();
+			}
+			
 			ImGui::EndChild();
 		}
 	}
@@ -416,7 +554,7 @@ void Scene::OnImGui()
 			for (auto& name : staticList)
 				StaticModels[i++] = name.c_str();
 
-			if (ImGui::Combo("Mesh", &selectedStatic, StaticModels, staticList.size()))
+			if (ImGui::Combo("Mesh", &selectedStatic, StaticModels, (int)staticList.size()))
 				selectedName = staticList[selectedStatic];
 
 			if (selectedName.empty()) selectedName = staticList[0];
@@ -427,7 +565,7 @@ void Scene::OnImGui()
 			for (auto& name : skeletalList)
 				SkeltalModels[i++] = name.c_str();
 
-			if(ImGui::Combo("Mesh", &selectedStatic, SkeltalModels, skeletalList.size()))
+			if(ImGui::Combo("Mesh", &selectedStatic, SkeltalModels, (int)skeletalList.size()))
 				selectedName = skeletalList[selectedStatic];
 
 			if (selectedName.empty()) selectedName = skeletalList[0];
@@ -436,33 +574,39 @@ void Scene::OnImGui()
 
 		if (ImGui::Button("Create"))
 		{
+			std::shared_ptr<Engine::Model3D> model;
 			if (newModelType)
 			{
-				std::shared_ptr<Engine::Model3D> model = Engine::Model3D::Create()
+				model = Engine::Model3D::Create()
 					.buildFromOBJ()
 					.SetObject(selectedName);
 				model->m_Name = newModelBuffer;
-				m_Model3.push_back(model);
 			}
 			else
 			{
-				std::shared_ptr<Engine::Model3D> model = Engine::Model3D::Create()
+				model = Engine::Model3D::Create()
 					.buildFromFBX()
 					.SetSkeleton(selectedName);
 				model->m_Transform.SetScale(0.01f, 0.01f, 0.01f);
 				model->m_Name = newModelBuffer;
-				m_Model3.push_back(model);
 			}
+			Add3DModel(model);
+
 			memset(newModelBuffer, 0, 100);
 			newModel = false;
-			curModelIdx = m_Model3.size() - 1;
+			curModelIdx = (int)m_Model3.size() - 1;
 			selectedName.clear();
+			selectedStatic = 0;
+			selectedSkeletal = 0;
 		}
+		ImGui::SameLine();
 		if (ImGui::Button("Cancel"))
 		{
 			memset(newModelBuffer, 0, 100);
 			newModel = false;
 			selectedName.clear();
+			selectedStatic = 0;
+			selectedSkeletal = 0;
 		}
 		ImGui::End();
 	}
@@ -486,12 +630,14 @@ void Scene::OnImGui()
 			}
 			light->lightCam.GetTransform().SetTranslate(newLightPosition[0], newLightPosition[1], newLightPosition[2]);
 			light->name = newLightBuffer;
-			m_Lights.push_back(light);
+			AddLight(light);
+			selectedLight = (int)m_Lights.size() - 1;
 			memset(newLightBuffer, 0, 100);
 			memset(newLightPosition, 0, 12);
 			newlightType = 0;
 			newLight = false;
 		}
+		ImGui::SameLine();
 		if (ImGui::Button("Cancel"))
 		{
 			memset(newLightBuffer, 0, 100);
@@ -502,29 +648,72 @@ void Scene::OnImGui()
 		ImGui::End();
 	}
 
-	if (deleteModel)
+	if (newCam)
 	{
-		m_Model3.erase(m_Model3.begin() + curModelIdx);
-		if (curModelIdx == m_Model3.size())
-			--curModelIdx;
-		deleteModel = false;
+		ImGui::Begin("New Camera");
+
+		static const char* camtype[] = { "Perspective", "Ortho" };
+		static int selectedtype = 0;
+		ImGui::Combo("Type", &selectedtype, camtype, 2);
+		
+		static float fov = 0.0f;
+		static float mag = 0.0f;
+
+		if (selectedtype) ImGui::InputFloat("Mag", &mag, 0.1f, 1.0f);
+		else ImGui::SliderFloat("FOV", &fov, 1.0f, 180.0f);
+
+		static char nameBuffer[100];
+		ImGui::InputText("Name", nameBuffer, 100);
+
+		if (ImGui::Button("Create"))
+		{
+			std::shared_ptr<Engine::Camera> cam;
+			if (selectedtype) cam.reset(new Engine::Camera(mag, float(g_Width) / (float)g_Height, true, -1.0f, 1.0f, nameBuffer));
+			else cam.reset(new Engine::Camera(Engine::Util::ToRadian(fov), float(g_Width) / (float)g_Height, 0.1f, 1000.0f, nameBuffer));
+			AddCamera(cam);
+
+			mag = 0.0f;
+			fov = 0.0f;
+			memset(nameBuffer, 0, 100);
+			selectedtype = 0;
+			newCam = false;
+
+			selectedCamera = int(m_Cameras.size()) - 1;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel"))
+		{
+			mag = 0.0f;
+			fov = 0.0f;
+			memset(nameBuffer, 0, 100);
+			selectedtype = 0;
+			newCam = false;
+		}
+
+
+		ImGui::End();
 	}
 
 	if (deleteLight)
 	{
 		deleteLight = false;
+		std::string lightname = m_Lights[selectedLight]->name;
 		m_Lights.erase(m_Lights.begin() + selectedLight);
 		if (selectedLight == m_Lights.size())
-			--selectedLight;
+		{
+			if(selectedLight)
+				--selectedLight;
+		}
+		LOG_TRACE("On {0} scene deleted light : {1}", m_Name, lightname);
 	}
-
 }
 
 SceneInform Scene::Save()
 {
 	SceneInform inform;
 	inform.SceneName = m_Name;
-	inform.CurrentCamIdx = curcamIdx;
+	inform.CurrentCamIdx = activateCamIdx;
+	inform.World = m_worldInform;
 	for (auto cam : m_Cameras)
 	{
 		CameraInform camInform;
@@ -612,6 +801,7 @@ SceneInform Scene::Save()
 Scene::Scene(const SceneInform & _inform)
 {
 	m_Name = _inform.SceneName;
+	m_worldInform = _inform.World;
 	for (auto& inform : _inform.Camera)
 	{
 		float screenAspect = (float)g_Width / (float)g_Height;
@@ -648,31 +838,33 @@ Scene::Scene(const SceneInform & _inform)
 			curAnimtionIdx[model->m_Name] = 0;
 			if (animInform)
 			{
-				bool findCurAnim = false;
 				int animIdx = 1;
-				for (auto anim : animInform->AnimList)
-				{
-					if (anim == inform.AnimInfo.CurAnimation)
-					{
-						animInform->CurAnim = inform.AnimInfo.CurAnimation;
-						findCurAnim = true;
-						curAnimtionIdx[model->m_Name] = animIdx;
-						break;
-					}
-					++animIdx;
-				}
-				if (!findCurAnim)
-				{
-					model->StopAnimation();
-					LOG_CRITICAL("LoadScene::There is no cashed animation {0}'s {1}", inform.MeshName, inform.AnimInfo.CurAnimation);
-				}
-				else
-				{
-					model->PlayAnimation();
-					model->SetAnimation(inform.AnimInfo.CurAnimation, true);
-				}
+				bool findCurAnim = false;
 
-				
+				if (inform.AnimInfo.CurAnimation != "T-Pose")
+				{
+					for (auto anim : animInform->AnimList)
+					{
+						if (anim == inform.AnimInfo.CurAnimation)
+						{
+							animInform->CurAnim = inform.AnimInfo.CurAnimation;
+							findCurAnim = true;
+							curAnimtionIdx[model->m_Name] = animIdx;
+							break;
+						}
+						++animIdx;
+					}
+					if (!findCurAnim)
+					{
+						model->StopAnimation();
+						LOG_CRITICAL("LoadScene::There is no cashed animation {0}'s {1}", inform.MeshName, inform.AnimInfo.CurAnimation);
+					}
+					else
+					{
+						model->PlayAnimation();
+						model->SetAnimation(inform.AnimInfo.CurAnimation, true);
+					}
+				}
 				animInform->Elapsedtime = inform.AnimInfo.Curtime;
 				animInform->Loop = inform.AnimInfo.Loop;
 				animInform->Accelation = inform.AnimInfo.PlaySpeed;

@@ -33,7 +33,7 @@ GBuffer main(Input input) : SV_TARGET
 		output.Diffuse = SColor;
 	}
 	output.Diffuse = color;
-	output.Diffuse.w = 0.9f;
+	output.Ambient.w = 0.0f;
 
 	return output;
 }

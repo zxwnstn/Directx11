@@ -41,4 +41,5 @@
 #include "File/Serialization.h"
 #include "File/FileCommon.h"
 #include "Core/Log.h"
+#include "Renderer/Shader.h"
 

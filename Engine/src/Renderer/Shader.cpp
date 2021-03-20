@@ -159,13 +159,23 @@ namespace Engine {
 
 				AddCBuffer(file.path());
 				ID3D10Blob* binary = CompileShader(file.path(), type);
-				ASSERT(binary, "Shader::Create shader binary failed");
+				if (!binary)
+				{
+					LOG_CRITICAL("Shader::Create shader binary failed");
+					Created = false;
+					return;
+				}
 
 				CreateShader(binary, type);
 				
 				LOG_MISC("Compile Success : {0}", file.path().filename().string());
 			}
 		}
+	}
+
+	void Shader::Release()
+	{
+
 	}
 
 	void AddElements(const std::string& dataFormat, char* sementicName, uint32_t offset, std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDescs)
@@ -286,31 +296,46 @@ namespace Engine {
 		{
 		case Shader::VertexShader:
 		{
-			ID3D11VertexShader* shader;
+			ID3D11VertexShader* shader = nullptr;
 			Dx11Core::Get().Device->CreateVertexShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
-			ASSERT(shader, "Shader::Create Shader failed");
+			if (!shader)
+			{
+				LOG_CRITICAL("Shader::Create Shader failed");
+				Created = false;
+				return;
+			}
 			Shaders.emplace(type, shader);
 		}
 		break;
 		case Shader::HullShader:
 		{
-			ID3D11HullShader* shader;
+			ID3D11HullShader* shader = nullptr;
 			Dx11Core::Get().Device->CreateHullShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
-			ASSERT(shader, "Shader::Create Shader failed");
+			if (!shader)
+			{
+				LOG_CRITICAL("Shader::Create Shader failed");
+				Created = false;
+				return;
+			}
 			Shaders.emplace(type, shader);
 		}
 		break;
 		case Shader::DomainShader:
 		{
-			ID3D11DomainShader* shader;
+			ID3D11DomainShader* shader = nullptr;
 			Dx11Core::Get().Device->CreateDomainShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
-			ASSERT(shader, "Shader::Create Shader failed");
+			if (!shader)
+			{
+				LOG_CRITICAL("Shader::Create Shader failed");
+				Created = false;
+				return;
+			}
 			Shaders.emplace(type, shader);
 		}
 		break;
 		case Shader::GeometryShader:
 		{
-			ID3D11GeometryShader* shader;
+			ID3D11GeometryShader* shader = nullptr;
 			if (SOLayout.empty())
 			{
 				Dx11Core::Get().Device->CreateGeometryShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
@@ -326,24 +351,38 @@ namespace Engine {
 					binary->GetBufferPointer(),binary->GetBufferSize(), 
 					SOLayout.data(), (UINT)SOLayout.size(), &stride, 1, D3D11_SO_NO_RASTERIZED_STREAM, nullptr, &shader);
 			}
-		
-			ASSERT(shader, "Shader::Create Shader failed");
+			if (!shader)
+			{
+				LOG_CRITICAL("Shader::Create Shader failed");
+				Created = false;
+				return;
+			}
 			Shaders.emplace(type, shader);
 		}
 		break;
 		case Shader::PixelShader:
 		{
-			ID3D11PixelShader* shader;
+			ID3D11PixelShader* shader = nullptr;
 			Dx11Core::Get().Device->CreatePixelShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
-			ASSERT(shader, "Shader::Create Shader failed");
+			if (!shader)
+			{
+				LOG_CRITICAL("Shader::Create Shader failed");
+				Created = false;
+				return;
+			}
 			Shaders.emplace(type, shader);
 		}
 		break;
 		case Shader::ComputeShader:
 		{
-			ID3D11ComputeShader* shader;
+			ID3D11ComputeShader* shader = nullptr;
 			Dx11Core::Get().Device->CreateComputeShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &shader);
-			ASSERT(shader, "Shader::Create Shader failed");
+			if (!shader)
+			{
+				LOG_CRITICAL("Shader::Create Shader failed");
+				Created = false;
+				return;
+			}
 			Shaders.emplace(type, shader);
 		}
 		break;
@@ -419,7 +458,11 @@ namespace Engine {
 			&msg
 		);
 		if (result != S_OK)
+		{
 			Dx11Core::ErrorMessage(msg);
+			Created = false;
+			return nullptr;
+		}
 
 		if (type == Shader::VertexShader)
 			SetLayout(path, binary);
@@ -504,7 +547,12 @@ namespace Engine {
 
 	std::shared_ptr<Shader> ShaderArchive::Add(const std::string& path, const std::string& name)
 	{
-		if (!Has(name)) s_Shaders[name].reset(new Shader(path, name));
+		if (!Has(name))
+		{
+			auto shader = new Shader(path, name);
+			ASSERT(shader->Created, "Shader Create Failed");
+			s_Shaders[name].reset(shader);
+		}
 		return s_Shaders[name];
 	}
 
@@ -522,6 +570,31 @@ namespace Engine {
 	{
 		auto find = s_Shaders.find(name);
 		return find != s_Shaders.end();
+	}
+
+	void ShaderArchive::RecomplieShader(const std::string & path)
+	{
+		std::string target;
+		auto find = path.rfind("\\");
+		std::string folder = path.substr(0, find);
+
+		for (auto shader : s_Shaders)
+		{
+			if (shader.second->Path == folder)
+			{
+				target = shader.first;
+			}
+		}
+
+		auto shader = new Shader(folder, target);
+		if (!shader->Created)
+		{
+			LOG_CRITICAL("{0} Shader recompiling filed", target);
+			return;
+		}
+		LOG_INFO("{0} Shader recompiling complete!", target);
+		s_Shaders[target]->Release();
+		s_Shaders[target].reset(shader);
 	}
 
 }

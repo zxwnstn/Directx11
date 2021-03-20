@@ -31,7 +31,9 @@ namespace Engine {
 		static void ActivateWire(bool activate);
 		static void ActivateLighting(bool activate);
 		static void SetTFactor(float tFactor);
-		static struct vec4& GetSkyColor();
+		static void AppMinimized(bool min);
+		static void ActivateVSync(bool activate);
+		static struct vec3& GetSkyColor();
 
 	public:
 		static void BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights);
@@ -45,15 +47,17 @@ namespace Engine {
 		static float* GetReinhardFactor();
 
 		static void SetRenderMode(RenderMode mode);
-		static void AdjustShadowBias(float depth, float slope);
+		static void AdjustShadowBias(int depth, float slope);
 		static void Resize(uint32_t width, uint32_t height);
 
 	private:
+		//BeCarefull don't be same render target as compute target
 		static float computeLum(const std::string& target);
 		static void renderDeffered();
 		static void renderForward();
 		static void renderShadow();
 		static void renderGBuffer();
+		static void renderSkyBox();
 		static void renderLight(const std::shared_ptr<Light>& light);
 		static void draw2D(std::shared_ptr<Model2D> model, const std::string& shader);
 		static void draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind = 0, bool tess = false);

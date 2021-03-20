@@ -29,11 +29,11 @@ namespace Engine {
 			ar & Shiness; ar & MapMode; ar & Name;
 		}
 		vec4 Ambient;
-		vec4 Diffuse{1.0f, 1.0f, 1.0f, 1.0f};
-		vec4 Specular{1.0f, 1.0f, 1.0f, 1.0f};
+		vec4 Diffuse;
+		vec4 Specular;
 		vec4 Emissive;
 		vec4 Fresnel;
-		float Shiness = 20.0f;
+		float Shiness;
 		int MapMode = 0;
 		std::string Name = "default";
 	};

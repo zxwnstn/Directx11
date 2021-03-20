@@ -3,15 +3,13 @@
 #include <thread>
 #include <string>
 
-int main()
+int main() 
 {
-	std::string path = "E:\\dev\\Directx11\\Engine\\assets\\Scene\\sefs.scene";
+	std::string name = "zxcv";
 
-	auto slash = path.rfind('\\');
-	auto extension = path.rfind('.');
-	auto saveSceneName = path.substr(slash + 1, extension - slash - 1);
+	auto v = name.rfind("c");
+	auto k = name.substr(0, v);
 
-	
 }
 
 /*

@@ -1,12 +1,4 @@
 
-cbuffer Environment : register(b0)
-{
-	matrix WorldMatrix;
-	float3 EAmbient;
-	bool UseShadowMap;
-	float4 Bias;
-};
-
 struct Input
 {
 	float3 position : POSITION;

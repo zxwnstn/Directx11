@@ -51,7 +51,7 @@ namespace Engine::File {
 	bool runThread = false;
 	std::wstring result;
 
-	void SaveOfn(const std::string path)
+	void SaveOfn(const std::string path, wchar_t* extension)
 	{
 		std::wstring w;
 		w.assign(path.begin(), path.end());
@@ -62,7 +62,7 @@ namespace Engine::File {
 		wchar_t file[256]{ 0, };
 		OFN.lpstrFile = file;
 		OFN.nMaxFile = 256;
-		OFN.lpstrFilter = L"Scene File\0*.scene\0";
+		OFN.lpstrFilter = extension;
 		OFN.lpstrInitialDir = w.c_str();
 		GetSaveFileName(&OFN);
 
@@ -70,9 +70,13 @@ namespace Engine::File {
 		complete = true;
 
 		result = file;
+		if (file[0] == 0)
+		{
+			result = L"%~#%#@^^@&"; // mean cancel
+		}
 	}
 
-	void ReadOfn(const std::string path)
+	void ReadOfn(const std::string path, wchar_t* extension)
 	{
 		std::wstring w;
 		w.assign(path.begin(), path.end());
@@ -83,7 +87,7 @@ namespace Engine::File {
 		wchar_t file[256]{ 0, };
 		OFN.lpstrFile = file;
 		OFN.nMaxFile = 256;
-		OFN.lpstrFilter = L"Scene File\0*.scene\0";
+		OFN.lpstrFilter = extension;
 		OFN.lpstrInitialDir = w.c_str();
 		GetOpenFileName(&OFN);
 
@@ -91,28 +95,32 @@ namespace Engine::File {
 		complete = true;
 
 		result = file;
+		if (file[0] == 0)
+		{
+			result = L"%~#%#@^^@&"; 
+		}
 	}
 
 	
-	void OpenSaveFileDialog(const std::string & path)
+	void OpenSaveFileDialog(const std::string & path, wchar_t* extensionInform)
 	{
 		if (runThread) return;
 		
 		runThread = true;
 		complete = false;
 
-		std::thread t(SaveOfn, path);
+		std::thread t(SaveOfn, path, extensionInform);
 		t.detach();
 	}
 
-	void OpenReadFileDialog(const std::string & path)
+	void OpenReadFileDialog(const std::string & path, wchar_t* extensionInform)
 	{
 		if (runThread) return;
 
 		runThread = true;
 		complete = false;
 
-		std::thread t(ReadOfn, path);
+		std::thread t(ReadOfn, path, extensionInform);
 		t.detach();
 	}
 
@@ -120,12 +128,35 @@ namespace Engine::File {
 	{
 		if (!complete) return "";
 
-		std::string ret;
-		ret.assign(result.begin(), result.end());
+		std::string ret = Util::WstToStr(result);
 		return ret;
 	}
 
-
+#if RELEASE
+	std::string GetCommonPath(CommonPathType pathType)
+	{
+		switch (pathType)
+		{
+		case File::Assets:
+			return "assets/";
+		case File::Texture:
+			return "assets/Texture/";
+		case File::FBX:
+			return "assets/Fbx/";
+		case File::Obj:
+			return "assets/Obj/";
+		case File::FBXCache:
+			return "assets/FbxCache/";
+		case File::Shader:
+			return "assets/Shader/";
+		case File::Log:
+			return "Log/" + Time::Year_Mon_Day();
+		case File::Scene:
+			return "assets/Scene/";
+		}
+		return "";
+	}
+#else
 	std::string GetCommonPath(CommonPathType pathType)
 	{
 		switch (pathType)
@@ -149,6 +180,6 @@ namespace Engine::File {
 		}
 		return "";
 	}
-
+#endif
 }
 

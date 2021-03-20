@@ -140,6 +140,24 @@ struct LightInform
 	float OuterAngle;
 };
 
+struct WorldInform
+{
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & GlobalAmbient;
+		ar & SkyColor;
+		ar & WorldTranslate;
+		ar & WorldRotate;
+		ar & WorldScale;
+	}
+
+	Engine::vec3 GlobalAmbient{0.5f, 0.5f, 0.5f};
+	Engine::vec3 SkyColor{ 1.0f, 1.0f, 1.0f };
+	Engine::vec3 WorldTranslate;
+	Engine::vec3 WorldRotate{0.0f, 3.141592f, 0.0f};
+	Engine::vec3 WorldScale{ 1.0f, 1.0f, 1.0f };
+};
 
 struct SceneInform
 {
@@ -151,14 +169,17 @@ struct SceneInform
 		ar & Model3d;
 		ar & Light;
 		ar & Camera;
+		ar & SkyColor;
 	}
 
 	std::string SceneName;
 	int CurrentCamIdx;
+	Engine::vec4 SkyColor;
 	std::vector<Model2DInform> Model2d;
 	std::vector<Model3DInform> Model3d;
 	std::vector<LightInform> Light;
 	std::vector<CameraInform> Camera;
+	WorldInform World;
 };
 
 class Scene
@@ -194,16 +215,20 @@ private:
 
 	std::shared_ptr<class Engine::Camera> m_Curcam;
 
+	WorldInform m_worldInform;
+
 	int curModelIdx = 0;
 	int newlightType = 0;
 	int selectedLight = 0;
 	int selectedMat = 0;
 	int selectedCamera = 0;
-	int curcamIdx = 0;
+	int activateCamIdx = 0;
+
+	bool newCam = false;
 	bool newLight = false;
 	bool deleteLight = false;
-
 	bool newModel = false;
+
 	int selectedStatic = 0;
 	int selectedSkeletal = 0;
 	int newModelType = 0;

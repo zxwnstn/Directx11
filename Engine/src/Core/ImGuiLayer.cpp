@@ -10,7 +10,7 @@
 
 namespace Engine {
 
-	void ImGuiLayer::Init(int windowHandle)
+	void ImGuiLayer::Init(int64_t windowHandle)
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();

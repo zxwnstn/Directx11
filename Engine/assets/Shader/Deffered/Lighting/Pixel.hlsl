@@ -15,7 +15,15 @@ SamplerState SampleTypeClamp : register(s0);
 SamplerComparisonState SampleTypePCF : register(s1);
 SamplerState SampleType : register(s2);
 
-cbuffer Camera : register(b0)
+cbuffer Environment : register(b0)
+{
+	matrix WorldMatrix;
+	float3 EAmbient;
+	bool UseShadowMap;
+	float4 Bias;
+};
+
+cbuffer Camera : register(b1)
 {
 	matrix CView;
 	matrix CProjection;
@@ -23,7 +31,7 @@ cbuffer Camera : register(b0)
 	int padding_;
 };
 
-cbuffer Light : register(b1)
+cbuffer Light : register(b2)
 {
 	float4 LPosition;
 	float4 LDirection;
@@ -36,21 +44,13 @@ cbuffer Light : register(b1)
 	int3  LPadding;
 };
 
-cbuffer LightCam : register(b2)
+cbuffer LightCam : register(b3)
 {
 	matrix LView;
 	matrix LProjection;
 }
 
-cbuffer Environment : register(b4)
-{
-	matrix WorldMatrix;
-	float3 EAmbient;
-	bool UseShadowMap;
-	float4 Bias;
-};
-
-cbuffer Cascaded : register(b5)
+cbuffer Cascaded : register(b4)
 {
 	matrix ToShadowSpace;
 	float4 ToCascadeOffsetX;
@@ -165,8 +165,17 @@ float4 main(Input input) : SV_TARGET
 	float4 WorldPositionSample = WorldPosition.Sample(SampleTypeClamp, input.tex);
 	float4 MiscSample = Misc.Sample(SampleTypeClamp, input.tex);
 
-	if (DiffuseSample.w == 0.9f)
-		return DiffuseSample;
+	if (AmbientSample.w == 0.0f)
+	{
+		if (Bias.x == 0.0f)
+		{
+			return DiffuseSample;
+		}
+		else
+		{
+			discard;
+		}
+	}
 
 	float depth = DepthSample.x;
 	float3 diffuse = DiffuseSample.xyz;
@@ -220,8 +229,10 @@ float4 main(Input input) : SV_TARGET
 	float3 finalSpecular = sf * (specular * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
 	
-	if (DiffuseSample.w != 1.0f)
+	if (NormalSample.w != 1.0f)
+	{
 		return pow(float4(color, 1.0f), 0.4545);
+	}
 
 	return float4(color, 1.0f);
 }

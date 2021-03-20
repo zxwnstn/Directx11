@@ -29,6 +29,7 @@ set(project_headers
 	src/Util/Math.h
 	src/Util/MathType.h
 	src/Util/MathTypeConverter.h
+	src/Util/Misc.h
     src/Renderer/CBuffer.h
     src/Renderer/Dx11Core.h
     src/Renderer/ModelBuffer.h
@@ -64,6 +65,7 @@ set(project_source
 	src/Model/2D/2DModelBuilder.cpp
 	src/Util/Math.cpp
 	src/Util/MathTypeConverter.cpp
+	src/Util/Misc.cpp
     src/Renderer/CBuffer.cpp
     src/Renderer/Dx11Core.cpp
     src/Renderer/ModelBuffer.cpp

@@ -26,6 +26,7 @@ namespace Engine {
 		void ShutDown();
 		void Present();
 		void Resize(uint32_t width, uint32_t height);
+		void SetVSync(bool activate) { m_Vsynk = activate; }
 
 		HWND GetHWND();
 
@@ -41,6 +42,7 @@ namespace Engine {
 		LocalDeviceSpec LocalSpec;
 		IDXGISwapChain* SwapChain;
 
+		bool m_Vsynk = true;
 		std::unique_ptr<struct WindowProp> WinProp;
 
 		friend class PipelineController;

@@ -11,7 +11,7 @@
 namespace Engine {
 
 	ShadowMap::ShadowMap(uint32_t width, uint32_t height)
-		: m_Width(width), m_Height(height)
+		: m_Width(width), m_Height(height), m_TextureCount(1)
 	{
 		//Depth/Stencil Buffer
 		ZeroMemory(&m_DepthStencilBufferDecs, sizeof(m_DepthStencilBufferDecs));
@@ -47,16 +47,16 @@ namespace Engine {
 		ASSERT(m_ShaderResourceView, "Texture::Create Texture render target view failed");
 
 		//Viewport
-		m_ViewPortDesc.Width = (float)m_Width;
-		m_ViewPortDesc.Height = (float)m_Height;
 		m_ViewPortDesc.TopLeftX = 0.0f;
 		m_ViewPortDesc.TopLeftY = 0.0f;
+		m_ViewPortDesc.Width = (float)m_Width;
+		m_ViewPortDesc.Height = (float)m_Height;
+		m_ViewPortDesc.MinDepth = 0.0f;
 		m_ViewPortDesc.MaxDepth = 1.0f;
-		m_ViewPortDesc.TopLeftY = 0.0f;
 	}
 
 	ShadowMap::ShadowMap(uint32_t width, uint32_t height, uint32_t arraySize)
-		: m_Width(width), m_Height(height)
+		: m_Width(width), m_Height(height), m_TextureCount(arraySize)
 	{
 		//Depth/Stencil Buffer
 		ZeroMemory(&m_DepthStencilBufferDecs, sizeof(m_DepthStencilBufferDecs));
@@ -118,7 +118,7 @@ namespace Engine {
 		ID3D11RenderTargetView* nullTarget = nullptr;
 		Dx11Core::Get().Context->ClearDepthStencilView(m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0, 0);
 		D3D11_VIEWPORT vp[6] = { m_ViewPortDesc , m_ViewPortDesc , m_ViewPortDesc , m_ViewPortDesc , m_ViewPortDesc , m_ViewPortDesc };
-		Dx11Core::Get().Context->RSSetViewports(6, vp);
+		Dx11Core::Get().Context->RSSetViewports(m_TextureCount, vp);
 		Dx11Core::Get().Context->OMSetRenderTargets(1, &nullTarget, m_DepthStencilView);
 	}
 
@@ -147,8 +147,8 @@ namespace Engine {
 
 	void ShadowMap::MultipleBind(std::vector<std::shared_ptr<ShadowMap>>& shadowMaps, uint32_t count, uint32_t slot)
 	{
-		ID3D11ShaderResourceView** array;
-		for (int i = 0; i < count; ++i)
+		ID3D11ShaderResourceView** array = nullptr;
+		for (uint32_t i = 0; i < count; ++i)
 			array[i] = shadowMaps[i]->m_ShaderResourceView;
 
 		Dx11Core::Get().Context->PSSetShaderResources(slot, count, array);
@@ -484,7 +484,7 @@ namespace Engine {
 				maxMiplevel = m_TextureDesc.MipLevels;
 			}
 			LOG_MISC("{0}", paths[i]);
-			Dx11Core::Get().Context->UpdateSubresource(m_Buffer, i * maxMiplevel, NULL, resizedData, Width * 4 * sizeof(unsigned char), 0);
+			Dx11Core::Get().Context->UpdateSubresource(m_Buffer, i * maxMiplevel, NULL, resizedData, UINT(Width * 4 * sizeof(unsigned char)), 0);
 			stbi_image_free(data);
 			delete[] resizedData;
 		}
@@ -494,7 +494,7 @@ namespace Engine {
 		m_SrvDesc.Texture2DArray.MostDetailedMip = 0;
 		m_SrvDesc.Texture2DArray.MipLevels = maxMiplevel;
 		m_SrvDesc.Texture2DArray.FirstArraySlice = 0;
-		m_SrvDesc.Texture2DArray.ArraySize = paths.size();
+		m_SrvDesc.Texture2DArray.ArraySize = (UINT)paths.size();
 		Dx11Core::Get().Device->CreateShaderResourceView(m_Buffer, &m_SrvDesc, &m_ResourceView);
 		Dx11Core::Get().Context->GenerateMips(m_ResourceView);
 	}

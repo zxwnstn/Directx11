@@ -15,7 +15,7 @@ cbuffer Materials : register(b0)
 	int4  MMode[MaxPart / 4];
 };
 
-cbuffer Gamma : register(b1)
+cbuffer Gamma : register(b2)
 {
 	uint4 GammaCorection;
 };
@@ -43,6 +43,7 @@ struct Input
 	float3 gAmbient : AMBIENT;
 	float3 worldPosition : WORLD_POS;
 };
+
 
 float4 GetMaterialDiffuseMap(int index, float2 tex, int mapMode)
 {
@@ -108,11 +109,9 @@ GBuffer main(Input input) : SV_TARGET
 	float4 diffuseMap = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
 	if (diffuseMap.w < 0.9f)
 		discard;
-	bool gammaCorected = false;
-	if (GammaCorection.x == 1 && (diffuseMap.x + diffuseMap.y + diffuseMap.z) != 3.0f)
+	if (GammaCorection.x == 1 && (mapMode & 1))
 	{
 		diffuseMap = pow(diffuseMap, 2.2f);
-		gammaCorected = true;
 	}
 
 	float3 normalMap = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
@@ -129,10 +128,12 @@ GBuffer main(Input input) : SV_TARGET
 	}
 
 	output.Diffuse = float4(Diffuse, 1.0f);
-	if (gammaCorected)
-		output.Diffuse.w = 0.99f;
-
 	output.Normal = float4(input.normal, 1.0f);
+	if (GammaCorection.x == 1 && (mapMode & 1))
+	{
+		output.Normal.w = 0.99f; //mean Gamma Corrected color
+	}
+
 	output.Ambient = float4(Ambient, 1.0f);
 	output.WorldPosition = float4(input.worldPosition, 1.0f);
 	float shiness = MShiness[materialIndex / 4][materialIndex % 4];

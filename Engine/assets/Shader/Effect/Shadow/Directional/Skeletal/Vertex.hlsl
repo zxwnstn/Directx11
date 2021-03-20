@@ -1,12 +1,19 @@
+cbuffer Environment : register(b0)
+{
+	matrix WorldMatrix;
+	float3 EAmbient;
+	bool UseShadowMap;
+	float4 Bias;
+};
 
-cbuffer Transform : register(b0)
+cbuffer Transform : register(b1)
 {
 	matrix Translate;
 	matrix Rotate;
 	matrix Scale;
 };
 
-cbuffer Bone : register(b1)
+cbuffer Bone : register(b2)
 {
 	matrix SkinnedTransform[100];
 }

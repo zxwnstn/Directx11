@@ -41,12 +41,91 @@ namespace Engine {
 		std::shared_ptr<SBuffer<float>> LumCsBuffer;
 		std::shared_ptr<Light> emptyLight;
 		std::shared_ptr<Model3D> lightModel;
-		vec4 SkyColor;
+		vec3 SkyColor;
 
 		RenderMode Mode;
 		RenderingPath Path;
 
 	}static s_Data;
+
+	bool isHdr = false;
+	bool isGamma = false;
+	bool showGBuffer = false;
+	bool isWire = false;
+	bool isLighting = false;
+	float tFactor = 1.0f;
+	bool isMinimized = false;
+	uvec4 gamma;
+
+	std::shared_ptr<Environment> Renderer::GetGlobalEnv()
+	{
+		return s_Data.GlobalEnv;
+	}
+
+	void Renderer::AdjustShadowBias(int depth, float slope)
+	{
+		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(depth, slope);
+	}
+
+	void Renderer::ActivateHdr(bool activate)
+	{
+		isHdr = activate;
+	}
+
+	void Renderer::ActivateShadow(bool activate)
+	{
+		s_Data.GlobalEnv->UseShadowMap = activate;
+	}
+
+	void Renderer::ActivateGamma(bool activate)
+	{
+		gamma.x = (unsigned int)activate;
+	}
+
+	void Renderer::ActivateShowGBuffer(bool activate)
+	{
+		showGBuffer = activate;
+	}
+
+	void Renderer::ActivateWire(bool activate)
+	{
+		isWire = activate;
+	}
+
+	void Renderer::SetTFactor(float factor)
+	{
+		tFactor = factor;
+	}
+
+	void Renderer::AppMinimized(bool min)
+	{
+		isMinimized = min;
+	}
+
+	vec3 & Renderer::GetSkyColor()
+	{
+		return s_Data.SkyColor;
+	}
+
+	void Renderer::SetRenderMode(RenderMode mode)
+	{
+		s_Data.Mode = mode;
+	}
+
+	void Renderer::ActivateLighting(bool activate)
+	{
+		isLighting = activate;
+	}
+
+	float* Renderer::GetReinhardFactor()
+	{
+		return s_Data.ReinhardToneMapFactor;
+	}
+
+	void Renderer::ActivateVSync(bool activate)
+	{
+		Dx11Core::Get().SetVSync(activate);
+	}
 
 	void Renderer::Init(const WindowProp& prop)
 	{
@@ -88,8 +167,8 @@ namespace Engine {
 
 		s_Data.Mode = RenderMode::Forward;
 
-		for (uint32_t i = 0; i < MAX_LIGHT; ++i)
-			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(2048, 2048));
+		for (uint32_t i = 0; i < 10; ++i)
+			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(4096, 4096));
 		for (uint32_t i = 0; i < 10; ++i)
 			s_Data.PointShadowMaps.emplace_back(new ShadowMap(4096, 4096, 6));
 		for (uint32_t i = 0; i < 10; ++i)
@@ -106,22 +185,23 @@ namespace Engine {
 		s_Data.ReinhardToneMapFactor[0] = 6.0f;
 		s_Data.ReinhardToneMapFactor[1] = 6.0f;
 
-		s_Data.SkyColor.x = 1.0f;
-		s_Data.SkyColor.y = 1.0f;
-		s_Data.SkyColor.z = 1.0f;
-		s_Data.SkyColor.w = 1.0f;
 	}
 
 	void Renderer::Shutdown()
 	{
 	}
 
-	void Renderer::BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights)
+	void Renderer::Resize(uint32_t width, uint32_t height)
 	{
-		s_Data.PLController->ClearRTT();
-		s_Data.ActiveCamera = camera;
-		s_Data.QueuedLight = lights;
+		LOG_MISC("Renderer::Resize window {0} {1}", width, height);
+
+		Dx11Core::Get().Resize(width, height);
+		s_Data.GeometryBuffer->Resize(width, height);
+
+		TextureArchive::Get("ForwardTexture")->Resize(width, height);
+		TextureArchive::Get("HDRTexture")->Resize(width, height);
 	}
+
 
 	void Renderer::Enque2D(std::shared_ptr<Model2D> model)
 	{
@@ -133,77 +213,30 @@ namespace Engine {
 		s_Data.Queued3D.push_back(model);
 	}
 
-	bool isHdr = false;
-	bool isGamma = false;
-	bool showGBuffer = false;
-	bool isWire = false;
-	bool isLighting = false;
-	float tFactor = 1.0f;
-
-	void Renderer::ActivateHdr(bool activate)
+	void Renderer::BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights)
 	{
-		isHdr = activate;
-	}
-
-	void Renderer::ActivateShadow(bool activate)
-	{
-		s_Data.GlobalEnv->UseShadowMap = activate;
-	}
-
-	void Renderer::ActivateGamma(bool activate)
-	{
-		isGamma = activate;
-	}
-
-	void Renderer::ActivateShowGBuffer(bool activate)
-	{
-		showGBuffer = activate;
-	}
-
-	void Renderer::ActivateWire(bool activate)
-	{
-		isWire = activate;
-	}
-
-	void Renderer::SetTFactor(float factor)
-	{
-		tFactor = factor;
-	}
-
-	vec4 & Renderer::GetSkyColor()
-	{
-		return s_Data.SkyColor;
-	}
-
-	void Renderer::SetRenderMode(RenderMode mode)
-	{
-		s_Data.Mode = mode;
-	}
-
-	void Renderer::ActivateLighting(bool activate)
-	{
-		isLighting = activate;
-	}
-
-	float* Renderer::GetReinhardFactor()
-	{
-		return s_Data.ReinhardToneMapFactor;
+		s_Data.PLController->ClearRTT();
+		s_Data.ActiveCamera = camera;
+		s_Data.QueuedLight = lights;
 	}
 
 	void Renderer::EndScene()
 	{
-		renderShadow();
+		if (isMinimized)
+		{
+			s_Data.Queued2D.clear();
+			s_Data.Queued3D.clear();
+			s_Data.QueuedLight.clear();
+			return;
+		}
 
-		for (auto&[name, shader] : ShaderArchive::s_Shaders)
-			shader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
+		renderShadow();
 
 		switch (s_Data.Mode)
 		{
 		case RenderMode::Deffered: renderDeffered(); break;
 		case RenderMode::Forward: renderForward(); break;
 		}
-
-		Some();
 
 		//Render 2D
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
@@ -213,6 +246,8 @@ namespace Engine {
 
 		if (showGBuffer)
 			renderGBuffer();
+
+		//Some();
 
 		s_Data.Queued2D.clear();
 		s_Data.Queued3D.clear();
@@ -224,11 +259,32 @@ namespace Engine {
 		Dx11Core::Get().Present();
 	}
 
+	void Renderer::renderSkyBox()
+	{
+		for (auto it = s_Data.Queued3D.begin(); it != s_Data.Queued3D.end();)
+		{
+			if ((*it)->GetMeshType() == 2)
+			{
+				if (s_Data.Mode == RenderMode::Forward)
+				{
+					draw3D(*it, "Forward", 3, true);
+					it = s_Data.Queued3D.erase(it);
+				}
+				else
+				{
+					draw3D(*it, "Deffered", 3, true);
+					it = s_Data.Queued3D.erase(it);
+				}
+			}
+			else
+			{
+				++it;
+			}
+		}
+	}
+
 	void Renderer::renderShadow()
 	{
-		for (auto&[name, shader] : ShaderArchive::s_Shaders)
-			shader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
-
 		Dx11Core::Get().Context->PSSetShader(nullptr, nullptr, 0);
 
 		s_Data.PLController->SetRasterize(RasterlizerOpt::Shadow);
@@ -244,45 +300,35 @@ namespace Engine {
 		uint32_t spotIndex = 0;
 		uint32_t pointIndex = 0;
 		uint32_t dirIndex = 0;
+		std::string shadername;
 		for (auto light : s_Data.QueuedLight)
 		{
-			if (light->m_Type == Light::Type::Directional)
+			switch (light->m_Type)
 			{
-				s_Data.DirShadowMaps[dirIndex++]->SetRenderTarget();
-				
+			case Light::Type::Directional: 
+				shadername = "EffectShadowDirectional";
 				light->UpdateCascade(s_Data.ActiveCamera);
 				DirStatic->SetParam<CBuffer::CascadedViewProj>(light->m_CascadedMat);
 				DirSkeletal->SetParam<CBuffer::CascadedViewProj>(light->m_CascadedMat);
-				
-				for (auto model3D : s_Data.Queued3D)
-				{
-					if (model3D->GetMeshType() == 2) continue;
-					draw3D(model3D, "EffectShadowDirectional");
-				}
-			}
-			else if (light->m_Type == Light::Type::Point)
-			{
-				s_Data.PointShadowMaps[pointIndex++]->SetRenderTarget();
-
+				s_Data.DirShadowMaps[dirIndex++]->SetRenderTarget();
+				break;
+			case Light::Type::Point:
+				shadername = "EffectShadowPoint";
 				PointStatic->SetParam<CBuffer::CubeCamera>(light->lightCam);
 				PointSkeletal->SetParam<CBuffer::CubeCamera>(light->lightCam);
-				for (auto model3D : s_Data.Queued3D)
-				{
-					if (model3D->GetMeshType() == 2) continue;
-					draw3D(model3D, "EffectShadowPoint");
-				}
-			}
-			else if (light->m_Type == Light::Type::Spot)
-			{
+				s_Data.PointShadowMaps[pointIndex++]->SetRenderTarget();
+				break;
+			case Light::Type::Spot:
+				shadername = "EffectShadowSpot";
+				SpotStatic->SetParam<CBuffer::LightCam>(*light);
+				SpotSkeletal->SetParam<CBuffer::LightCam>(*light);
 				s_Data.SpotShadowMaps[spotIndex++]->SetRenderTarget();
-
-				SpotStatic->SetParam<CBuffer::Camera>(light->lightCam);
-				SpotSkeletal->SetParam<CBuffer::Camera>(light->lightCam);
-				for (auto model3D : s_Data.Queued3D)
-				{
-					if (model3D->GetMeshType() == 2) continue;
-					draw3D(model3D, "EffectShadowSpot");
-				}
+				break;
+			}
+			for (auto model3D : s_Data.Queued3D)
+			{
+				if (model3D->GetMeshType() == 2) continue;
+				draw3D(model3D, shadername);
 			}
 		}
 	}
@@ -319,12 +365,19 @@ namespace Engine {
 		if (light->m_Type == Light::Type::Directional)
 			return;
 
-		auto shader = ShaderArchive::Get("EtcDrawLight");
+		std::string shadername;
+		switch (s_Data.Mode)
+		{
+		case RenderMode::Forward: shadername = "ForwardLight"; break;
+		case RenderMode::Deffered: shadername = "DefferedLight"; break;
+		}
+
+		auto shader = ShaderArchive::Get(shadername);
 		shader->Bind();
 
 		s_Data.lightModel->m_ModelBuffer->Bind();
 
-		light->lightCam.GetTransform().SetScale(0.2f, 0.2f, 0.2f);
+		shader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
 		shader->SetParam<CBuffer::Transform>(light->lightCam.GetTransform());
 		shader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 		shader->SetParam<CBuffer::LightColor>(*light);
@@ -398,13 +451,16 @@ namespace Engine {
 		auto myShader = ShaderArchive::Get(useShader);
 		myShader->Bind();
 
+		myShader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
 		myShader->SetParam<CBuffer::Transform>(model->m_Transform);
 		myShader->SetParam<CBuffer::Materials>(*model->m_MaterialSet);
 		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
+		myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+
 		if (meshType == MeshType::SkyBox)
 		{
+			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 			myShader->SetParam<CBuffer::SkyBoxInfo>(s_Data.SkyColor);
-			myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 			auto skyTexture = model->m_MaterialSet->MaterialTextures[0][0].Name;
 
 			if(!skyTexture.empty())
@@ -424,76 +480,37 @@ namespace Engine {
 		
 
 		Dx11Core::Get().Context->DrawIndexed(model->m_ModelBuffer->GetIndexCount(), 0, 0);
-
+		if (meshType == MeshType::SkyBox)
+		{
+			if (isWire) s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
+			else s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
+		}
 		myShader->Unbind();
 	}
-
-	void Renderer::Resize(uint32_t width, uint32_t height)
-	{
-		LOG_MISC("Renderer::Resize window {0} {1}", width, height);
-
-		Dx11Core::Get().Resize(width, height);
-		s_Data.GeometryBuffer->Resize(width, height);
-
-		TextureArchive::Get("ForwardTexture")->Resize(width, height);
-		TextureArchive::Get("HDRTexture")->Resize(width, height);
-	}
-
-	std::shared_ptr<Environment> Renderer::GetGlobalEnv()
-	{
-		return s_Data.GlobalEnv;
-	}
-
-	void Renderer::AdjustShadowBias(float depth, float slope)
-	{
-		s_Data.PLController->m_Rasterlizer.AdjustShadowBias(depth, slope);
-	}
-
 
 	void Renderer::renderDeffered()
 	{
 		//Pass1. Render Geometry Buffer
-		s_Data.GeometryBuffer->SetRenderTarget();
-
 		s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
-		
+		s_Data.PLController->SetBlend(BlendOpt::Alpha);
 		if(isWire)
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Wire);
 		else
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 
-
-		s_Data.PLController->SetBlend(BlendOpt::Alpha);
-
-		uvec4 gamma;
-		if (isGamma)
-			gamma.x = 1;
-		else
-			gamma.x = 0;
-
 		std::string useShader = "Deffered";
+		s_Data.GeometryBuffer->SetRenderTarget();
 		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
-		skeletal->Bind();
-		skeletal->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
-		skeletal->SetParam<CBuffer::Gamma>(gamma);
-
 		auto static_ = ShaderArchive::Get(useShader + "Static");
-		static_->Bind();
-		static_->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		
+		skeletal->SetParam<CBuffer::Gamma>(gamma);
 		static_->SetParam<CBuffer::Gamma>(gamma);
 
-		auto lighting = ShaderArchive::Get(useShader + "Lighting");
-		lighting->Bind();
-		lighting->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
-
-		std::string shader;
-		switch (s_Data.Mode)
-		{
-		case RenderMode::Deffered: shader = "Deffered"; break;
-		case RenderMode::Forward: shader = "Forward"; break;
-		}
 		for (auto model3D : s_Data.Queued3D)
-			draw3D(model3D, shader);
+			draw3D(model3D, useShader);
+
+		for (auto light : s_Data.QueuedLight)
+			renderLight(light);
 
 		//Pass2. Render light with gbuffer
 		if (isHdr)
@@ -503,6 +520,8 @@ namespace Engine {
 
 		auto lightingShader = ShaderArchive::Get("DefferedLighting");
 		lightingShader->Bind();
+		
+
 		s_Data.ModelBuffer2D->Bind();
 		s_Data.GeometryBuffer->Bind();
 	
@@ -510,14 +529,24 @@ namespace Engine {
 		uint32_t spotIndex = 0;
 		uint32_t dirIndex = 0;
 
+		if (s_Data.QueuedLight.empty())
+		{
+			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+		}
 		for (uint32_t i = 0; i < s_Data.QueuedLight.size(); ++i)
 		{
+			if (i == 0) s_Data.GlobalEnv->bias.x = 0.0f;
+			else s_Data.GlobalEnv->bias.x = 1.0f;
+
 			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 			s_Data.PLController->SetBlend(BlendOpt::GBuffer);
 
+			lightingShader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
 			lightingShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
+			lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
+
 			switch (s_Data.QueuedLight[i]->m_Type)
 			{
 			case Light::Type::Directional:
@@ -530,30 +559,29 @@ namespace Engine {
 				pointIndex++;
 				break;
 			case Light::Type::Spot:
-				lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
 				Dx11Core::Get().Context->PSSetShaderResources(6, 1, &s_Data.SpotShadowMaps[spotIndex]->m_ShaderResourceView);
 				spotIndex++;
 				break;
 			}
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
-			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);	
 		}
 		lightingShader->Unbind();
 
+		//processing hdr
 		if (isHdr)
 		{
 			s_Data.PLController->SetRenderTarget("BackBuffer");
 			auto averagelum = computeLum("HDRTexture");
+			s_Data.ReinhardToneMapFactor[2] = averagelum / float(Dx11Core::Get().Width() * Dx11Core::Get().Height());
 
 			auto hdrShader = ShaderArchive::Get("HDRLighting");
 			auto hdrTexture = TextureArchive::Get("HDRTexture");
-			hdrShader->Bind();
 
-			s_Data.ReinhardToneMapFactor[2] = averagelum / float(Dx11Core::Get().Width() * Dx11Core::Get().Height());
-			hdrShader->SetParam<CBuffer::ToneMapFactor>(s_Data.ReinhardToneMapFactor);
+			hdrShader->Bind();
 			hdrTexture->Bind(0);
-			
+			hdrShader->SetParam<CBuffer::ToneMapFactor>(s_Data.ReinhardToneMapFactor);
 			s_Data.ModelBuffer2D->Bind();
+
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
 		}
 	}
@@ -568,19 +596,13 @@ namespace Engine {
 		std::string useShader = "Forward";
 
 		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
-		skeletal->Bind();
-		skeletal->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
-		skeletal->SetParam<CBuffer::TFactor>(tFactor);
-
 		auto static_ = ShaderArchive::Get(useShader + "Static");
-		static_->Bind();
-		static_->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		skeletal->SetParam<CBuffer::TFactor>(tFactor);
 		static_->SetParam<CBuffer::TFactor>(tFactor);
 
 		if (!isLighting)
 		{
 			s_Data.PLController->SetRenderTarget("BackBuffer");
-
 			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
 			s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
@@ -593,29 +615,31 @@ namespace Engine {
 		else
 		{
 			int spotIdx = 0, pointIdx = 0, dirIdx = 0;
+			if (s_Data.QueuedLight.empty())
+				s_Data.PLController->SetRenderTarget("BackBuffer");
+			else
+				s_Data.PLController->SetRenderTarget("ForwardTexture");
 
+			renderSkyBox();
 			for (auto& light : s_Data.QueuedLight)
 			{
-				s_Data.PLController->ClearRTT("ForwardTexture");
-
 				s_Data.PLController->SetRenderTarget("ForwardTexture");
 				s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
 				s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
 				skeletal->SetParam<CBuffer::Light>(*light);
-				static_->SetParam<CBuffer::Light>(*light);
-
 				skeletal->SetParam<CBuffer::LightPos>(*light);
-				static_->SetParam<CBuffer::LightPos>(*light);
-
 				skeletal->SetParam<CBuffer::LightCam>(*light);
+				skeletal->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
+				
+				static_->SetParam<CBuffer::Light>(*light);
+				static_->SetParam<CBuffer::LightPos>(*light);
 				static_->SetParam<CBuffer::LightCam>(*light);
+				static_->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
 
 				switch (light->m_Type)
 				{
 				case Light::Type::Directional:
-					skeletal->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
-					static_->SetParam<CBuffer::Cascaded>(light->m_CascadedMat);
 					Dx11Core::Get().Context->PSSetShaderResources(2, 1, &s_Data.DirShadowMaps[dirIdx]->m_ShaderResourceView);
 					dirIdx++;
 					break;
@@ -624,7 +648,6 @@ namespace Engine {
 					pointIdx++;
 					break;
 				case Light::Type::Spot:
-					
 					Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[spotIdx]->m_ShaderResourceView);
 					spotIdx++;
 					break;
@@ -632,6 +655,7 @@ namespace Engine {
 
 				for (auto& model : s_Data.Queued3D)
 					draw3D(model, useShader, 3, true);
+				renderLight(light);
 
 				s_Data.PLController->SetRenderTarget("BackBuffer");
 				s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
@@ -639,12 +663,12 @@ namespace Engine {
 				s_Data.PLController->SetBlend(BlendOpt::GBuffer);
 
 				auto blendShader = ShaderArchive::Get("ForwardBlend");
-
 				blendShader->Bind();
 				TextureArchive::Get("ForwardTexture")->Bind(0);
 
 				s_Data.ModelBuffer2D->Bind();
 				Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
+				s_Data.PLController->ClearRTT("ForwardTexture");
 			}
 		}
 	}

@@ -58,6 +58,7 @@ Output main(Input input)
 
 	float4 position = float4(input.position, 1.0f);
 	output.position = mul(position, skinTransform);
+
 	output.position = mul(output.position, Scale);
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);

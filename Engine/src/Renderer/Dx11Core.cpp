@@ -30,7 +30,14 @@ namespace Engine {
 
 	void Dx11Core::Present()
 	{
-		SwapChain->Present(1, 0);
+		if (m_Vsynk)
+		{
+			SwapChain->Present(1, 0);
+		}
+		else
+		{
+			SwapChain->Present(0, 0);
+		}
 	}
 
 	void Dx11Core::Resize(uint32_t width, uint32_t height)

@@ -7,12 +7,10 @@ cbuffer Environment : register(b0)
 	float4 Bias;
 };
 
-cbuffer Camera : register(b1)
+cbuffer LightCam : register(b1)
 {
 	matrix View;
 	matrix Projection;
-	float3 Position;
-	int padding_;
 };
 
 cbuffer Transform : register(b2)
@@ -34,23 +32,20 @@ struct Input
 	int MaterialIndex : MATERIALIDX;
 };
 
-
 struct Output
 {
 	float4 position : SV_POSITION;
 };
 
+
 Output main(Input input)
 {
 	Output output;
 
-	float4 position = float4(input.position, 1.0f);
-
-	output.position = mul(position, Scale);
+	float4 pos = float4(input.position, 1.0f);
+	output.position = mul(pos, Scale);
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);
-
-	output.position = mul(output.position, WorldMatrix);
 	output.position = mul(output.position, View);
 	output.position = mul(output.position, Projection);
 

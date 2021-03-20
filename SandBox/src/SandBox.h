@@ -21,15 +21,16 @@ private:
 	std::shared_ptr<Scene> CurScene;
 	std::vector<std::shared_ptr<Scene>> Scenes;
 
-	bool lighting = false;
+	bool lighting = true;
 	bool gBuffer = false;
-	bool shadow = false;
+	bool shadow = true;
 	bool hdr = false;
-	bool gamma = false;
+	bool gamma = true;
 	bool wire = false;
+	bool v_Sync = true;
 
 	float tFactor = 1.0f;
-	float depthBias = 85.0f;
+	int depthBias = 85;
 	float slopeBias = 5.0f;
 
 	float mouseSensitive = 0.005f;
@@ -42,8 +43,13 @@ private:
 	bool newName = false;
 	bool onSave = false;
 	bool onLoad = false;
+	bool onShaderLoad = false;
 	char newSceneBuffer[100]{ 0, };
 
+	wchar_t* sceneExt = L"Scene Type\0*.scene\0";
+	wchar_t* shaderExt = L"Folder\0";
+
 	Engine::Timestep ts;
+	Engine::Timestep ts2;
 };
 

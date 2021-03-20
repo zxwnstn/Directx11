@@ -132,7 +132,7 @@ namespace Engine::CBuffer {
 	struct SkyBoxInfo
 	{
 		vec4 Color;
-		void Upload(vec4& color);
+		void Upload(vec3& color);
 	};
 
 	struct Environment

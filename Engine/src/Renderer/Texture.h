@@ -20,6 +20,7 @@ namespace Engine {
 	private:
 		int m_Width;
 		int m_Height;
+		int m_TextureCount;
 
 		ID3D11Texture2D* m_DepthStecilBuffer = nullptr;
 		ID3D11ShaderResourceView* m_ShaderResourceView = nullptr;

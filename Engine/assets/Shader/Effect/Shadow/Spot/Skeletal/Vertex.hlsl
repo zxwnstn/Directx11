@@ -8,12 +8,10 @@ cbuffer Environment : register(b0)
 	float4 Bias;
 };
 
-cbuffer Camera : register(b1)
+cbuffer LightCam : register(b1)
 {
 	matrix View;
 	matrix Projection;
-	float3 Position;
-	int padding_;
 };
 
 cbuffer Transform : register(b2)
@@ -72,7 +70,6 @@ Output main(Input input)
 	output.position = mul(output.position, Rotate);
 	output.position = mul(output.position, Translate);
 
-	output.position = mul(output.position, WorldMatrix);
 	output.position = mul(output.position, View);
 	output.position = mul(output.position, Projection);
 
