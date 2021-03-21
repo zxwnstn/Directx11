@@ -15,28 +15,11 @@ struct Input
 	uint4 boneIndicesr : BONEINDICESR;
 };
 
-//struct Output
-//{
-//	float3 f3Position   : POSITION;
-//	float2 f2TexCoord   : TEXCOORD;
-//
-//	float3 f3Normal     : NORMAL;
-//	float3 binormal : BINORMAL;
-//	float3 tangent : TANGENT;
-//
-//	int MaterialIndex : MATERIALIDX;
-//};
-
-cbuffer Bone : register(b0)
-{
-	matrix SkinnedTransform[100];
-}
-
 struct Output
 {
 	float3 f3Position   : POSITION;
 	float2 f2TexCoord   : TEXCOORD;
-	
+
 	float3 f3Normal     : NORMAL;
 	float3 binormal : BINORMAL;
 	float3 tangent : TANGENT;
@@ -46,13 +29,14 @@ struct Output
 	matrix skinTransform : SKINT;
 };
 
-
+cbuffer Bone : register(b0)
+{
+	matrix SkinnedTransform[100];
+}
 
 Output main(Input input)
 {
 	Output output;
-
-	//Output output;
 
 	matrix skinTransform = 0;
 	skinTransform += SkinnedTransform[input.boneIndices.x] * input.boneWeight.x;
@@ -64,16 +48,15 @@ Output main(Input input)
 	skinTransform += SkinnedTransform[input.boneIndicesr.z] * input.boneWeightr.z;
 	skinTransform += SkinnedTransform[input.boneIndicesr.w] * input.boneWeightr.w;
 	
-	//output.f3Position = mul(input.f3Position, skinTransform);
 	output.f3Position = input.f3Position;
-	output.f3Normal = input.f3Normal;
 	output.f2TexCoord = input.f2TexCoord;
-
-	output.skinTransform = skinTransform;
-	output.MaterialIndex = input.MaterialIndex;
+	
+	output.f3Normal = input.f3Normal;
 	output.binormal = input.binormal;
 	output.tangent = input.tangent;
 
+	output.MaterialIndex = input.MaterialIndex;
+	output.skinTransform = skinTransform;
 
 	return output;
 }

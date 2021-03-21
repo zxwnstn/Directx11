@@ -149,13 +149,14 @@ float CalcConeAttenuation(float3 lightPos, float3 lightDir)
 
 float CalcSpotShadow(float3 position)
 {
-	float4 lightPosition;
-	lightPosition = mul(float4(position, 1.0f), LView);
-	lightPosition = mul(lightPosition, LProjection);
+	float4 worldPosition;
+	worldPosition = mul(float4(position, 1.0f), LView);
+	worldPosition = mul(worldPosition, LProjection);
 
-	float3 uv = lightPosition.xyz / lightPosition.w;
+	float3 uv = worldPosition.xyz / worldPosition.w;
 	uv.x = uv.x * 0.5f + 0.5f;
 	uv.y = -uv.y * 0.5f + 0.5f;
+	//uv.y = 1.0f -uv.y;
 
 	return SpotShadowMap.SampleCmpLevelZero(SampleTypePCF, uv.xy, uv.z);
 }
@@ -242,12 +243,12 @@ float4 main(Input input) : SV_TARGET
 	float LightAttenuation = 1.0f; // no light decrease
 	float3 LightVector = -LDirection.xyz;
 
-	if (LType == 1) //Point
+	if (LType == 1)
 	{
 		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp);
 		LightVector = -input.lightToPos;
 	}
-	if (LType == 2) //Spot
+	if (LType == 2)
 	{
 		LightAttenuation = CalcDistAttenuation(length(input.lightToPos), LRangeRcp)
 			* CalcConeAttenuation(input.lightToPos, LightVector);
@@ -278,11 +279,9 @@ float4 main(Input input) : SV_TARGET
 
 	//Step5. Calc finale caculated phong blinn
 	float3 finalAmbient = input.globalAmbient * MAmbient[materialIndex];
-	//float3 finalDiffuse = df * (Diffuse.xyz * LIntensity * LightColor) + finalAmbient * (ShadowAtt * Diffuse.xyz * LIntensity * LightColor);
 	float3 finalDiffuse = (float3(df, df, df) + finalAmbient) * (Diffuse * ShadowAtt * LIntensity * LightColor);
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
-
 
 	return float4(color, 1.0f);
 }

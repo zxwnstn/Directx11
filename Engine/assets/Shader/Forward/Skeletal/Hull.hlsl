@@ -3,21 +3,7 @@ cbuffer TFactor : register(b0)
 	float4 tessFactor;
 };
 
-struct HS_Input
-{
-	float3 f3Position   : POSITION;
-	float2 f2TexCoord   : TEXCOORD;
-	
-	float3 f3Normal     : NORMAL;
-	float3 binormal : BINORMAL;
-	float3 tangent : TANGENT;
-
-	int MaterialIndex : MATERIALIDX;
-
-	matrix skinTransform : SKINT;
-};
-
-struct HS_ControlPointOutput
+struct Input
 {
 	float3 f3Position   : POSITION;
 	float2 f2TexCoord   : TEXCOORD;
@@ -52,7 +38,7 @@ struct HS_ConstantOutput
 	float3 f3N101    : NORMAL5;
 };
 
-HS_ConstantOutput HS_PNTrianglesConstant(InputPatch<HS_Input, 3> I)
+HS_ConstantOutput HS_PNTrianglesConstant(InputPatch<Input, 3> I)
 {
 	HS_ConstantOutput O = (HS_ConstantOutput)0;
 
@@ -103,21 +89,7 @@ HS_ConstantOutput HS_PNTrianglesConstant(InputPatch<HS_Input, 3> I)
 [patchconstantfunc("HS_PNTrianglesConstant")]
 [outputcontrolpoints(3)]
 [maxtessfactor(64)]
-HS_ControlPointOutput main(InputPatch<HS_Input, 3> I, uint uCPID : SV_OutputControlPointID)
+Input main(InputPatch<Input, 3> I, uint uCPID : SV_OutputControlPointID)
 {
-	HS_ControlPointOutput O = (HS_ControlPointOutput)0;
-
-	// Just pass through inputs = fast pass through mode triggered
-	O.f3Position = I[uCPID].f3Position;
-	
-	O.f3Normal = I[uCPID].f3Normal;
-	O.binormal = I[uCPID].binormal;
-	O.tangent = I[uCPID].tangent;
-
-	O.f2TexCoord = I[uCPID].f2TexCoord;
-	O.MaterialIndex = I[uCPID].MaterialIndex;
-	
-	O.skinTransform = I[uCPID].skinTransform;
-
-	return O;
+	return I[uCPID];
 }

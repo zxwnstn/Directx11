@@ -47,7 +47,7 @@ struct HS_ConstantOutput
 	float3 f3N101    : NORMAL5;
 };
 
-struct HS_ControlPointOutput
+struct Input
 {
 	float3 f3Position   : POSITION;
 	float2 f2TexCoord   : TEXCOORD;
@@ -82,7 +82,7 @@ struct Output
 
 
 [domain("tri")]
-Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointOutput, 3> I, float3 f3BarycentricCoords : SV_DomainLocation)
+Output main(HS_ConstantOutput HSConstantData, const OutputPatch<Input, 3> I, float3 f3BarycentricCoords : SV_DomainLocation)
 {
 	//Output output = (Output)0;
 	Output output = (Output)0;
@@ -152,6 +152,9 @@ Output main(HS_ConstantOutput HSConstantData, const OutputPatch<HS_ControlPointO
 	output.position = mul(output.position, Translate);
 	
 	pos = output.position;
+	pos.x = pos.x / pos.w;
+	pos.y = pos.y / pos.w;
+	pos.z = pos.z / pos.w;
 	output.worldPosition = pos.xyz;
 
 	output.position = mul(output.position, WorldMatrix);

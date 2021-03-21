@@ -276,10 +276,10 @@ float4 main(Input input) : SV_TARGET
 		if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(input.lightToPos, input.position.w));
 		if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(input.worldPosition));
 	}
+	//return float4(input.worldPosition, 1.0f);
 
 	//Step5. Calc finale caculated phong blinn
 	float3 finalAmbient = input.globalAmbient * MAmbient[materialIndex];
-	//float3 finalDiffuse = df * (Diffuse.xyz * LIntensity * LightColor) + finalAmbient * (ShadowAtt * Diffuse.xyz * LIntensity * LightColor);
 	float3 finalDiffuse = (float3(df, df, df) + finalAmbient) * (Diffuse * ShadowAtt * LIntensity * LightColor);
 	float3 finalSpecular = sf * (Specular.xyz * LIntensity * LightColor);
 	float3 color = finalDiffuse + finalSpecular;
