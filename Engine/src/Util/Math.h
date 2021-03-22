@@ -25,6 +25,7 @@ namespace Engine::Util {
 	DirectX::XMMATRIX GetLerpTransform(const vec3 & t1, const vec3 & t2, const vec4 & q1, const vec4 & q2, const vec3 & s1, const vec3 & s2, float ratio, bool XM);
 	
 	mat4 multiply(const mat4& mat1, const mat4& mat2);
+	vec3 multiplyMatVec(const mat4& mat, const vec3& vec);
 	void matrixScaling(mat4& mat, float x, float y, float z);
 
 	mat4 GetOrthographic(float magnification, float screenAspect, float _near, float _far);
@@ -41,6 +42,7 @@ namespace Engine::Util {
 	void RotateLocalX(vec3& rotate, float radian);
 	void RotateLocalY(vec3& rotate, float radian);
 	void RotateLocalZ(vec3& rotate, float radian);
+	vec3 RotateAround(const vec3& position, const vec3& pivot, const vec3& rotate, float angle);
 
 	vec3 TransformCoord(mat4& mat, vec3& vec);
 	vec4 TransformCoord(mat4& mat, vec4& vec);

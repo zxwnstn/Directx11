@@ -15,10 +15,11 @@ cbuffer Materials : register(b0)
 	int4  MMode[MaxPart / 4];
 };
 
-cbuffer Gamma : register(b2)
+cbuffer ShadingData : register(b1)
 {
-	uint4 GammaCorection;
-};
+	int4 SData1; //x = Lighting, y = shadow, z = diffuse(lambert, half), w = specular(phong blinn) 
+	int4 SData2; //x = lambert Pow factor, y = deffered blend factor, z = gamma correction
+}
 
 struct GBuffer
 {
@@ -109,9 +110,12 @@ GBuffer main(Input input) : SV_TARGET
 	float4 diffuseMap = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
 	if (diffuseMap.w < 0.9f)
 		discard;
-	if (GammaCorection.x == 1 && (mapMode & 1))
+
+	bool gammaCorrected = false;
+	if ((SData2.z == 1) && (mapMode & 1))
 	{
 		diffuseMap = pow(diffuseMap, 2.2f);
+		gammaCorrected = true;
 	}
 
 	float3 normalMap = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
@@ -129,7 +133,7 @@ GBuffer main(Input input) : SV_TARGET
 
 	output.Diffuse = float4(Diffuse, 1.0f);
 	output.Normal = float4(input.normal, 1.0f);
-	if (GammaCorection.x == 1 && (mapMode & 1))
+	if (gammaCorrected && (mapMode & 1))
 	{
 		output.Normal.w = 0.99f; //mean Gamma Corrected color
 	}

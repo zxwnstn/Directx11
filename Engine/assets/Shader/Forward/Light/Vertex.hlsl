@@ -1,9 +1,7 @@
 cbuffer Environment : register(b0)
 {
 	matrix WorldMatrix;
-	float3 EAmbient;
-	bool EUseShadowMap;
-	float4 Bias;
+	float4 EAmbient;
 };
 
 cbuffer Camera : register(b1)

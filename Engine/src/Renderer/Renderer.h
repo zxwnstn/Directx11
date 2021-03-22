@@ -33,6 +33,9 @@ namespace Engine {
 		static void SetTFactor(float tFactor);
 		static void AppMinimized(bool min);
 		static void ActivateVSync(bool activate);
+		static void SetSpecularMode(int mode); //0 - phong, 1 - blinn 
+		static void SetDiffuseMode(int mode); //0 - lambert, 1 - half lambert
+		static void SetLambertContrast(int factor);
 		static struct vec3& GetSkyColor();
 
 	public:

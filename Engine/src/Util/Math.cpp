@@ -219,6 +219,27 @@ namespace Engine::Util {
 		return ToMatrix(ret);
 	}
 
+	vec3 multiplyMatVec(const mat4 & mat, const vec3& vec)
+	{
+		vec4 v;
+		v.x = vec.x;
+		v.y = vec.y;
+		v.z = vec.z;
+		v.w = 1.0f;
+
+		vec3 ret;
+		for (int i = 0; i < 3; ++i)
+		{
+			float k = 0.0f;
+			for (int j = 0; j < 4; ++j)
+			{
+				k += mat.m[j][i] * vec.m[j];
+			}
+			ret.m[i] = k;
+		}
+		return ret;
+	}
+
 	void matrixScaling(mat4 & mat, float x, float y, float z)
 	{
 		DirectX::XMMATRIX m = ToXMMatrix(mat);
@@ -367,6 +388,23 @@ namespace Engine::Util {
 	void RotateLocalZ(vec3 & rotate, float radian)
 	{
 		rotate.z += radian;
+	}
+
+	vec3 RotateAround(const vec3 & position, const vec3 & pivot, const vec3 & axis, float angle)
+	{
+		auto cpos = position - pivot;
+		auto pos = ToXMVector(cpos);
+
+		DirectX::XMVECTOR rot;
+		rot.m128_f32[0] = axis.x;
+		rot.m128_f32[1] = axis.y;
+		rot.m128_f32[2] = axis.z;
+
+		auto rotMat = DirectX::XMMatrixRotationAxis(rot, angle);
+		auto result = DirectX::XMVector3TransformCoord(pos, rotMat);
+		vec3 ret = ToVector3(result) + pivot;
+
+		return ret;
 	}
 
 	vec3 TransformCoord(mat4 & mat, vec3& vec)

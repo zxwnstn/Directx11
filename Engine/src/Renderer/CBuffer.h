@@ -9,7 +9,7 @@ namespace Engine::CBuffer {
 
 	enum class Type
 	{
-		Camera, CubeCamera, Transform, Bone, TFactor, DispatchInfo, ToneMapFactor, Gamma, SkyBoxInfo,
+		Camera, CubeCamera, Transform, Bone, TFactor, DispatchInfo, ToneMapFactor, Gamma, SkyBoxInfo, ShadingData,
 		Environment, Light, LightCam, LightColor, LightPos, Material, Materials, CascadedViewProj, Cascaded,
 		TextureInform, None
 	};
@@ -138,11 +138,17 @@ namespace Engine::CBuffer {
 	struct Environment
 	{
 		mat4 WorldMatrix;
-		vec3 Ambient;
-		bool UseShadowMap;
-		vec4 bias;
+		vec4 Ambient;
 
 		void Upload(const Engine::Environment& other);
+	};
+
+	struct ShadingData
+	{
+		uvec4 Data1; //x = Lighting, y = shadow, z = diffuse(lambert, half), w = specular(phong blinn) 
+		uvec4 Data2; //x = lambert Pow factor, y = deffered blend factor,
+
+		void Upload(const Engine::ShadingData& other);
 	};
 
 	struct Material
@@ -286,6 +292,11 @@ namespace Engine::CBuffer {
 		struct GetType<CBuffer::Gamma>
 		{
 			static const Type value = Type::Gamma;
+		};
+		template<>
+		struct GetType<CBuffer::ShadingData>
+		{
+			static const Type value = Type::ShadingData;
 		};
 
 	}

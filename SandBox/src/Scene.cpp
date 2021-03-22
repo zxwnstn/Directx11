@@ -4,6 +4,7 @@
 
 #include "../../vendor/imgui/imgui.h"
 
+#include "Script/MultiLighting.h"
 
 void Scene::Add2DModel(std::shared_ptr<Engine::Model2D> model)
 {
@@ -31,9 +32,41 @@ void Scene::AddCamera(std::shared_ptr<Engine::Camera> camera)
 	m_Cameras.push_back(camera);
 }
 
+std::shared_ptr<Engine::Model3D> Scene::GetModel3d(const std::string & name)
+{
+	for (auto model : m_Model3)
+	{
+		if (model->m_Name == name)
+		{
+			return model;
+		}
+	}
+	LOG_WARN("Can't find {0} model on {1} scene ", name, m_Name);
+	return nullptr;
+}
+
+std::shared_ptr<Engine::Light> Scene::GetLight(const std::string & name)
+{
+	for (auto model : m_Lights)
+	{
+		if (model->name == name)
+		{
+			return model;
+		}
+	}
+	LOG_WARN("Can't find {0} model on {1} scene ", name, m_Name);
+	return nullptr;
+}
+
 void Scene::SetSceneName(const std::string & name)
 {
 	LOG_TRACE("On {0} scene renamed into {1}", m_Name, name);
+	m_Name = name;
+}
+
+Scene::Scene(const std::string & name)
+	: Scene()
+{
 	m_Name = name;
 }
 
@@ -79,12 +112,63 @@ Scene::Scene()
 	m_Model3.push_back(skybox);
 }
 
-
-
-Scene::Scene(const std::string & name)
-	: Scene()
+void Scene::OnMouseMove(float dx, float dy, float sensitive)
 {
-	m_Name = name;
+	if (runScript)
+	{
+		m_MyScript->OnMouseMove(dx * sensitive, dy * sensitive);
+	}
+	else
+	{
+		auto& camTransform = GetCurCam()->GetTransform();
+		if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
+		{
+			dx *= sensitive;
+			dy *= sensitive;
+			camTransform.LocalRotateX(dx);
+			camTransform.LocalRotateY(dy);
+		}
+	}
+
+}
+
+void Scene::OnKeyInput()
+{
+	if (runScript)
+	{
+		m_MyScript->OnKeyInput();
+	}
+	else
+	{
+		auto& camTransform = GetCurCam()->GetTransform();
+		if (GetAsyncKeyState('W') & 0x8000)
+		{
+			camTransform.MoveForwad(0.1f);
+		}
+
+		if (GetAsyncKeyState('S') & 0x8000)
+		{
+			camTransform.MoveBack(0.1f);
+		}
+
+		if (GetAsyncKeyState('A') & 0x8000)
+		{
+			camTransform.MoveLeft(0.1f);
+		}
+		if (GetAsyncKeyState('D') & 0x8000)
+		{
+			camTransform.MoveRight(0.1f);
+		}
+
+		if (GetAsyncKeyState('E') & 0x8000)
+		{
+			camTransform.AddTranslate(0.0f, 0.1f, 0.0f);
+		}
+		if (GetAsyncKeyState('Q') & 0x8000)
+		{
+			camTransform.AddTranslate(0.0f, -0.1f, 0.0f);
+		}
+	}
 }
 
 void Scene::OnUpdate(float dt)
@@ -92,7 +176,15 @@ void Scene::OnUpdate(float dt)
 	auto globalenv = Engine::Renderer::GetGlobalEnv();
 	Engine::Renderer::GetSkyColor() = m_worldInform.SkyColor;
 	globalenv->WorldMatrix = Engine::Util::GetTransform(m_worldInform.WorldTranslate, m_worldInform.WorldRotate, m_worldInform.WorldScale, true);
-	globalenv->Ambient = m_worldInform.GlobalAmbient;
+	globalenv->Ambient.x = m_worldInform.GlobalAmbient.x;
+	globalenv->Ambient.y = m_worldInform.GlobalAmbient.y;
+	globalenv->Ambient.z = m_worldInform.GlobalAmbient.z;
+
+	OnKeyInput();
+	if (runScript && !pauseScript)
+	{
+		m_MyScript->OnUpdate(dt);
+	}
 
 	for(auto model : m_Model3)
 		model->Update(dt);
@@ -449,6 +541,7 @@ void Scene::OnImGui()
 			{
 			case Engine::Light::Type::Directional:
 			{
+
 				auto& rotate = curLight->lightCam.GetTransform().GetRotate();
 				float rot[] = { Engine::Util::ToDegree(rotate.x),  Engine::Util::ToDegree(rotate.y) ,  Engine::Util::ToDegree(rotate.z) };
 				if (ImGui::SliderFloat3("Direction(Degree)", rot, 0.0f, 360.0f))
@@ -519,6 +612,55 @@ void Scene::OnImGui()
 			}
 			
 			ImGui::EndChild();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Script"))
+	{
+		if (m_MyScript)
+		{
+			ImGui::Text("Current script : %s", m_MyScript->m_Name.c_str());
+			if (!runScript)
+			{
+				if (ImGui::Button("Run Script"))
+				{
+					m_MyScript->OnStart();
+					runScript = true;
+				}
+			}
+			else
+			{
+				if (!pauseScript)
+				{
+					if (ImGui::Button("Pasue"))
+					{
+						pauseScript = true;
+					}
+				}
+				else
+				{
+					if (ImGui::Button("Resume"))
+					{
+						pauseScript = false;
+					}
+				}
+				
+				if (ImGui::Button("Stop"))
+				{
+					m_MyScript->OnStop();
+					runScript = false;
+					pauseScript = false;
+				}
+			}
+		}
+		else
+		{
+			ImGui::Text("Current script : None");
+		}
+		if (!runScript)
+		{
+			if (ImGui::Button("SetScript"))
+				setScript = true;
 		}
 	}
 
@@ -624,9 +766,9 @@ void Scene::OnImGui()
 			std::shared_ptr<Engine::Light> light(new Engine::Light);
 			switch (newlightType)
 			{
-			case 0: light->m_Type = Engine::Light::Type::Directional;
-			case 1: light->m_Type = Engine::Light::Type::Point;
-			case 2: light->m_Type = Engine::Light::Type::Spot;
+			case 0: light->m_Type = Engine::Light::Type::Directional; break;
+			case 1: light->m_Type = Engine::Light::Type::Point; break;
+			case 2: light->m_Type = Engine::Light::Type::Spot; break;
 			}
 			light->lightCam.GetTransform().SetTranslate(newLightPosition[0], newLightPosition[1], newLightPosition[2]);
 			light->name = newLightBuffer;
@@ -706,14 +848,44 @@ void Scene::OnImGui()
 		}
 		LOG_TRACE("On {0} scene deleted light : {1}", m_Name, lightname);
 	}
+
+	if (setScript)
+	{
+		ImGui::Begin("Set Script");
+		const char* scriptList[] = { "None", "MultiLighting" };
+		static int listidx = 0;
+		ImGui::Combo("selected script", &listidx, scriptList, 2);
+		if (ImGui::Button("Set"))
+		{
+			if (listidx != 0)
+			{
+				SetScript(scriptList[listidx]);
+				listidx = 0;
+				runScript = false;
+				pauseScript = false;
+			}
+			setScript = false;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel"))
+		{
+			listidx = 0;
+			setScript = false;
+		}
+		ImGui::End();
+	}
+
 }
 
-SceneInform Scene::Save()
+
+SceneInform Scene::SaveSceneData()
 {
 	SceneInform inform;
 	inform.SceneName = m_Name;
 	inform.CurrentCamIdx = activateCamIdx;
 	inform.World = m_worldInform;
+	if (m_MyScript)
+		inform.ScriptName = m_MyScript->m_Name;
 	for (auto cam : m_Cameras)
 	{
 		CameraInform camInform;
@@ -798,10 +970,8 @@ SceneInform Scene::Save()
 	return inform;
 }
 
-Scene::Scene(const SceneInform & _inform)
+void Scene::LoadSceneData(const SceneInform& _inform)
 {
-	m_Name = _inform.SceneName;
-	m_worldInform = _inform.World;
 	for (auto& inform : _inform.Camera)
 	{
 		float screenAspect = (float)g_Width / (float)g_Height;
@@ -882,7 +1052,7 @@ Scene::Scene(const SceneInform & _inform)
 				.buildFromOBJ()
 				.SetObject(inform.MeshName);
 		}
-		
+
 		model->m_Name = inform.Name;
 		model->m_MaterialSet = Engine::MaterialArchive::GetSetCopy(model->m_MeshName);
 		auto materialset = model->m_MaterialSet;
@@ -899,11 +1069,11 @@ Scene::Scene(const SceneInform & _inform)
 			texture[i][1].Name = inform.Material[i].NormalMap;
 			texture[i][2].Name = inform.Material[i].SpecularMap;
 		}
-		
+
 		model->m_Transform.SetTranslate(inform.Translate);
 		model->m_Transform.SetRotate(inform.Rotate);
 		model->m_Transform.SetScale(inform.Scale);
-		
+
 		m_Model3.push_back(model);
 	}
 
@@ -920,8 +1090,32 @@ Scene::Scene(const SceneInform & _inform)
 		light->m_OuterAngle = inform.OuterAngle;
 		light->lightCam.GetTransform().SetTranslate(inform.Position);
 		light->m_Range = inform.Range;
-		light->m_Type = static_cast<Engine::Light::Type>(inform.type);
+		light->SetType(static_cast<Engine::Light::Type>(inform.type));
 		m_Lights.push_back(light);
 	}
 
+}
+
+void Scene::SetScript(const std::string & scriptName)
+{
+	if (scriptName == "MultiLighting")
+	{
+		m_MyScript.reset(new MultiLightingScript(this));
+	}
+	else if (scriptName == "None")
+	{
+		m_MyScript.reset();
+	}
+	else
+	{
+		LOG_WARN("Can't find {0} script", scriptName);
+	}
+}
+
+Scene::Scene(const SceneInform & _inform)
+{
+	m_Name = _inform.SceneName;
+	m_worldInform = _inform.World;
+	LoadSceneData(_inform);
+	SetScript(_inform.ScriptName);
 }

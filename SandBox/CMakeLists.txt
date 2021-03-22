@@ -4,6 +4,8 @@ set(project_headers
     src/SandBox.h
 	src/pceh.h
 	src/Scene.h
+	src/Script/Script.h
+	src/Script/MultiLighting.h
 )
 
 set(project_source 
@@ -11,6 +13,8 @@ set(project_source
     src/main.cpp
 	src/pceh.cpp
 	src/Scene.cpp
+	src/Script/MultiLighting.cpp
+	src/Script/Script.cpp
 )
 
 add_executable(

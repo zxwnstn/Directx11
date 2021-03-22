@@ -484,7 +484,7 @@ namespace Engine {
 				maxMiplevel = m_TextureDesc.MipLevels;
 			}
 			LOG_MISC("{0}", paths[i]);
-			Dx11Core::Get().Context->UpdateSubresource(m_Buffer, i * maxMiplevel, NULL, resizedData, UINT(Width * 4 * sizeof(unsigned char)), 0);
+			Dx11Core::Get().Context->UpdateSubresource(m_Buffer, i * maxMiplevel, NULL, resizedData, static_cast<UINT>(Width * 4 * sizeof(unsigned char)), 0);
 			stbi_image_free(data);
 			delete[] resizedData;
 		}

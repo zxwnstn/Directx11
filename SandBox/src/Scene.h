@@ -126,6 +126,7 @@ struct LightInform
 		ar & Direction;
 		ar & InnerAngle;
 		ar & OuterAngle;
+		ar & RenderSize;
 	}
 	std::string Name;
 	int type;
@@ -134,6 +135,7 @@ struct LightInform
 	float CasBorder1;
 	float CasBorder2;
 	float Range;
+	float RenderSize;
 	Engine::vec3 Position;
 	Engine::vec3 Direction;
 	float InnerAngle;
@@ -170,6 +172,7 @@ struct SceneInform
 		ar & Light;
 		ar & Camera;
 		ar & SkyColor;
+		ar & ScriptName;
 	}
 
 	std::string SceneName;
@@ -180,6 +183,7 @@ struct SceneInform
 	std::vector<LightInform> Light;
 	std::vector<CameraInform> Camera;
 	WorldInform World;
+	std::string ScriptName = "";
 };
 
 class Scene
@@ -189,14 +193,18 @@ public:
 	Scene(const SceneInform& inform);
 	Scene(const std::string& name);
 
+	void OnKeyInput();
 	void OnUpdate(float dt);
 	void OnImGui();
-	SceneInform Save();
+	void OnMouseMove(float dx, float dy, float sensitive);
 
 	void Add2DModel(std::shared_ptr<Engine::Model2D> model);
 	void Add3DModel(std::shared_ptr<Engine::Model3D> model);
 	void AddLight(std::shared_ptr<Engine::Light> light);
 	void AddCamera(std::shared_ptr<Engine::Camera> camera);
+	
+	std::shared_ptr<Engine::Model3D> GetModel3d(const std::string& name);
+	std::shared_ptr<Engine::Light> GetLight(const std::string& name);
 
 	void SetSceneName(const std::string& name);
 	const std::string& GetSceneName() const { return m_Name; }
@@ -204,6 +212,10 @@ public:
 	std::shared_ptr<class Engine::Camera> GetCurCam() { return m_Curcam; }
 	std::vector<std::shared_ptr<class Engine::Camera>>& GetCams() { return m_Cameras; }
 	std::vector<std::shared_ptr<struct Engine::Light>>& GetLights() { return m_Lights; }
+
+	SceneInform SaveSceneData();
+	void LoadSceneData(const SceneInform& inform);
+	void SetScript(const std::string& scriptName);
 
 private:
 	std::string m_Name;
@@ -216,6 +228,7 @@ private:
 	std::shared_ptr<class Engine::Camera> m_Curcam;
 
 	WorldInform m_worldInform;
+	std::shared_ptr<class Script> m_MyScript;
 
 	int curModelIdx = 0;
 	int newlightType = 0;
@@ -228,6 +241,9 @@ private:
 	bool newLight = false;
 	bool deleteLight = false;
 	bool newModel = false;
+	bool runScript = false;
+	bool pauseScript = false;
+	bool setScript = false;
 
 	int selectedStatic = 0;
 	int selectedSkeletal = 0;
@@ -239,5 +255,8 @@ private:
 	std::string selectedName;
 
 	std::unordered_map<std::string, int> curAnimtionIdx;
+
+	friend class Script;
+	friend class SandBox;
 };
 

@@ -20,9 +20,13 @@ namespace Engine {
 	{
 	}
 
-	ModelBuilder Model3D::Create()
+	Model3D::Model3D(const std::string & name)
+		: m_Name(name)
+	{}
+
+	ModelBuilder Model3D::Create(const std::string& name)
 	{
-		return ModelBuilder(new Model3D);
+		return ModelBuilder(new Model3D(name));
 	}
 
 	void Model3D::Update(float dt)

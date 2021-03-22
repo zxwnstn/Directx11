@@ -6,11 +6,15 @@ namespace Engine {
 
 	struct Environment
 	{
-		vec3 Ambient{ 0.0f, 0.0f, 0.0f};
 		mat4 WorldMatrix;
-		bool UseShadowMap = true;
-		vec4 bias;
+		vec4 Ambient{ 0.0f, 0.0f, 0.0f, 1.0f};
 		Environment();
+	};
+
+	struct ShadingData
+	{
+		uvec4 Data1;
+		uvec4 Data2;
 	};
 
 	struct CascadedMatrix

@@ -43,6 +43,8 @@ namespace Engine {
 		std::shared_ptr<Model3D> lightModel;
 		vec3 SkyColor;
 
+		ShadingData ShadingData_;
+
 		RenderMode Mode;
 		RenderingPath Path;
 
@@ -52,10 +54,10 @@ namespace Engine {
 	bool isGamma = false;
 	bool showGBuffer = false;
 	bool isWire = false;
+	bool isShadow = false;
 	bool isLighting = false;
 	float tFactor = 1.0f;
 	bool isMinimized = false;
-	uvec4 gamma;
 
 	std::shared_ptr<Environment> Renderer::GetGlobalEnv()
 	{
@@ -74,12 +76,28 @@ namespace Engine {
 
 	void Renderer::ActivateShadow(bool activate)
 	{
-		s_Data.GlobalEnv->UseShadowMap = activate;
+		isShadow = activate;
+		s_Data.ShadingData_.Data1.y = (int)activate;
+	}
+
+	void Renderer::SetSpecularMode(int mode)
+	{
+		s_Data.ShadingData_.Data1.w = mode;
+	}
+
+	void Renderer::SetDiffuseMode(int mode)
+	{
+		s_Data.ShadingData_.Data1.z = mode;
+	}
+
+	void Renderer::SetLambertContrast(int factor)
+	{
+		s_Data.ShadingData_.Data2.x = factor;
 	}
 
 	void Renderer::ActivateGamma(bool activate)
 	{
-		gamma.x = (unsigned int)activate;
+		s_Data.ShadingData_.Data2.z = (int)activate;
 	}
 
 	void Renderer::ActivateShowGBuffer(bool activate)
@@ -115,6 +133,7 @@ namespace Engine {
 	void Renderer::ActivateLighting(bool activate)
 	{
 		isLighting = activate;
+		s_Data.ShadingData_.Data1.x = (int)activate;
 	}
 
 	float* Renderer::GetReinhardFactor()
@@ -138,12 +157,6 @@ namespace Engine {
 			.SetRasterize(RasterlizerOpt::Solid);
 
 		s_Data.GlobalEnv.reset(new Environment);
-		s_Data.GlobalEnv->UseShadowMap = false;
-		s_Data.GlobalEnv->bias.x = 0.0000125f;
-		s_Data.GlobalEnv->bias.y = 0.0f;
-		s_Data.GlobalEnv->bias.z = 1.0f;
-		s_Data.GlobalEnv->Ambient = { 0.8f, 0.8f, 0.8f };
-
 		s_Data.GeometryBuffer.reset(new GBuffer(Dx11Core::Get().Width(), Dx11Core::Get().Height(), {
 			{"Diffuse", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"Normal",  DXGI_FORMAT_R32G32B32A32_FLOAT},
 			{"Ambient", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"WorldPosition", DXGI_FORMAT_R32G32B32A32_FLOAT},
@@ -285,6 +298,8 @@ namespace Engine {
 
 	void Renderer::renderShadow()
 	{
+		if (!isShadow) return;
+
 		Dx11Core::Get().Context->PSSetShader(nullptr, nullptr, 0);
 
 		s_Data.PLController->SetRasterize(RasterlizerOpt::Shadow);
@@ -456,6 +471,7 @@ namespace Engine {
 		myShader->SetParam<CBuffer::Materials>(*model->m_MaterialSet);
 		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
 		myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		myShader->SetParam<CBuffer::ShadingData>(s_Data.ShadingData_);
 
 		if (meshType == MeshType::SkyBox)
 		{
@@ -503,14 +519,17 @@ namespace Engine {
 		auto skeletal = ShaderArchive::Get(useShader + "Skeletal");
 		auto static_ = ShaderArchive::Get(useShader + "Static");
 		
-		skeletal->SetParam<CBuffer::Gamma>(gamma);
-		static_->SetParam<CBuffer::Gamma>(gamma);
-
 		for (auto model3D : s_Data.Queued3D)
 			draw3D(model3D, useShader);
 
 		for (auto light : s_Data.QueuedLight)
 			renderLight(light);
+
+		if (!isLighting)
+		{
+
+		}
+
 
 		//Pass2. Render light with gbuffer
 		if (isHdr)
@@ -535,8 +554,8 @@ namespace Engine {
 		}
 		for (uint32_t i = 0; i < s_Data.QueuedLight.size(); ++i)
 		{
-			if (i == 0) s_Data.GlobalEnv->bias.x = 0.0f;
-			else s_Data.GlobalEnv->bias.x = 1.0f;
+			if (i == 0) s_Data.ShadingData_.Data2.y = 0;
+			else s_Data.ShadingData_.Data2.y = 1;
 
 			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Disable);
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
@@ -546,6 +565,7 @@ namespace Engine {
 			lightingShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
 			lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
+			lightingShader->SetParam<CBuffer::ShadingData>(s_Data.ShadingData_);
 
 			switch (s_Data.QueuedLight[i]->m_Type)
 			{
@@ -605,9 +625,6 @@ namespace Engine {
 			s_Data.PLController->SetRenderTarget("BackBuffer");
 			s_Data.PLController->SetDepthStencil(DepthStencilOpt::Enable);
 			s_Data.PLController->SetBlend(BlendOpt::Alpha);
-
-			static_->SetParam<CBuffer::Light>(*s_Data.emptyLight);
-			skeletal->SetParam<CBuffer::Light>(*s_Data.emptyLight);
 
 			for (auto& model : s_Data.Queued3D)
 				draw3D(model, useShader, 3, true);

@@ -25,6 +25,7 @@ namespace Engine {
 		void AddRotate(const vec3& rotation);
 		void AddScale(float x, float y, float z);
 		void AddScale(const vec3& scale);
+		void RotateAround(const vec3 & center, const vec3 & axis, float angle);
 
 		void LocalRotateX(float radian);
 		void LocalRotateY(float radian);

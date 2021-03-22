@@ -68,6 +68,17 @@ namespace Engine {
 			return ret;
 		}
 
+		vec3 operator - (const vec3& other) const
+		{
+			vec3 ret = *this;
+
+			ret.x -= other.x;
+			ret.y -= other.y;
+			ret.z -= other.z;
+
+			return ret;
+		}
+
 		vec3 operator-()
 		{
 			vec3 ret = *this;

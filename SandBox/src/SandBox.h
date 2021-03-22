@@ -12,8 +12,6 @@ public:
 	void OnResize();
 	void OnMouseMove(float dx, float dy);
 
-	void controlUpdate(float dt);
-
 	void SaveScene(const std::string& path);
 	void LoadScene(const std::string& path);
 
@@ -38,6 +36,9 @@ private:
 	bool sceneChanged = false;
 	bool pathChanged = false;
 	int renderingPath = 0;
+	int specMode = 0;
+	int diffuseMode = 0;
+	int lambertContrast = 3;
 
 	bool newScene = false;
 	bool newName = false;

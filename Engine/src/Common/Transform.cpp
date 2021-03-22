@@ -99,6 +99,11 @@ namespace Engine {
 		m_Scale.z += scale.z;
 	}
 
+	void Transform::RotateAround(const vec3 & center, const vec3 & axis, float angle)
+	{
+		m_Translate = Util::RotateAround(m_Translate, center, axis, angle);
+	}
+
 	void Transform::LocalRotateX(float radian)
 	{
 		Util::RotateLocalX(m_Rotate, radian);

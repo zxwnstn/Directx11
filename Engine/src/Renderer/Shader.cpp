@@ -31,6 +31,7 @@ namespace Engine {
 		case CBuffer::Type::ToneMapFactor: return sizeof(CBuffer::ToneMapFactor);
 		case CBuffer::Type::Gamma: return sizeof(CBuffer::Gamma);
 		case CBuffer::Type::SkyBoxInfo: return sizeof(CBuffer::SkyBoxInfo);
+		case CBuffer::Type::ShadingData: return sizeof(CBuffer::ShadingData);
 		}
 		return 0;
 	}
@@ -56,6 +57,7 @@ namespace Engine {
 		if (name == "ToneMapFactor") return CBuffer::Type::ToneMapFactor;
 		if (name == "Gamma") return CBuffer::Type::Gamma;
 		if (name == "SkyBoxInfo") return CBuffer::Type::SkyBoxInfo;
+		if (name == "ShadingData") return CBuffer::Type::ShadingData;
 		return CBuffer::Type::None;
 	}
 

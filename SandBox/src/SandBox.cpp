@@ -4,6 +4,7 @@
 
 #include "../../vendor/imgui/imgui.h"
 
+#include "Script/MultiLighting.h"
 
 float mFactor = 0.0f;
 float White = 1.5f;
@@ -43,7 +44,9 @@ void SandBox::Init()
 	Engine::Renderer::ActivateWire(wire);
 	Engine::Renderer::SetTFactor(tFactor);
 	Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
-
+	Engine::Renderer::SetDiffuseMode(diffuseMode);
+	Engine::Renderer::SetSpecularMode(specMode);
+	Engine::Renderer::SetLambertContrast(lambertContrast);
 }
 
 void SandBox::OnImGui()
@@ -86,66 +89,90 @@ void SandBox::OnImGui()
 				Engine::Renderer::ActivateShowGBuffer(gBuffer);
 			}
 		}
-
-		if (ImGui::Checkbox("Render as WireFrame", &wire))
-			Engine::Renderer::ActivateWire(wire);
-
-		if (ImGui::Checkbox("Shadow", &shadow))
-			Engine::Renderer::ActivateShadow(shadow);
-
-		if (shadow)
+	
+		if (ImGui::Checkbox("Lighting", &lighting))
 		{
-			if (ImGui::SliderInt("DepthBias", &depthBias, 0, 100))
-				Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
-			if (ImGui::SliderFloat("SlopeBias", &slopeBias, 0.0f, 100.0f))
-				Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
+			Engine::Renderer::ActivateLighting(lighting);
 		}
 
-		if (renderingPath == 0)
+		if (lighting)
 		{
-			if (ImGui::Checkbox("Lighting", &lighting))
-			{
-				Engine::Renderer::ActivateLighting(lighting);
-			}
-
-			if (ImGui::SliderFloat("TsellationFactor", &tFactor, 1.0f, 20.0f))
-				Engine::Renderer::SetTFactor(tFactor);
-		}
-		if (renderingPath == 1)
-		{
-			if (ImGui::Checkbox("Show G-Buffer", &gBuffer))
-			{
-				Engine::Renderer::ActivateShowGBuffer(gBuffer);
-			}
+			ImGui::BeginChild("lighting opt", ImVec2(350, 150), true);
 
 			if (ImGui::Checkbox("Gamma correction", &gamma))
 				Engine::Renderer::ActivateGamma(gamma);
 
-			if (ImGui::Checkbox("Hdr", &hdr))
+			if (ImGui::Checkbox("Shadow", &shadow))
+				Engine::Renderer::ActivateShadow(shadow);
+
+			if (shadow)
 			{
-				Engine::Renderer::ActivateHdr(hdr);
-				if (!hdr)
-				{
-					Engine::Renderer::ActivateGamma(false);
-				}
-				else
-				{
-					Engine::Renderer::ActivateGamma(gamma);
-				}
+				if (ImGui::SliderInt("DepthBias", &depthBias, 0, 100))
+					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
+				if (ImGui::SliderFloat("SlopeBias", &slopeBias, 0.0f, 100.0f))
+					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
 			}
 
-			if (hdr)
+			const char* difuselist[] = { "lambert", "half lambert" };
+			if (ImGui::Combo("Diffuse mode", &diffuseMode, difuselist, 2))
+				Engine::Renderer::SetDiffuseMode(diffuseMode);
+
+			const char* speclist[] = { "phong", "blinn" };
+			if (ImGui::Combo("Specular mode", &specMode, speclist, 2))
+				Engine::Renderer::SetSpecularMode(specMode);
+
+			if (diffuseMode == 1)
 			{
-				ImGui::BeginChild("", ImVec2(300, 200), true);
-				float* factor = Engine::Renderer::GetReinhardFactor();
-
-				ImGui::Text("Average Lum : %f", factor[2]);
-				ImGui::SliderFloat("White", &factor[0], 0.0f, 10.0f, nullptr, 1.0f);
-				ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 10.0f, nullptr, 1.0f);
-
-				ImGui::EndChild();
+				if (ImGui::SliderInt("Diffuse Contrast", &lambertContrast, 1, 5))
+					Engine::Renderer::SetLambertContrast(lambertContrast);
 			}
-		}		
+			ImGui::EndChild();
+		}
+
+		if (ImGui::Checkbox("Render as WireFrame", &wire))
+			Engine::Renderer::ActivateWire(wire);
+
+		if (ImGui::TreeNode("Specific")) 
+		{
+			if (renderingPath == 0)
+			{
+				if (ImGui::SliderFloat("TsellationFactor", &tFactor, 1.0f, 20.0f))
+					Engine::Renderer::SetTFactor(tFactor);
+			}
+			if (renderingPath == 1)
+			{
+				if (ImGui::Checkbox("Show G-Buffer", &gBuffer))
+				{
+					Engine::Renderer::ActivateShowGBuffer(gBuffer);
+				}
+
+				if (ImGui::Checkbox("Hdr", &hdr))
+				{
+					Engine::Renderer::ActivateHdr(hdr);
+					if (!hdr)
+					{
+						Engine::Renderer::ActivateGamma(false);
+					}
+					else
+					{
+						Engine::Renderer::ActivateGamma(gamma);
+					}
+				}
+
+				if (hdr)
+				{
+					ImGui::BeginChild("", ImVec2(350, 100), true);
+					float* factor = Engine::Renderer::GetReinhardFactor();
+
+					ImGui::Text("Average Lum : %f", factor[2]);
+					ImGui::SliderFloat("White", &factor[0], 0.0f, 10.0f, nullptr, 1.0f);
+					ImGui::SliderFloat("MiddleGray", &factor[1], 0.0f, 10.0f, nullptr, 1.0f);
+
+					ImGui::EndChild();
+				}
+			}
+			ImGui::TreePop();
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Scene"))
@@ -267,7 +294,6 @@ void SandBox::OnUpdate(float dt)
 
 	OnImGui();
 	Engine::Renderer::Present();
-	controlUpdate(dt);
 
 	if (onSave || onLoad || onShaderLoad)
 	{
@@ -329,47 +355,7 @@ void SandBox::OnResize()
 //
 void SandBox::OnMouseMove(float dx, float dy)
 {
-	auto& camTransform = CurScene->GetCurCam()->GetTransform();
-	if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
-	{
-		dx *= mouseSensitive;
-		dy *= mouseSensitive;
-		camTransform.LocalRotateX(dx);
-		camTransform.LocalRotateY(dy);
-	}
-}
-
-void SandBox::controlUpdate(float dt)
-{
-	auto& camTransform = CurScene->GetCurCam()->GetTransform();
-
-	if (GetAsyncKeyState('W') & 0x8000)
-	{
-		camTransform.MoveForwad(0.1f);
-	}
-
-	if (GetAsyncKeyState('S') & 0x8000)
-	{
-		camTransform.MoveBack(0.1f);
-	}
-
-	if (GetAsyncKeyState('A') & 0x8000)
-	{
-		camTransform.MoveLeft(0.1f);
-	}
-	if (GetAsyncKeyState('D') & 0x8000)
-	{
-		camTransform.MoveRight(0.1f);
-	}
-
-	if (GetAsyncKeyState('E') & 0x8000)
-	{
-		camTransform.AddTranslate(0.0f, 0.1f, 0.0f);
-	}
-	if (GetAsyncKeyState('Q') & 0x8000)
-	{
-		camTransform.AddTranslate(0.0f, -0.1f, 0.0f);
-	}
+	CurScene->OnMouseMove(dx, dy, mouseSensitive);
 }
 
 void SandBox::SaveScene(const std::string& path)
@@ -377,7 +363,7 @@ void SandBox::SaveScene(const std::string& path)
 	auto slash = path.rfind('\\');
 	auto extension = path.rfind('.');
 	auto saveSceneName = path.substr(slash + 1, extension - slash - 1);
-	auto inform = CurScene->Save();
+	auto inform = CurScene->SaveSceneData();
 	inform.SceneName = saveSceneName;
 
 	Engine::Serializer::Write(path, inform);
@@ -390,6 +376,7 @@ void SandBox::LoadScene(const std::string& path)
 	SceneInform inform;
 	Engine::Serializer::Read(path, inform);
 	std::shared_ptr<Scene> scene(new Scene(inform));
+
 	Scenes.push_back(scene);
 
 	CurScene = scene;

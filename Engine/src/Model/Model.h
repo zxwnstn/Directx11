@@ -32,9 +32,10 @@ namespace Engine {
 	{
 	private:
 		Model3D() = default;
+		Model3D(const std::string& name);
 
 	public:
-		static ModelBuilder Create();
+		static ModelBuilder Create(const std::string& name = "");
 		
 		void Update(float dt);
 		bool SetAnimation(const std::string& animationName, bool loop);

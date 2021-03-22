@@ -24,8 +24,6 @@ namespace Engine::CBuffer {
 	{
 		Ambient = other.Ambient;
 		WorldMatrix = other.WorldMatrix;
-		UseShadowMap = other.UseShadowMap;
-		bias = other.bias;
 	}
 
 	void Light::Upload(Engine::Light & other)
@@ -51,18 +49,6 @@ namespace Engine::CBuffer {
 
 		InnerAng = cosf(other.m_InnerAngle);
 		OuterAng = cosf(other.m_OuterAngle);
-
-		if (other.noLight)
-		{
-			padding.x = 1;
-			padding.y = 1;
-			padding.z = 1;
-		}
-		else {
-			padding.x = 0;
-			padding.y = 0;
-			padding.z = 0;
-		}
 	}
 
 	void Material::Upload(const Engine::Material& other)
@@ -180,6 +166,12 @@ namespace Engine::CBuffer {
 		Color.y = color.y;
 		Color.z = color.z;
 		Color.w = 1.0f;
+	}
+
+	void ShadingData::Upload(const Engine::ShadingData & other)
+	{
+		Data1 = other.Data1;
+		Data2 = other.Data2;
 	}
 
 }
