@@ -52,7 +52,10 @@ struct MaterialInform
 		ar & Ambient;
 		ar & Diffuse;
 		ar & Specular;
+		ar & Fresnel;
 		ar & Shiness;
+		ar & Roughness;
+		ar & Metalic;
 		ar & Mapmode;
 		ar & DiffuseMap;
 		ar & NormalMap;
@@ -62,7 +65,10 @@ struct MaterialInform
 	Engine::vec4 Ambient;
 	Engine::vec4 Diffuse;
 	Engine::vec4 Specular;
+	Engine::vec4 Fresnel;
 	float Shiness;
+	float Roughness;
+	float Metalic;
 	int Mapmode;
 	std::string DiffuseMap;
 	std::string NormalMap;

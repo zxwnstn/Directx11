@@ -26,14 +26,17 @@ namespace Engine {
 			ar & Specular.x; ar & Specular.y; ar & Specular.z;
 			ar & Emissive.x; ar & Emissive.y; ar & Emissive.z;
 			ar & Fresnel.x; ar & Fresnel.y; ar & Fresnel.z;
-			ar & Shiness; ar & MapMode; ar & Name;
+			ar & Shiness; ar & Roughness; ar & Metalic;
+			ar & MapMode; ar & Name;
 		}
 		vec4 Ambient;
 		vec4 Diffuse;
 		vec4 Specular;
 		vec4 Emissive;
-		vec4 Fresnel;
+		vec4 Fresnel{1.0f, 1.0f, 1.0f, 1.0f};
 		float Shiness;
+		float Roughness = 1.0f;
+		float Metalic = 0.0f;
 		int MapMode = 0;
 		std::string Name = "default";
 	};

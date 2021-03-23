@@ -426,7 +426,10 @@ void Scene::OnImGui()
 			ImGui::ColorEdit3("Ambient", mat.Ambient.m);
 			ImGui::ColorEdit3("Diffuse", mat.Diffuse.m);
 			ImGui::ColorEdit3("Specular", mat.Specular.m);
-			ImGui::SliderFloat("Shiness", &mat.Shiness, 0.1f, 30.0f);
+			ImGui::ColorEdit3("Fresnel", mat.Fresnel.m);
+			ImGui::SliderFloat("Sharpness", &mat.Shiness, 0.1f, 30.0f);
+			ImGui::SliderFloat("Roughness", &mat.Roughness, 0.0f, 1.0f);
+			ImGui::SliderFloat("Metalic", &mat.Metalic, 0.0f, 1.0f);
 
 			ImGui::Text("Material Mapping Mode");
 			int mappingMode = mat.MapMode;
@@ -937,9 +940,12 @@ SceneInform Scene::SaveSceneData()
 			matInform.Name = material->Materials[i].Name;
 			matInform.Ambient = material->Materials[i].Ambient;
 			matInform.Diffuse = material->Materials[i].Diffuse;
-			matInform.Mapmode = material->Materials[i].MapMode;
+			matInform.Fresnel = material->Materials[i].Fresnel;
 			matInform.Specular = material->Materials[i].Specular;
 			matInform.Shiness = material->Materials[i].Shiness;
+			matInform.Roughness = material->Materials[i].Roughness;
+			matInform.Metalic = material->Materials[i].Metalic;
+			matInform.Mapmode = material->Materials[i].MapMode;
 			matInform.DiffuseMap = material->MaterialTextures[i][0].Name;
 			matInform.NormalMap = material->MaterialTextures[i][1].Name;
 			matInform.SpecularMap = material->MaterialTextures[i][2].Name;
@@ -1063,8 +1069,11 @@ void Scene::LoadSceneData(const SceneInform& _inform)
 			mat.Ambient = inform.Material[i].Ambient;
 			mat.Diffuse = inform.Material[i].Diffuse;
 			mat.Specular = inform.Material[i].Specular;
+			mat.Fresnel = inform.Material[i].Fresnel;
 			mat.MapMode = inform.Material[i].Mapmode;
 			mat.Shiness = inform.Material[i].Shiness;
+			mat.Roughness = inform.Material[i].Roughness;
+			mat.Metalic = inform.Material[i].Metalic;
 			texture[i][0].Name = inform.Material[i].DiffuseMap;
 			texture[i][1].Name = inform.Material[i].NormalMap;
 			texture[i][2].Name = inform.Material[i].SpecularMap;

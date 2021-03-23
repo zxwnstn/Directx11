@@ -80,6 +80,35 @@ namespace Engine {
 				}
 			}
 		}
+
+		LOG_INFO("Load Texture") {
+			std::filesystem::recursive_directory_iterator TextureFolder(File::GetCommonPath(File::Texture));
+			std::vector<std::string> tempEnv;
+			for (auto& dir : TextureFolder)
+			{
+				if (dir.is_regular_file())
+				{
+					if (dir.path().parent_path().stem() == "Environment")
+					{
+						if(!tempEnv.empty())
+							continue;
+
+						std::string path = dir.path().parent_path().string() + "\\";
+						const char* compo[] = { "right.png", "left.png", "bottom.png", "top.png", "front.png", "back.png" };
+						for (int i = 0; i < 6; ++i)
+						{
+							tempEnv.push_back(path + compo[i]);
+						}
+					}
+					else
+					{
+						TextureArchive::Add(dir.path().string(), dir.path().stem().string());
+					}
+				}
+			}
+			TextureArchive::Add(tempEnv, "TempEnvironment", 1024, 1024, true);
+			ShadowMap(1024, 1024, 6);
+		}
 		
 		LOG_INFO("Load Fbx") {
 			std::string fbxDir = File::GetCommonPath(File::FBX);
@@ -102,23 +131,6 @@ namespace Engine {
 					}
 				}
 			}
-		}
-		
-
-		LOG_INFO("Load Texture") {
-			std::filesystem::recursive_directory_iterator TextureFolder(File::GetCommonPath(File::Texture));
-			std::vector<std::string> paths;
-			for (auto& dir : TextureFolder)
-			{
-				if (dir.is_regular_file())
-				{
-					TextureArchive::Add(dir.path().string(), dir.path().stem().string());
-					paths.push_back(dir.path().string());
-				}
-			}
-			TextureArchive::Add(paths, "images", 1024, 1024);
-			TextureArchive::Add("asdf", 1024, 1024, 6);
-			ShadowMap(1024, 1024, 6);
 		}
 
 		LOG_INFO("Init ImGui") {

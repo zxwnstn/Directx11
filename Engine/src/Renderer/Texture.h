@@ -74,7 +74,7 @@ namespace Engine {
 		//General texture with image
 		Texture(const std::string& path);
 		//General textures(Texture array)
-		Texture(const std::vector<std::string>& paths, int unifiedWidth, int unifiedHeight);
+		Texture(const std::vector<std::string>& paths, int unifiedWidth, int unifiedHeight, bool isCubeMap);
 		//UAV
 		Texture(uint32_t width, uint32_t height, bool, bool);
 
@@ -124,7 +124,7 @@ namespace Engine {
 		//Create Render target TextureArray if call by zero unified width or height value setted first image width or height
 		static void Add(const std::string& name, uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize);
 		//Create Shader Resource TextureArray if call by zero unified width or height value setted 1024
-		static void Add(const std::vector<std::string>& paths, const std::string& name, uint32_t unifiedWidth, uint32_t unifiedHeight);
+		static void Add(const std::vector<std::string>& paths, const std::string& name, uint32_t unifiedWidth, uint32_t unifiedHeight, bool isCubeMap);
 		//Create UAV
 		static void Add(const std::string& name, uint32_t width, uint32_t height, bool, bool);
 

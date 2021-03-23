@@ -13,7 +13,7 @@
 	#define DEBUG_FEATURE
 	#define RELEASE false
 #else
-	#define RELEASE true
+	#define RELEASE false
 #endif
 
 #ifdef DEBUG_FEATURE		

@@ -160,8 +160,8 @@ namespace Engine {
 		s_Data.GeometryBuffer.reset(new GBuffer(Dx11Core::Get().Width(), Dx11Core::Get().Height(), {
 			{"Diffuse", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"Normal",  DXGI_FORMAT_R32G32B32A32_FLOAT},
 			{"Ambient", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"WorldPosition", DXGI_FORMAT_R32G32B32A32_FLOAT},
-			{"Misc", DXGI_FORMAT_R8G8B8A8_UNORM},
-			}));
+			{"Specular", DXGI_FORMAT_R32G32B32A32_FLOAT}, {"Misc", DXGI_FORMAT_R8G8B8A8_UNORM},
+		}));
 
 		float vertices[] = {
 		   -1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
@@ -525,12 +525,6 @@ namespace Engine {
 		for (auto light : s_Data.QueuedLight)
 			renderLight(light);
 
-		if (!isLighting)
-		{
-
-		}
-
-
 		//Pass2. Render light with gbuffer
 		if (isHdr)
 			s_Data.PLController->SetRenderTarget("HDRTexture");
@@ -539,7 +533,7 @@ namespace Engine {
 
 		auto lightingShader = ShaderArchive::Get("DefferedLighting");
 		lightingShader->Bind();
-		
+		TextureArchive::Get("TempEnvironment")->Bind(10);
 
 		s_Data.ModelBuffer2D->Bind();
 		s_Data.GeometryBuffer->Bind();
@@ -571,15 +565,15 @@ namespace Engine {
 			{
 			case Light::Type::Directional:
 				lightingShader->SetParam<CBuffer::Cascaded>(s_Data.QueuedLight[i]->m_CascadedMat);
-				Dx11Core::Get().Context->PSSetShaderResources(8, 1, &s_Data.DirShadowMaps[dirIndex]->m_ShaderResourceView);
+				Dx11Core::Get().Context->PSSetShaderResources(9, 1, &s_Data.DirShadowMaps[dirIndex]->m_ShaderResourceView);
 				dirIndex++;
 				break;
 			case Light::Type::Point:
-				Dx11Core::Get().Context->PSSetShaderResources(7, 1, &s_Data.PointShadowMaps[pointIndex]->m_ShaderResourceView);
+				Dx11Core::Get().Context->PSSetShaderResources(8, 1, &s_Data.PointShadowMaps[pointIndex]->m_ShaderResourceView);
 				pointIndex++;
 				break;
 			case Light::Type::Spot:
-				Dx11Core::Get().Context->PSSetShaderResources(6, 1, &s_Data.SpotShadowMaps[spotIndex]->m_ShaderResourceView);
+				Dx11Core::Get().Context->PSSetShaderResources(7, 1, &s_Data.SpotShadowMaps[spotIndex]->m_ShaderResourceView);
 				spotIndex++;
 				break;
 			}
@@ -627,7 +621,7 @@ namespace Engine {
 			s_Data.PLController->SetBlend(BlendOpt::Alpha);
 
 			for (auto& model : s_Data.Queued3D)
-				draw3D(model, useShader, 3, true);
+				draw3D(model, useShader, 4, true);
 		}
 		else
 		{
@@ -636,6 +630,7 @@ namespace Engine {
 				s_Data.PLController->SetRenderTarget("BackBuffer");
 			else
 				s_Data.PLController->SetRenderTarget("ForwardTexture");
+			TextureArchive::Get("TempEnvironment")->Bind(3);
 
 			renderSkyBox();
 			for (auto& light : s_Data.QueuedLight)
@@ -671,7 +666,7 @@ namespace Engine {
 				}
 
 				for (auto& model : s_Data.Queued3D)
-					draw3D(model, useShader, 3, true);
+					draw3D(model, useShader, 4, true);
 				renderLight(light);
 
 				s_Data.PLController->SetRenderTarget("BackBuffer");

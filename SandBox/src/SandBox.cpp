@@ -113,12 +113,12 @@ void SandBox::OnImGui()
 					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
 			}
 
-			const char* difuselist[] = { "lambert", "half lambert" };
-			if (ImGui::Combo("Diffuse mode", &diffuseMode, difuselist, 2))
+			const char* difuselist[] = { "lambert", "half lambert", "Oren-Nayer" };
+			if (ImGui::Combo("Diffuse mode", &diffuseMode, difuselist, 3))
 				Engine::Renderer::SetDiffuseMode(diffuseMode);
 
-			const char* speclist[] = { "phong", "blinn" };
-			if (ImGui::Combo("Specular mode", &specMode, speclist, 2))
+			const char* speclist[] = { "phong", "blinn", "Cook-Torrance" };
+			if (ImGui::Combo("Specular mode", &specMode, speclist, 3))
 				Engine::Renderer::SetSpecularMode(specMode);
 
 			if (diffuseMode == 1)

@@ -4,7 +4,7 @@
 Texture2D materialTexture[MaxPart * 3] : register(t0);
 SamplerState SampleType : register(s0);
 
-cbuffer Materials : register(b0)
+cbuffer Materials : register(b3)
 {
 	float4 MAmbient[MaxPart];
 	float4 MDiffuse[MaxPart];
@@ -12,6 +12,10 @@ cbuffer Materials : register(b0)
 	float4 MEmmisive[MaxPart];
 	float4 MFresnel[MaxPart];
 	float4 MShiness[MaxPart / 4];
+	float4 MRoughness[MaxPart / 4];
+	float4 MMetalic[MaxPart / 4];
+
+	//1 $ has Diffuse 2 $ has Normal 4 $ has specular
 	int4  MMode[MaxPart / 4];
 };
 
@@ -27,8 +31,10 @@ struct GBuffer
 	float4 Normal  : SV_TARGET1;
 	float4 Ambient : SV_TARGET2;
 	float4 WorldPosition : SV_TARGET3;
-	float4 Misc : SV_TARGET4;
+	float4 Specular : SV_TARGET4;
+	float4 Misc : SV_TARGET5;
 };
+
 
 struct Input
 {
@@ -122,7 +128,11 @@ GBuffer main(Input input) : SV_TARGET
 	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
 
 	float3 Diffuse = diffuseMap * MDiffuse[materialIndex].xyz;
-	float3 Specular = specularMap * MSpecular[materialIndex].xyz;;
+	float3 Specular = specularMap * MSpecular[materialIndex].xyz;
+	if (SData1.w == 2)
+	{
+		Specular = MFresnel[materialIndex];
+	}
 	float3 Ambient = input.gAmbient * MAmbient[materialIndex].xyz;
 	if (mapMode & 2)
 	{
@@ -140,9 +150,16 @@ GBuffer main(Input input) : SV_TARGET
 
 	output.Ambient = float4(Ambient, 1.0f);
 	output.WorldPosition = float4(input.worldPosition, 1.0f);
+	output.Specular = float4(Specular, 1.0f);
+
 	float shiness = MShiness[materialIndex / 4][materialIndex % 4];
-	shiness /= 30.0f;
-	output.Misc = float4(Specular, shiness);
+	float roughness = MRoughness[materialIndex / 4][materialIndex % 4];
+	float metalic = MMetalic[materialIndex / 4][materialIndex % 4];
+
+	output.Misc.x = shiness / 30.0f;
+	output.Misc.y = roughness;
+	output.Misc.z = metalic;
+	output.Misc.w = 1.0f;
 
 	return output;
 }

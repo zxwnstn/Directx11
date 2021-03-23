@@ -159,6 +159,7 @@ namespace Engine::CBuffer {
 		vec4 Emissive;
 		vec4 Fresnel;
 		float Shiness;
+		float Roughness;
 		int MapMode;
 
 		void Upload(const Engine::Material& other);
@@ -173,6 +174,8 @@ namespace Engine::CBuffer {
 		vec4 Fresnel[MAXIMUM_PART];
 		
 		float Shiness[MAXIMUM_PART];
+		float Roughness[MAXIMUM_PART];
+		float Metalic[MAXIMUM_PART];
 		unsigned int MMode[MAXIMUM_PART]{0, };
 
 		void Upload(const Engine::MaterialSet& other);

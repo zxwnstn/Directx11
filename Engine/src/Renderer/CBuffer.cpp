@@ -60,6 +60,7 @@ namespace Engine::CBuffer {
 		Fresnel = other.Fresnel;
 		Shiness = other.Shiness;
 		MapMode = other.MapMode;
+		Roughness = other.Roughness;
 	}
 
 	void Materials::Upload(const Engine::MaterialSet & other)
@@ -78,6 +79,8 @@ namespace Engine::CBuffer {
 
 			MMode[i] = curMaterial.MapMode;
 			Shiness[i] = curMaterial.Shiness;
+			Roughness[i] = curMaterial.Roughness;
+			Metalic[i] = curMaterial.Metalic;
 		}
 	}
 
