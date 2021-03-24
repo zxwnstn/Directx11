@@ -26,6 +26,7 @@ private:
 	bool gamma = true;
 	bool wire = false;
 	bool v_Sync = true;
+	bool realTimeEnv = false;
 
 	float tFactor = 1.0f;
 	int depthBias = 85;

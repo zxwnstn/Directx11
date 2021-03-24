@@ -60,6 +60,11 @@ cbuffer Cascaded : register(b4)
 	float4 ToCascadeScale;
 }
 
+cbuffer SkyBoxInfo : register(b5)
+{
+	float4 SColor;
+}
+
 struct Input
 {
 	float4 position : SV_POSITION;
@@ -274,7 +279,6 @@ float CalcDirShadow(float3 position)
 
 float4 main(Input input) : SV_TARGET
 {
-
 	int materialIndex = input.MaterialIndex;
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
 
@@ -284,6 +288,13 @@ float4 main(Input input) : SV_TARGET
 		discard;
 
 	float3 diffuseMap = diffuseMapFirst.xyz;
+	bool gammaCorrected = false;
+	if (SData2.z && mapMode & 1)
+	{
+		diffuseMap = pow(diffuseMap, 2.2f);
+		gammaCorrected = true;
+	}
+
 	float3 normalMap = GetMaterialNormalMap(materialIndex, input.tex, mapMode).xyz;
 	float3 specularMap = GetMaterialSpecularMap(materialIndex, input.tex, mapMode).xyz;
 
@@ -297,13 +308,7 @@ float4 main(Input input) : SV_TARGET
 	if (SData1.x == 0) // Not calculate lihgting just return diffuse
 		return float4(Diffuse, 1.0f);
 
-	bool gammaCorrected = false;
-	if (SData2.z && mapMode & 1)
-	{
-		diffuseMap = pow(diffuseMap, 2.2f);
-		gammaCorrected = true;
-	}
-
+	
 	if (mapMode & 2)
 	{
 		normalMap = normalMap * 2.0f - 1.0f;
@@ -361,8 +366,8 @@ float4 main(Input input) : SV_TARGET
 	float sf = 0.0f;
 	if (SData1.w == 0) //phong
 	{
-		float3 specularVector = normalize(reflect(-LightVector, input.normal));
-		specPower = max(dot(specularVector, input.camvector), 0.0f);
+		float3 specularVector = normalize(reflect(-L, N));
+		specPower = max(dot(specularVector, V), 0.0f);
 		sf = pow(specPower, sharpness);
 	}
 	if (SData1.w == 1) //blinn-phong
@@ -389,7 +394,7 @@ float4 main(Input input) : SV_TARGET
 			float3 kD = 1.0f - kS;
 			kD *= 1.0f - metalic;
 
-			Lo = float3((kD * Diffuse / PI + Specular) * LightColor * LightPower * NdotL);
+			Lo = float3((kD * Diffuse / PI + Specular) * LightPower * NdotL);
 		}
 
 		float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
@@ -399,9 +404,10 @@ float4 main(Input input) : SV_TARGET
 
 		float3 R = reflect(V, N);
 		float3 PrefilteredColor = EnvironmentMap.Sample(SampleType, R, roughness * 11).xyz;
+		PrefilteredColor *= SColor; // Sky color
 		float3 Specular_ = PrefilteredColor * F;
 
-		float3 Ambient_ = KD * Diffuse * df + Specular_;
+		float3 Ambient_ = KD * Diffuse * df * LightColor + Specular_;
 
 		float3 color = Ambient_ + Lo;
 
@@ -436,7 +442,9 @@ float4 main(Input input) : SV_TARGET
 	color *= ShadowAtt;
 
 	if (gammaCorrected)
+	{
 		color = pow(color, 0.4545f);
+	}
 
 	return float4(color, 1.0f);
 }

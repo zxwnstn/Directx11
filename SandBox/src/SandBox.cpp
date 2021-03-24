@@ -97,13 +97,16 @@ void SandBox::OnImGui()
 
 		if (lighting)
 		{
-			ImGui::BeginChild("lighting opt", ImVec2(350, 150), true);
+			ImGui::BeginChild("lighting opt", ImVec2(350, 250), true);
 
 			if (ImGui::Checkbox("Gamma correction", &gamma))
 				Engine::Renderer::ActivateGamma(gamma);
 
 			if (ImGui::Checkbox("Shadow", &shadow))
 				Engine::Renderer::ActivateShadow(shadow);
+
+			//if (ImGui::Checkbox("Real Time Environment map", &realTimeEnv))
+			//	Engine::Renderer::ActivateRealTimeEnvironment(realTimeEnv);
 
 			if (shadow)
 			{

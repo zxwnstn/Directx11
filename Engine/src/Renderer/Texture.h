@@ -62,6 +62,7 @@ namespace Engine {
 
 			friend class PipelineController;
 			friend class Renderer;
+			friend class Texture;
 		};	
 
 	private:
@@ -70,7 +71,7 @@ namespace Engine {
 		//Render target Texture
 		Texture(uint32_t width, uint32_t height);
 		//Render target Textures
-		Texture(uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize);
+		Texture(uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize, bool isCubeMap = false);
 		//General texture with image
 		Texture(const std::string& path);
 		//General textures(Texture array)
@@ -87,6 +88,7 @@ namespace Engine {
 		void Resize(int Width, int Height);
 		void SetComputeOuput();
 		void SetComputeResource(int slot);
+		void SetAsRenderTarget();
 
 	public:
 		int32_t Width;

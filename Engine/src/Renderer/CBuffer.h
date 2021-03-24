@@ -36,6 +36,7 @@ namespace Engine::CBuffer {
 		mat4 Projection;
 
 		void Upload(Engine::Camera& other);
+		void Upload(vec3& translate);
 	};
 
 	struct Cascaded

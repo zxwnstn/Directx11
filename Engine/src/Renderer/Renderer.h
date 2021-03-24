@@ -33,6 +33,7 @@ namespace Engine {
 		static void SetTFactor(float tFactor);
 		static void AppMinimized(bool min);
 		static void ActivateVSync(bool activate);
+		static void ActivateRealTimeEnvironment(bool activate);
 		static void SetSpecularMode(int mode); //0 - phong, 1 - blinn 
 		static void SetDiffuseMode(int mode); //0 - lambert, 1 - half lambert
 		static void SetLambertContrast(int factor);
@@ -61,6 +62,7 @@ namespace Engine {
 		static void renderShadow();
 		static void renderGBuffer();
 		static void renderSkyBox();
+		static void renderEnvironment();
 		static void renderLight(const std::shared_ptr<Light>& light);
 		static void draw2D(std::shared_ptr<Model2D> model, const std::string& shader);
 		static void draw3D(std::shared_ptr<Model3D> model, const std::string& shader, int materialBind = 0, bool tess = false);

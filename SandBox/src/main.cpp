@@ -7,6 +7,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 #include "../../vendor/imgui/backends/imgui_impl_win32.h"
 
 bool running = true;
+bool resized = false;
 SandBox sandBox;
 
 Engine::vec2 prevMouse;
@@ -33,9 +34,7 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam
 		g_Height = HIWORD(lParam);
 		if (g_Width != 0 && g_Height != 0)
 		{
-			Engine::Renderer::AppMinimized(false);
-			Engine::Renderer::Resize(g_Width, g_Height);
-			sandBox.OnResize();
+			resized = true;
 			LOG_INFO("Application Resized! width : {0}, height {1}", g_Width, g_Height);
 		}
 		if (g_Width == 0 && g_Height == 0)
@@ -50,7 +49,7 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam
 int main()
 {
 	auto hInstance = GetModuleHandle(NULL);
-	LPCTSTR appName = L"SandBox";
+	LPCTSTR appName = L"Directx11";
 
 	WNDCLASS wndClass;
 	wndClass.cbClsExtra = 0;
@@ -66,8 +65,8 @@ int main()
 	RegisterClass(&wndClass);
 
 	auto hWindow = CreateWindow(
-		L"SandBox",
-		L"SandBox",
+		L"Directx11",
+		L"Directx11",
 		WS_OVERLAPPEDWINDOW,
 		100,
 		100,
@@ -79,13 +78,14 @@ int main()
 		NULL
 	);
 
+	RECT rc{0, 0, g_Width, g_Height};
+	AdjustWindowRect(&rc, WS_CAPTION | WS_SYSMENU, false);
+	SetWindowPos(hWindow, NULL, 100, 100, (rc.right - rc.left), (rc.bottom - rc.top), SWP_NOZORDER);
+
 	ShowWindow(hWindow, SW_SHOW);
 
 	Engine::ModuleCore::Init({ g_Width, g_Height, (uint64_t)hWindow });
 	sandBox.Init();
-
-	Engine::Renderer::Resize(g_Width, g_Height);
-	sandBox.OnResize();
 
 	Engine::Timestep::SetTimePoint();
 
@@ -93,12 +93,21 @@ int main()
 	while (running)
 	{
 		MSG msg;
-		
+
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+
+		if (resized)
+		{
+			Engine::Renderer::AppMinimized(false);
+			Engine::Renderer::Resize(g_Width, g_Height);
+			sandBox.OnResize();
+			resized = false;
+		}
+
 		sandBox.OnUpdate(ts.elapse());
 	}
 	

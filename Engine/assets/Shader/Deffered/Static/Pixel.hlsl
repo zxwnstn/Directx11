@@ -133,7 +133,7 @@ GBuffer main(Input input) : SV_TARGET
 	{
 		Specular = MFresnel[materialIndex];
 	}
-	float3 Ambient = input.gAmbient * MAmbient[materialIndex].xyz;
+	float3 Ambient = MAmbient[materialIndex].xyz;
 	if (mapMode & 2)
 	{
 		normalMap = normalMap * 2.0f - 1.0f;

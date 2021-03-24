@@ -110,6 +110,15 @@ namespace Engine::CBuffer {
 		Projection = Util::Transpose(other.GetProjectionMatrix());
 	}
 
+	void CubeCamera::Upload(vec3& translate)
+	{
+		static mat4 s_Projection = Util::Transpose(Util::GetPerspective(3.141592f * 0.5f, 1.0f, 0.1f, 2000.0f));
+
+		for (int i = 0; i < 6; ++i)
+			View[i] = Util::Transpose(Util::GetCubeViewMatrix(translate, i));
+		Projection = s_Projection;
+	}
+
 	void TFactor::Upload(float factor)
 	{
 		Factor.x = factor;

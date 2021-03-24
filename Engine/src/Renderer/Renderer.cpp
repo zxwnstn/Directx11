@@ -28,6 +28,7 @@ namespace Engine {
 		std::vector<std::shared_ptr<ShadowMap>> SpotShadowMaps;
 		std::vector<std::shared_ptr<ShadowMap>> PointShadowMaps;
 		std::vector<std::shared_ptr<ShadowMap>> DirShadowMaps;
+		std::vector<std::shared_ptr<Texture>> EnvironmentMaps;
 
 		std::shared_ptr<ModelBuffer> ModelBuffer2D;
 		std::shared_ptr<Model2D> SkyCube;
@@ -58,6 +59,7 @@ namespace Engine {
 	bool isLighting = false;
 	float tFactor = 1.0f;
 	bool isMinimized = false;
+	bool realtimeEnvironment = false;
 
 	std::shared_ptr<Environment> Renderer::GetGlobalEnv()
 	{
@@ -146,6 +148,11 @@ namespace Engine {
 		Dx11Core::Get().SetVSync(activate);
 	}
 
+	void Renderer::ActivateRealTimeEnvironment(bool activate)
+	{
+		realtimeEnvironment = activate;
+	}
+
 	void Renderer::Init(const WindowProp& prop)
 	{
 		Dx11Core::Get().Init(prop);
@@ -198,6 +205,11 @@ namespace Engine {
 		s_Data.ReinhardToneMapFactor[0] = 6.0f;
 		s_Data.ReinhardToneMapFactor[1] = 6.0f;
 
+		for (int i = 0; i < 50; ++i)
+		{
+			s_Data.EnvironmentMaps.push_back(std::shared_ptr<Texture>(new Texture(1024u, 1024u, 6u, true)));
+		}
+
 	}
 
 	void Renderer::Shutdown()
@@ -244,6 +256,7 @@ namespace Engine {
 		}
 
 		renderShadow();
+		renderEnvironment();
 
 		switch (s_Data.Mode)
 		{
@@ -292,6 +305,34 @@ namespace Engine {
 			else
 			{
 				++it;
+			}
+		}
+	}
+
+	void Renderer::renderEnvironment()
+	{
+		if (!realtimeEnvironment) return;
+
+		int i = 0;
+		for (auto model : s_Data.Queued3D)
+		{
+			bool isReflect = false;
+			auto& mats = model->m_MaterialSet->Materials;
+			for (auto material : mats)
+			{
+				if (material.second.Roughness != 1.0f && material.second.Metalic != 0.0f)
+				{
+					isReflect = true;
+					break;
+				}
+			}
+			if (!isReflect) continue;
+
+			s_Data.EnvironmentMaps[i]->SetAsRenderTarget();
+			for (auto anotherModel : s_Data.Queued3D)
+			{
+				if (anotherModel == model) continue;
+				draw3D(anotherModel, "EffectEnvironment");
 			}
 		}
 	}
@@ -410,20 +451,21 @@ namespace Engine {
 		auto shader = ShaderArchive::Get("HDRAverage");
 		auto width = hdr->Width;
 		auto height = hdr->Height;
+		
 		uint32_t dispatchX = (uint32_t)ceil(width / 16.0f);
 		uint32_t dispatchY = (uint32_t)ceil(height / 16.0f);
+		
 		uvec4 vec;
 		vec.x = dispatchX;
 		vec.y = dispatchY;
+
 		shader->SetParam<CBuffer::DispatchInfo>(vec);
-		
 		shader->Bind();
-		
 		shader->Dipatch(dispatchX, dispatchY, 1);
 
-		auto data = s_Data.LumCsBuffer->GetData();
+		auto data = s_Data.LumCsBuffer->GetData(); //컴퓨트 쉐이더에서 1차처리된 결과를 가져온다.
 		float ret = 0.0f;
-		for (uint32_t i = 0; i < dispatchY; ++i)
+		for (uint32_t i = 0; i < dispatchY; ++i) //2차 처리는 cpu에서 진행한다.
 		{
 			for (uint32_t j = 0; j < dispatchX; ++j)
 			{
@@ -472,11 +514,14 @@ namespace Engine {
 		myShader->SetParam<CBuffer::Bone>(model->m_Animation->MySkinnedTransforms);
 		myShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
 		myShader->SetParam<CBuffer::ShadingData>(s_Data.ShadingData_);
+		myShader->SetParam<CBuffer::SkyBoxInfo>(s_Data.SkyColor);
+
+		if (shader == "EffectEnvironment")
+			myShader->SetParam<CBuffer::CubeCamera>(model->m_Transform.GetTranslate());
 
 		if (meshType == MeshType::SkyBox)
 		{
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
-			myShader->SetParam<CBuffer::SkyBoxInfo>(s_Data.SkyColor);
 			auto skyTexture = model->m_MaterialSet->MaterialTextures[0][0].Name;
 
 			if(!skyTexture.empty())
@@ -542,6 +587,10 @@ namespace Engine {
 		uint32_t spotIndex = 0;
 		uint32_t dirIndex = 0;
 
+		lightingShader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
+		lightingShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+		lightingShader->SetParam<CBuffer::SkyBoxInfo>(s_Data.SkyColor);
+
 		if (s_Data.QueuedLight.empty())
 		{
 			Dx11Core::Get().Context->DrawIndexed(s_Data.ModelBuffer2D->GetIndexCount(), 0, 0);
@@ -555,11 +604,9 @@ namespace Engine {
 			s_Data.PLController->SetRasterize(RasterlizerOpt::Solid);
 			s_Data.PLController->SetBlend(BlendOpt::GBuffer);
 
-			lightingShader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
-			lightingShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
+			lightingShader->SetParam<CBuffer::ShadingData>(s_Data.ShadingData_);
 			lightingShader->SetParam<CBuffer::Light>(*s_Data.QueuedLight[i]);
 			lightingShader->SetParam<CBuffer::LightCam>(*s_Data.QueuedLight[i]);
-			lightingShader->SetParam<CBuffer::ShadingData>(s_Data.ShadingData_);
 
 			switch (s_Data.QueuedLight[i]->m_Type)
 			{
@@ -630,8 +677,7 @@ namespace Engine {
 				s_Data.PLController->SetRenderTarget("BackBuffer");
 			else
 				s_Data.PLController->SetRenderTarget("ForwardTexture");
-			TextureArchive::Get("TempEnvironment")->Bind(3);
-
+			
 			renderSkyBox();
 			for (auto& light : s_Data.QueuedLight)
 			{
@@ -665,8 +711,26 @@ namespace Engine {
 					break;
 				}
 
+				int envIdx = 0;
 				for (auto& model : s_Data.Queued3D)
+				{
+					bool isReflect = false;
+					auto mat = model->m_MaterialSet->Materials;
+					for (auto material : mat)
+					{
+						if (material.second.Roughness != 1.0f && material.second.Metalic != 0.0f)
+						{
+							isReflect = true;
+							break;
+						}
+					}
+					if (isReflect)
+					{
+						if (realtimeEnvironment) s_Data.EnvironmentMaps[envIdx++]->Bind(3);
+						else TextureArchive::Get("TempEnvironment")->Bind(3);
+					}
 					draw3D(model, useShader, 4, true);
+				}
 				renderLight(light);
 
 				s_Data.PLController->SetRenderTarget("BackBuffer");

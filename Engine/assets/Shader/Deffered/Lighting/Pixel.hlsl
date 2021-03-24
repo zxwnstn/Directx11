@@ -66,6 +66,11 @@ cbuffer ShadingData : register(b5)
 	int4 SData2; //x = lambert Pow factor, y = deffered blend factor, z = gamma correction
 }
 
+cbuffer SkyBoxInfo : register(b6)
+{
+	float4 SColor;
+}
+
 struct Input
 {
 	float4 position : SV_POSITION;
@@ -246,12 +251,18 @@ float4 main(Input input) : SV_TARGET
 		}
 		else
 		{
+			if (AmbientSample.x >= 0.8)
+			{
+				return DiffuseSample;
+			}
 			discard;
 		}
 	}
 
 	if (SData1.x == 0)
+	{
 		return float4(diffuse, 1.0f);
+	}
 
 	//step2. Calc Light intensity
 	float lightAttenuation = 1.0f;
@@ -336,7 +347,7 @@ float4 main(Input input) : SV_TARGET
 			float3 kD = 1.0f - kS;
 			kD *= 1.0f - metalic;
 
-			Lo = float3((kD * diffuse / PI + specular_) * LightColor * LightPower * NdotL);
+			Lo = float3((kD * diffuse / PI + specular_) * LightPower * NdotL);
 		}
 
 		float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
@@ -346,11 +357,8 @@ float4 main(Input input) : SV_TARGET
 
 		float3 R = reflect(V, N);
 		float3 PrefilteredColor = EnvironmentMap.Sample(SampleType, R, roughness * 11).xyz;
+		PrefilteredColor *= SColor;
 		float3 Specular_ = PrefilteredColor * F;
-
-		float3 Ambient_ = KD * diffuse * df + Specular_;
-
-		float3 color = Ambient_ + Lo;
 
 		float ShadowAtt = 1.0f;
 		if (SData1.y == 1)
@@ -359,7 +367,10 @@ float4 main(Input input) : SV_TARGET
 			if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
 			if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
 		}
-		color *= ShadowAtt;
+		float3 Ambient_ = KD * diffuse * df + Specular_ * ShadowAtt;
+		float3 color = Ambient_ * LightColor * LightPower + Lo;
+
+		
 		if (NormalSample.w != 1.0f)
 			color = pow(color, 0.4545f);
 
@@ -384,7 +395,9 @@ float4 main(Input input) : SV_TARGET
 	color *= ShadowAtt;
 
 	if (NormalSample.w != 1.0f) // mean gamma corrected
+	{
 		color = pow(color, 0.4545);
+	}
 
 	return float4(color, 1.0f);
 }

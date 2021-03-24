@@ -332,7 +332,7 @@ namespace Engine {
 		m_RTT = new RTTInform(width, height, m_Buffer);
 	}
 
-	Texture::Texture(uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize)
+	Texture::Texture(uint32_t unifiedWidth, uint32_t unifiedHeight, uint32_t arraySize, bool isCubeMap)
 	{
 		//Create texture
 		m_TextureDesc.Width = unifiedWidth;
@@ -346,12 +346,20 @@ namespace Engine {
 		m_TextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 		m_TextureDesc.CPUAccessFlags = 0;
 		m_TextureDesc.MiscFlags = 0;
+		if (isCubeMap)
+		{
+			m_TextureDesc.MipLevels = 0;
+			m_TextureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE | D3D11_RESOURCE_MISC_GENERATE_MIPS;
+		}
 		Dx11Core::Get().Device->CreateTexture2D(&m_TextureDesc, NULL, &m_Buffer);
 		ASSERT(m_Buffer, "Texture::Create texture failed");
 
 		//Create Shader Resource view(SRV)
 		m_SrvDesc.Format = m_TextureDesc.Format;
 		m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		if (isCubeMap)
+			m_SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+
 		m_SrvDesc.Texture2DArray.ArraySize = arraySize;
 		m_SrvDesc.Texture2DArray.FirstArraySlice = 0;
 		m_SrvDesc.Texture2DArray.MipLevels = 1;
@@ -524,8 +532,10 @@ namespace Engine {
 			ASSERT(m_ResourceView, "Texture::Resize texture failed");
 		}
 
-		if (m_RTT) {}
+		if (m_RTT) 
+		{
 			m_RTT->Resize(Width, Height, m_Buffer);
+		}
 	}
 
 	void Texture::SetComputeOuput()
@@ -536,6 +546,17 @@ namespace Engine {
 	void Texture::SetComputeResource(int slot)
 	{
 		Dx11Core::Get().Context->CSSetShaderResources(slot, 1, &m_ResourceView);
+	}
+
+	void Texture::SetAsRenderTarget()
+	{
+		float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		D3D11_VIEWPORT vp[6] = { m_RTT->m_ViewPortDesc , m_RTT->m_ViewPortDesc , m_RTT->m_ViewPortDesc , m_RTT->m_ViewPortDesc , m_RTT->m_ViewPortDesc , m_RTT->m_ViewPortDesc };
+		Dx11Core::Get().Context->GenerateMips(m_ResourceView);
+		Dx11Core::Get().Context->ClearDepthStencilView(m_RTT->m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0, 0);
+		Dx11Core::Get().Context->ClearRenderTargetView(m_RTT->m_RenderTargetView, color);
+		Dx11Core::Get().Context->RSSetViewports(m_TextureDesc.ArraySize, vp);
+		Dx11Core::Get().Context->OMSetRenderTargets(1, &m_RTT->m_RenderTargetView, m_RTT->m_DepthStencilView);
 	}
 
 	void Texture::Bind(int slot) const

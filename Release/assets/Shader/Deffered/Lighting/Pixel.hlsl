@@ -1,15 +1,18 @@
 
 #define MaxPart 12
+#define PI 3.141592f
 
 Texture2D Depth : register(t0);
 Texture2D Diffuse : register(t1);
 Texture2D Normal : register(t2);
 Texture2D Ambient : register(t3);
 Texture2D WorldPosition : register(t4);
-Texture2D Misc : register(t5);
-Texture2D SpotShadowMap : register(t6);
-TextureCube PointShadowMap : register(t7);
-Texture2DArray DirShadowMap : register(t8);
+Texture2D Specular : register(t5);
+Texture2D Misc : register(t6);
+Texture2D SpotShadowMap : register(t7);
+TextureCube PointShadowMap : register(t8);
+Texture2DArray DirShadowMap : register(t9);
+TextureCube EnvironmentMap : register(t10);
 
 SamplerState SampleTypeClamp : register(s0);
 SamplerComparisonState SampleTypePCF : register(s1);
@@ -61,6 +64,11 @@ cbuffer ShadingData : register(b5)
 {
 	int4 SData1; //x = Lighting, y = shadow, z = diffuse(lambert, half), w = specular(phong blinn) 
 	int4 SData2; //x = lambert Pow factor, y = deffered blend factor, z = gamma correction
+}
+
+cbuffer SkyBoxInfo : register(b6)
+{
+	float4 SColor;
 }
 
 struct Input
@@ -159,6 +167,58 @@ float CalcDirShadow(float3 position)
 	return shadow;
 }
 
+float NDFBlinn(float Roughness, float NdotH)
+{
+	float m = Roughness * Roughness;
+	float m2 = m * m;
+	float n = 2 / m2 - 2;
+	return (n + 2) / (2 * PI) * pow(max(abs(NdotH), 0.000001f), n);
+}
+
+float NDFGGX(float Roughness, float NdotH)
+{
+	float m = Roughness * Roughness;
+	float m2 = m * m;
+	float d = (NdotH * m2 - NdotH) * NdotH + 1;
+	return m2 / (PI * d * d);
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness) {
+	float r = (roughness + 1.0);
+	float k = (r*r) / 8.0;
+
+	float num = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
+
+	return num / denom;
+}
+
+float GAFSmith(float NdotV, float NdotL, float roughness)
+{
+	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+	return ggx1 * ggx2;
+}
+
+float3 FresnelSchlick(float HdotV, float3 fresnel)
+{
+	float t = pow(1.0 - HdotV, 5.0);
+	return fresnel + (1.0f - fresnel) * t;
+	//return saturate(50.0 * fresnel.g) * t + (1 - t) * fresnel;
+}
+
+float3 FresnelSchlickRoughness(float NdotV, float3 F0, float roughness)
+{
+	return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
+}
+
+float OrenNayer(float NdotV, float NdotL, float roughness)
+{
+	float rim = 1 - NdotV / 2;
+	float fakey = pow(1 - NdotL * rim, 2);
+	fakey = 0.62f * (1.0f - fakey);
+	return lerp(NdotL, fakey, roughness);
+}
 
 float4 main(Input input) : SV_TARGET
 {
@@ -168,16 +228,20 @@ float4 main(Input input) : SV_TARGET
 	float4 NormalSample = Normal.Sample(SampleTypeClamp, input.tex);
 	float4 AmbientSample = Ambient.Sample(SampleTypeClamp, input.tex);
 	float4 WorldPositionSample = WorldPosition.Sample(SampleTypeClamp, input.tex);
+	float4 SpecularSample = Specular.Sample(SampleTypeClamp, input.tex);
 	float4 MiscSample = Misc.Sample(SampleTypeClamp, input.tex);
 
 	float depth = DepthSample.x;
-	float3 diffuse = DiffuseSample.xyz;
 
+	float3 worldPosition = WorldPositionSample.xyz;
+
+	float3 diffuse = DiffuseSample.xyz;
 	float3 normal = NormalSample.xyz;
 	float3 ambient = AmbientSample.xyz;
-	float3 specular = MiscSample.xyz;
-	float sharpeness = MiscSample.w * 30.0f;
-	float3 worldPosition = WorldPositionSample.xyz;
+	float3 specular = SpecularSample.xyz;
+	float sharpness = MiscSample.x * 30.0f;
+	float roughness = MiscSample.y;
+	float metalic = MiscSample.z;
 
 	if (AmbientSample.w == 0.0f)
 	{
@@ -187,12 +251,18 @@ float4 main(Input input) : SV_TARGET
 		}
 		else
 		{
+			if (AmbientSample.x >= 0.8)
+			{
+				return DiffuseSample;
+			}
 			discard;
 		}
 	}
 
 	if (SData1.x == 0)
+	{
 		return float4(diffuse, 1.0f);
+	}
 
 	//step2. Calc Light intensity
 	float lightAttenuation = 1.0f;
@@ -214,29 +284,98 @@ float4 main(Input input) : SV_TARGET
 	lightVector = normalize(lightVector);
 
 	//Step 3. Calc specular, diffuse factor
+	float3 cpos = mul(CPosition, WorldMatrix);
+	float3 CamVector = normalize(cpos - worldPosition);
+	float3 L = lightVector;
+	float3 V = CamVector;
+	float3 H = normalize(V + L);
+	float3 N = normal;
+
+	float NdotL = max(dot(L, N), 0.0f);
+	float NdotH = max(dot(H, N), 0.0f);
+	float NdotV = max(dot(V, N), 0.0f);
+	float HdotV = max(dot(H, V), 0.0f);
+
 	//-Diffuse
-	float df = max(dot(lightVector, normal), 0.0f);	//diffuse factor 	
+	float df = 0.0f;
+	if (SData1.z == 0)
+	{
+		df = NdotL;
+	}
 	if (SData1.z == 1) //half lambert
 	{
-		df = df * 0.5f + 0.5f;
-		df = pow(df, SData2.x);
+		float adjusted = NdotL * 0.5f + 0.5f;
+		df = pow(adjusted, SData2.x);
+	}
+	if (SData1.z == 2) //Oren-Nayer
+	{
+		df = OrenNayer(NdotV, NdotL, roughness);
 	}
 
 	//-Specular
-	float3 cpos = mul(CPosition, WorldMatrix);
-	float3 CamVector = normalize(cpos - worldPosition);
 	float specPower = 0.0f;
+	float sf = 0.0f;
 	if (SData1.w == 0) //phong
 	{
-		float3 specularVector = normalize(reflect(-lightVector, normal));
-		specPower = max(dot(specularVector, CamVector), 0.0f);
+		float3 specularVector = normalize(reflect(-L, N));
+		specPower = max(dot(specularVector, V), 0.0f);
+		sf = pow(specPower, sharpness);
 	}
-	if (SData1.w == 1)//blinn-phong
+	if (SData1.w == 1) //blinn-phong
 	{
-		float3 specularVector = normalize(CamVector + lightVector);
-		specPower = max(dot(specularVector, normal), 0.0f);
+		specPower = max(NdotH, 0.0f);
+		sf = pow(specPower, sharpness);
 	}
-	float sf = pow(specPower, sharpeness);
+	if (SData1.w == 2) //Cook-torrance
+	{
+		float3 Fresnel = specular;
+		float3 F0 = 0.04f;
+		F0 = lerp(F0, Fresnel, metalic);
+
+		float3 Lo = 0.0f;
+		{
+			float NDF = NDFGGX(roughness, NdotH);
+			float G = GAFSmith(NdotV, NdotL, roughness);
+			float3 F = FresnelSchlick(HdotV, F0);
+
+			float3 num = NDF * G * F;
+			float denum = 4.0 * NdotV * NdotL;
+
+			float specular_;
+			specular_ = num / max(denum, 0.001f);
+			float3 kS = F;
+			float3 kD = 1.0f - kS;
+			kD *= 1.0f - metalic;
+
+			Lo = float3((kD * diffuse / PI + specular_) * LightPower * NdotL);
+		}
+
+		float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
+
+		float3 KD = 1.0f - F;
+		KD *= 1.0f - metalic;
+
+		float3 R = reflect(V, N);
+		float3 PrefilteredColor = EnvironmentMap.Sample(SampleType, R, roughness * 11).xyz;
+		PrefilteredColor *= SColor;
+		float3 Specular_ = PrefilteredColor * F;
+
+		float ShadowAtt = 1.0f;
+		if (SData1.y == 1)
+		{
+			if (LType == 0) ShadowAtt = saturate(0.3 + CalcDirShadow(worldPosition));
+			if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
+			if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
+		}
+		float3 Ambient_ = KD * diffuse * df + Specular_ * ShadowAtt;
+		float3 color = Ambient_ * LightColor * LightPower + Lo;
+
+		
+		if (NormalSample.w != 1.0f)
+			color = pow(color, 0.4545f);
+
+		return float4(color, 1.0f);
+	}
 
 	//step4. calc shadow attenuation
 	float ShadowAtt = 1.0f;
@@ -256,7 +395,9 @@ float4 main(Input input) : SV_TARGET
 	color *= ShadowAtt;
 
 	if (NormalSample.w != 1.0f) // mean gamma corrected
+	{
 		color = pow(color, 0.4545);
+	}
 
 	return float4(color, 1.0f);
 }

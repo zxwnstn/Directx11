@@ -769,9 +769,9 @@ void Scene::OnImGui()
 			std::shared_ptr<Engine::Light> light(new Engine::Light);
 			switch (newlightType)
 			{
-			case 0: light->m_Type = Engine::Light::Type::Directional; break;
-			case 1: light->m_Type = Engine::Light::Type::Point; break;
-			case 2: light->m_Type = Engine::Light::Type::Spot; break;
+			case 0: light->SetType(Engine::Light::Type::Directional); break;
+			case 1: light->SetType(Engine::Light::Type::Point); break;
+			case 2: light->SetType(Engine::Light::Type::Spot); break;
 			}
 			light->lightCam.GetTransform().SetTranslate(newLightPosition[0], newLightPosition[1], newLightPosition[2]);
 			light->name = newLightBuffer;

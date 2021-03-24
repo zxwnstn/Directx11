@@ -1,10 +1,12 @@
 
 #define MaxPart 12
+#define PI 3.141592f
 
 Texture2D SpotShadowMap : register(t0);
 TextureCube PointShadowMap : register(t1);
 Texture2DArray DirShadowMap : register(t2);
-Texture2D materialTexture[MaxPart * 3] : register(t3);
+TextureCube EnvironmentMap : register(t3);
+Texture2D materialTexture[MaxPart * 3] : register(t4);
 
 SamplerState SampleType : register(s0);
 SamplerComparisonState SampleTypePCF : register(s1);
@@ -12,7 +14,7 @@ SamplerComparisonState SampleTypePCF : register(s1);
 cbuffer ShadingData : register(b0)
 {
 	int4 SData1; //x = Lighting, y = shadow, z = diffuse(lambert, half), w = specular(phong blinn) 
-	int4 SData2; //x = lambert Pow factor, y = deffered blend factor,
+	int4 SData2; //x = lambert Pow factor, y = deffered blend factor, z = gamma correction
 }
 
 cbuffer LightCam : register(b1)
@@ -43,6 +45,8 @@ cbuffer Materials : register(b3)
 	float4 MEmmisive[MaxPart];
 	float4 MFresnel[MaxPart];
 	float4 MShiness[MaxPart / 4];
+	float4 MRoughness[MaxPart / 4];
+	float4 MMetalic[MaxPart / 4];
 
 	//1 $ has Diffuse 2 $ has Normal 4 $ has specular
 	int4  MMode[MaxPart / 4];
@@ -54,6 +58,11 @@ cbuffer Cascaded : register(b4)
 	float4 ToCascadeOffsetX;
 	float4 ToCascadeOffsetY;
 	float4 ToCascadeScale;
+}
+
+cbuffer SkyBoxInfo : register(b5)
+{
+	float4 SColor;
 }
 
 struct Input
@@ -174,6 +183,59 @@ float CalcPointShadow(float3 ToPixel, float depth)
 	return PointShadowMap.SampleCmpLevelZero(SampleTypePCF, ToPixel, Depth);
 }
 
+float NDFBlinn(float Roughness, float NdotH)
+{
+	float m = Roughness * Roughness;
+	float m2 = m * m;
+	float n = 2 / m2 - 2;
+	return (n + 2) / (2 * PI) * pow(max(abs(NdotH), 0.000001f), n);
+}
+
+float NDFGGX(float Roughness, float NdotH)
+{
+	float m = Roughness * Roughness;
+	float m2 = m * m;
+	float d = (NdotH * m2 - NdotH) * NdotH + 1;
+	return m2 / (PI * d * d);
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness) {
+	float r = (roughness + 1.0);
+	float k = (r*r) / 8.0;
+
+	float num = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
+
+	return num / denom;
+}
+
+float GAFSmith(float NdotV, float NdotL, float roughness)
+{
+	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+	return ggx1 * ggx2;
+}
+
+float3 FresnelSchlick(float HdotV, float3 fresnel)
+{
+	float t = pow(1.0 - HdotV, 5.0);
+	return fresnel + (1.0f - fresnel) * t;
+	//return saturate(50.0 * fresnel.g) * t + (1 - t) * fresnel;
+}
+
+float3 FresnelSchlickRoughness(float NdotV, float3 F0, float roughness)
+{
+	return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
+}
+
+float OrenNayer(float NdotV, float NdotL, float roughness)
+{
+	float rim = 1 - NdotV / 2;
+	float fakey = pow(1 - NdotL * rim, 2);
+	fakey = 0.62f * (1.0f - fakey);
+	return lerp(NdotL, fakey, roughness);
+}
+
 float CalcDirShadow(float3 position)
 {
 	// Transform the world position to shadow space
@@ -217,10 +279,8 @@ float CalcDirShadow(float3 position)
 
 float4 main(Input input) : SV_TARGET
 {
-
 	int materialIndex = input.MaterialIndex;
 	int mapMode = MMode[materialIndex / 4][materialIndex % 4];
-	bool gammaCorrected = false;
 
 	//step 1. Get material mapping color
 	float4 diffuseMapFirst = GetMaterialDiffuseMap(materialIndex, input.tex, mapMode);
@@ -228,6 +288,7 @@ float4 main(Input input) : SV_TARGET
 		discard;
 
 	float3 diffuseMap = diffuseMapFirst.xyz;
+	bool gammaCorrected = false;
 	if (SData2.z && mapMode & 1)
 	{
 		diffuseMap = pow(diffuseMap, 2.2f);
@@ -239,9 +300,15 @@ float4 main(Input input) : SV_TARGET
 
 	float3 Diffuse = MDiffuse[materialIndex].xyz * diffuseMap;
 	float3 Specular = MSpecular[materialIndex].xyz * specularMap;
+	float3 Fresnel = MFresnel[materialIndex].xyz;
+	float sharpness = MShiness[materialIndex / 4][materialIndex % 4];
+	float roughness = MRoughness[materialIndex / 4][materialIndex % 4];
+	float metalic = MMetalic[materialIndex / 4][materialIndex % 4];
 
 	if (SData1.x == 0) // Not calculate lihgting just return diffuse
+	{
 		return float4(Diffuse, 1.0f);
+	}
 
 	if (mapMode & 2)
 	{
@@ -269,30 +336,97 @@ float4 main(Input input) : SV_TARGET
 	float LightPower = LightAttenuation * LIntensity;
 
 	//Step 3. Calc specular, diffuse factor
+	float3 L = LightVector;
+	float3 V = input.camvector;
+	float3 H = normalize(V + L);
+	float3 N = input.normal;
+
+	float NdotL = max(dot(L, N), 0.0f);
+	float NdotH = max(dot(H, N), 0.0f);
+	float NdotV = max(dot(V, N), 0.0f);
+	float HdotV = max(dot(H, V), 0.0f);
+
 	//-Diffuse
-	float df = max(dot(LightVector, input.normal), 0.0f); //basic lambert
+	float df = 0.0f;
+	if (SData1.z == 0)
+	{
+		df = NdotL;
+	}
 	if (SData1.z == 1) //half lambert
 	{
-		df = df * 0.5f + 0.5f;
-		df = pow(df, SData2.x);
+		float adjusted = NdotL * 0.5f + 0.5f;
+		df = pow(adjusted, SData2.x);
+	}
+	if (SData1.z == 2) //Oren-Nayer
+	{
+		df = OrenNayer(NdotV, NdotL, roughness);
 	}
 
 	//-Specular
 	float specPower = 0.0f;
+	float sf = 0.0f;
 	if (SData1.w == 0) //phong
 	{
-		float3 specularVector = normalize(reflect(-LightVector, input.normal));
-		specPower = max(dot(specularVector, input.camvector), 0.0f);
+		float3 specularVector = normalize(reflect(-L, N));
+		specPower = max(dot(specularVector, V), 0.0f);
+		sf = pow(specPower, sharpness);
 	}
-	if (SData1.w == 1)//blinn-phong
+	if (SData1.w == 1) //blinn-phong
 	{
-		float3 specularVector = normalize(input.camvector + LightVector);
-		specPower = max(dot(specularVector, input.normal), 0.0f);
+		specPower = max(NdotH, 0.0f);
+		sf = pow(specPower, sharpness);
 	}
-	float sharpness = MShiness[materialIndex / 4][materialIndex % 4];
-	float sf = pow(specPower, sharpness);
+	if (SData1.w == 2) //Cook-torrance
+	{
+		float3 F0 = 0.04f;
+		F0 = lerp(F0, Fresnel, metalic);
 
-	//step4. calc shadow attenuation
+		float3 Lo = 0.0f;
+		{
+			float NDF = NDFGGX(roughness, NdotH);
+			float G = GAFSmith(NdotV, NdotL, roughness);
+			float3 F = FresnelSchlick(HdotV, F0);
+
+			float3 num = NDF * G * F;
+			float denum = 4.0 * NdotV * NdotL;
+
+			Specular = num / max(denum, 0.001f);
+			float3 kS = F;
+			float3 kD = 1.0f - kS;
+			kD *= 1.0f - metalic;
+
+			Lo = float3((kD * Diffuse / PI + Specular) * LightPower * NdotL);
+		}
+
+		float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
+
+		float3 KD = 1.0f - F;
+		KD *= 1.0f - metalic;
+
+		float3 R = reflect(V, N);
+		float3 PrefilteredColor = EnvironmentMap.Sample(SampleType, R, roughness * 11).xyz;
+		PrefilteredColor *= SColor; // Sky color
+		float3 Specular_ = PrefilteredColor * F;
+
+		float3 Ambient_ = KD * Diffuse * df * LightColor + Specular_;
+
+		float3 color = Ambient_ + Lo;
+
+		float ShadowAtt = 1.0f;
+		if (SData1.y == 1)
+		{
+			if (LType == 0) ShadowAtt = saturate(0.3 + CalcDirShadow(input.worldPosition));
+			if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(input.lightToPos, input.position.w));
+			if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(input.worldPosition));
+		}
+		color *= ShadowAtt;
+		if (gammaCorrected)
+			color = pow(color, 0.4545f);
+
+		return float4(color, 1.0f);
+	}
+
+	//step4. Calculate shadow attenuation
 	float ShadowAtt = 1.0f;
 	if (SData1.y == 1)
 	{
@@ -301,15 +435,18 @@ float4 main(Input input) : SV_TARGET
 		if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(input.worldPosition));
 	}
 
+	//step5. Calculate final color
 	float3 finalAmbient = input.globalAmbient * MAmbient[materialIndex] * LightPower;
 	float3 finalDiffuse = df * Diffuse * LightPower * LightColor;
 	float3 finalSpecular = sf * Specular * LightPower * LightColor;
-
+	
 	float3 color = finalDiffuse + finalSpecular + finalAmbient;
 	color *= ShadowAtt;
 
 	if (gammaCorrected)
+	{
 		color = pow(color, 0.4545f);
+	}
 
 	return float4(color, 1.0f);
 }

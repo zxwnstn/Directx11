@@ -19,6 +19,7 @@ GBuffer main() : SV_TARGET
 
 	output.Diffuse = LColor;
 	output.Ambient.w = 0.0f;
+	output.Ambient.x = 0.9f;
 
 	return output;
 }
