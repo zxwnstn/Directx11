@@ -16,6 +16,7 @@ void MultiLightingScript::OnStart()
 	m_Blue = m_MyScene->GetLight("spot1");
 	m_Yello = m_MyScene->GetLight("spot2");
 	m_Cyan = m_MyScene->GetLight("p3");
+	m_Ring = m_MyScene->GetModel3d("ring");
 
 	auto kachu = m_MyScene->GetModel3d("kachu");
 	kachu->SetAnimation("playerWalking", true);
@@ -50,6 +51,8 @@ void MultiLightingScript::OnUpdate(float dt)
 	//spot lights
 	m_Yello->lightCam.GetTransform().AddRotate(1.0f * dt, 2.0f* dt, 3.0f * dt);
 	m_Blue->lightCam.GetTransform().AddRotate(2.0f * dt, 4.0f * dt, 1.0f * dt);
+
+	m_Ring->m_Transform.AddRotate(0.0f, 3.14f * dt, 1.57 * dt);
 
 	if (cyanForward)
 	{

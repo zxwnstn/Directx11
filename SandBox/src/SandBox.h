@@ -31,6 +31,7 @@ private:
 	float tFactor = 1.0f;
 	int depthBias = 85;
 	float slopeBias = 5.0f;
+	int shadowQuality = 1;
 
 	float mouseSensitive = 0.005f;
 	int curSceneIdx = 0;

@@ -24,6 +24,7 @@ private:
 	std::shared_ptr<Engine::Light> m_Yello;
 	std::shared_ptr<Engine::Light> m_Red;
 	std::shared_ptr<Engine::Light> m_Cyan;
+	std::shared_ptr<Engine::Model3D> m_Ring;
 	bool cyanForward = true;
 
 	float mtR_Add = true;

@@ -47,6 +47,7 @@ void SandBox::Init()
 	Engine::Renderer::SetDiffuseMode(diffuseMode);
 	Engine::Renderer::SetSpecularMode(specMode);
 	Engine::Renderer::SetLambertContrast(lambertContrast);
+	Engine::Renderer::SetShdowQuality(shadowQuality);
 }
 
 void SandBox::OnImGui()
@@ -114,6 +115,8 @@ void SandBox::OnImGui()
 					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
 				if (ImGui::SliderFloat("SlopeBias", &slopeBias, 0.0f, 100.0f))
 					Engine::Renderer::AdjustShadowBias(depthBias, slopeBias);
+				if (ImGui::SliderInt("ShadowQuality", &shadowQuality, 1, 4))
+					Engine::Renderer::SetShdowQuality(shadowQuality);
 			}
 
 			const char* difuselist[] = { "lambert", "half lambert", "Oren-Nayer" };
@@ -152,14 +155,6 @@ void SandBox::OnImGui()
 				if (ImGui::Checkbox("Hdr", &hdr))
 				{
 					Engine::Renderer::ActivateHdr(hdr);
-					if (!hdr)
-					{
-						Engine::Renderer::ActivateGamma(false);
-					}
-					else
-					{
-						Engine::Renderer::ActivateGamma(gamma);
-					}
 				}
 
 				if (hdr)

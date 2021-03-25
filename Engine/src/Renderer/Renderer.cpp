@@ -60,6 +60,7 @@ namespace Engine {
 	float tFactor = 1.0f;
 	bool isMinimized = false;
 	bool realtimeEnvironment = false;
+	int shadowQuality = 0;
 
 	std::shared_ptr<Environment> Renderer::GetGlobalEnv()
 	{
@@ -127,6 +128,16 @@ namespace Engine {
 		return s_Data.SkyColor;
 	}
 
+	void Renderer::SetShdowQuality(int grade)
+	{
+		if (grade < 0)
+			grade = 0;
+		if (grade > 3)
+			grade = 3;
+
+		shadowQuality = grade;
+	}
+
 	void Renderer::SetRenderMode(RenderMode mode)
 	{
 		s_Data.Mode = mode;
@@ -188,11 +199,29 @@ namespace Engine {
 		s_Data.Mode = RenderMode::Forward;
 
 		for (uint32_t i = 0; i < 10; ++i)
-			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(4096, 4096));
-		for (uint32_t i = 0; i < 10; ++i)
-			s_Data.PointShadowMaps.emplace_back(new ShadowMap(4096, 4096, 6));
-		for (uint32_t i = 0; i < 10; ++i)
+		{
+			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(1024, 1024));
+			s_Data.PointShadowMaps.emplace_back(new ShadowMap(1024, 1024, 6));
 			s_Data.DirShadowMaps.emplace_back(new ShadowMap(4096, 4096, 4));
+		}
+
+		for (uint32_t i = 0; i < 10; ++i)
+		{
+			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(2048, 2048));
+			s_Data.PointShadowMaps.emplace_back(new ShadowMap(2048, 2048, 6));
+		}
+
+		for (uint32_t i = 0; i < 10; ++i)
+		{
+			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(3072, 3072));
+			s_Data.PointShadowMaps.emplace_back(new ShadowMap(3072, 3072, 6));
+		}
+		
+		for (uint32_t i = 30; i < 40; ++i)
+		{
+			s_Data.SpotShadowMaps.emplace_back(new ShadowMap(4096, 4096));
+			s_Data.PointShadowMaps.emplace_back(new ShadowMap(4096, 4096, 6));
+		}
 
 		TextureArchive::Add("HDRTexture", prop.Width, prop.Height);
 		TextureArchive::Add("ForwardTexture", prop.Width, prop.Height);
@@ -207,7 +236,7 @@ namespace Engine {
 
 		for (int i = 0; i < 50; ++i)
 		{
-			s_Data.EnvironmentMaps.push_back(std::shared_ptr<Texture>(new Texture(1024u, 1024u, 6u, true)));
+			//s_Data.EnvironmentMaps.push_back(std::shared_ptr<Texture>(new Texture(1024u, 1024u, 6u, true)));
 		}
 
 	}
@@ -356,6 +385,8 @@ namespace Engine {
 		uint32_t spotIndex = 0;
 		uint32_t pointIndex = 0;
 		uint32_t dirIndex = 0;
+		uint32_t sq = 10 * shadowQuality;
+
 		std::string shadername;
 		for (auto light : s_Data.QueuedLight)
 		{
@@ -366,19 +397,22 @@ namespace Engine {
 				light->UpdateCascade(s_Data.ActiveCamera);
 				DirStatic->SetParam<CBuffer::CascadedViewProj>(light->m_CascadedMat);
 				DirSkeletal->SetParam<CBuffer::CascadedViewProj>(light->m_CascadedMat);
-				s_Data.DirShadowMaps[dirIndex++]->SetRenderTarget();
+				s_Data.DirShadowMaps[dirIndex]->SetRenderTarget();
+				dirIndex++;
 				break;
 			case Light::Type::Point:
 				shadername = "EffectShadowPoint";
 				PointStatic->SetParam<CBuffer::CubeCamera>(light->lightCam);
 				PointSkeletal->SetParam<CBuffer::CubeCamera>(light->lightCam);
-				s_Data.PointShadowMaps[pointIndex++]->SetRenderTarget();
+				s_Data.PointShadowMaps[pointIndex + sq]->SetRenderTarget();
+				pointIndex++;
 				break;
 			case Light::Type::Spot:
 				shadername = "EffectShadowSpot";
 				SpotStatic->SetParam<CBuffer::LightCam>(*light);
 				SpotSkeletal->SetParam<CBuffer::LightCam>(*light);
-				s_Data.SpotShadowMaps[spotIndex++]->SetRenderTarget();
+				s_Data.SpotShadowMaps[spotIndex + sq]->SetRenderTarget();
+				spotIndex++;
 				break;
 			}
 			for (auto model3D : s_Data.Queued3D)
@@ -586,6 +620,7 @@ namespace Engine {
 		uint32_t pointIndex = 0;
 		uint32_t spotIndex = 0;
 		uint32_t dirIndex = 0;
+		uint32_t sq = 10 * shadowQuality;
 
 		lightingShader->SetParam<CBuffer::Environment>(*s_Data.GlobalEnv);
 		lightingShader->SetParam<CBuffer::Camera>(*s_Data.ActiveCamera);
@@ -616,11 +651,11 @@ namespace Engine {
 				dirIndex++;
 				break;
 			case Light::Type::Point:
-				Dx11Core::Get().Context->PSSetShaderResources(8, 1, &s_Data.PointShadowMaps[pointIndex]->m_ShaderResourceView);
+				Dx11Core::Get().Context->PSSetShaderResources(8, 1, &s_Data.PointShadowMaps[pointIndex + sq]->m_ShaderResourceView);
 				pointIndex++;
 				break;
 			case Light::Type::Spot:
-				Dx11Core::Get().Context->PSSetShaderResources(7, 1, &s_Data.SpotShadowMaps[spotIndex]->m_ShaderResourceView);
+				Dx11Core::Get().Context->PSSetShaderResources(7, 1, &s_Data.SpotShadowMaps[spotIndex + sq]->m_ShaderResourceView);
 				spotIndex++;
 				break;
 			}
@@ -672,7 +707,7 @@ namespace Engine {
 		}
 		else
 		{
-			int spotIdx = 0, pointIdx = 0, dirIdx = 0;
+			int spotIdx = 0, pointIdx = 0, dirIdx = 0, sq = 10 * shadowQuality;
 			if (s_Data.QueuedLight.empty())
 				s_Data.PLController->SetRenderTarget("BackBuffer");
 			else
@@ -702,11 +737,11 @@ namespace Engine {
 					dirIdx++;
 					break;
 				case Light::Type::Point:
-					Dx11Core::Get().Context->PSSetShaderResources(1, 1, &s_Data.PointShadowMaps[pointIdx]->m_ShaderResourceView);
+					Dx11Core::Get().Context->PSSetShaderResources(1, 1, &s_Data.PointShadowMaps[pointIdx + sq]->m_ShaderResourceView);
 					pointIdx++;
 					break;
 				case Light::Type::Spot:
-					Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[spotIdx]->m_ShaderResourceView);
+					Dx11Core::Get().Context->PSSetShaderResources(0, 1, &s_Data.SpotShadowMaps[spotIdx + sq]->m_ShaderResourceView);
 					spotIdx++;
 					break;
 				}

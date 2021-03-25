@@ -38,6 +38,7 @@ namespace Engine {
 		static void SetDiffuseMode(int mode); //0 - lambert, 1 - half lambert
 		static void SetLambertContrast(int factor);
 		static struct vec3& GetSkyColor();
+		static void SetShdowQuality(int grade);
 
 	public:
 		static void BeginScene(std::shared_ptr<Camera> camera, const std::vector<std::shared_ptr<Light>>& lights);

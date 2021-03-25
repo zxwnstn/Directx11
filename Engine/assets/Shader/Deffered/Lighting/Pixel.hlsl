@@ -332,6 +332,7 @@ float4 main(Input input) : SV_TARGET
 		float3 F0 = 0.04f;
 		F0 = lerp(F0, Fresnel, metalic);
 
+		//Specular
 		float3 Lo = 0.0f;
 		{
 			float NDF = NDFGGX(roughness, NdotH);
@@ -341,25 +342,32 @@ float4 main(Input input) : SV_TARGET
 			float3 num = NDF * G * F;
 			float denum = 4.0 * NdotV * NdotL;
 
-			float specular_;
+			float3 specular_;
 			specular_ = num / max(denum, 0.001f);
-			float3 kS = F;
-			float3 kD = 1.0f - kS;
+			float3 kD = 1.0f - F;
 			kD *= 1.0f - metalic;
 
-			Lo = float3((kD * diffuse / PI + specular_) * LightPower * NdotL);
+			Lo = float3((kD * diffuse / PI + specular_) * NdotL);
+			Lo *= LightPower * LightColor;
 		}
 
-		float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
+		//Ambient
+		float3 Ambient_ = 0.0f;
+		{
+			float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
+			float3 KD = 1.0f - F;
+			KD *= 1.0f - metalic;
 
-		float3 KD = 1.0f - F;
-		KD *= 1.0f - metalic;
+			float3 R = reflect(V, N);
+			float3 PrefilteredColor = EnvironmentMap.Sample(SampleType, R, roughness * 11).xyz;
+			PrefilteredColor *= SColor;
+			float3 Specular_ = PrefilteredColor * F;
 
-		float3 R = reflect(V, N);
-		float3 PrefilteredColor = EnvironmentMap.Sample(SampleType, R, roughness * 11).xyz;
-		PrefilteredColor *= SColor;
-		float3 Specular_ = PrefilteredColor * F;
+			Ambient_ = KD * diffuse * df + Specular_;
+			Ambient_ *= LightColor * LightPower;
+		}
 
+		//Shadow
 		float ShadowAtt = 1.0f;
 		if (SData1.y == 1)
 		{
@@ -367,10 +375,8 @@ float4 main(Input input) : SV_TARGET
 			if (LType == 1) ShadowAtt = saturate(0.3 + CalcPointShadow(posToLight, depth));
 			if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
 		}
-		float3 Ambient_ = KD * diffuse * df + Specular_ * ShadowAtt;
-		float3 color = Ambient_ * LightColor * LightPower + Lo;
-
 		
+		float3 color = (Ambient_ + Lo) * ShadowAtt;
 		if (NormalSample.w != 1.0f)
 			color = pow(color, 0.4545f);
 

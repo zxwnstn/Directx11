@@ -179,6 +179,7 @@ struct SceneInform
 		ar & Camera;
 		ar & SkyColor;
 		ar & ScriptName;
+		ar & World;
 	}
 
 	std::string SceneName;
@@ -203,6 +204,7 @@ public:
 	void OnUpdate(float dt);
 	void OnImGui();
 	void OnMouseMove(float dx, float dy, float sensitive);
+	void OnChange();
 
 	void Add2DModel(std::shared_ptr<Engine::Model2D> model);
 	void Add3DModel(std::shared_ptr<Engine::Model3D> model);

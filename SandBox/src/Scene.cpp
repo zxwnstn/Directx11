@@ -132,6 +132,10 @@ void Scene::OnMouseMove(float dx, float dy, float sensitive)
 
 }
 
+void Scene::OnChange()
+{
+}
+
 void Scene::OnKeyInput()
 {
 	if (runScript)
@@ -978,6 +982,7 @@ SceneInform Scene::SaveSceneData()
 
 void Scene::LoadSceneData(const SceneInform& _inform)
 {
+	m_worldInform = _inform.World;
 	for (auto& inform : _inform.Camera)
 	{
 		float screenAspect = (float)g_Width / (float)g_Height;
