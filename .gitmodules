@@ -12,4 +12,5 @@
 	url = https://github.com/gabime/spdlog
 [submodule "vendor/imgui"]
 	path = vendor/imgui
-	url = https://github.com/ocornut/imgui
+	url = https://github.com/zxwnstn/imgui
+	branch = Premake

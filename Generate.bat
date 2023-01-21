@@ -1,2 +1,2 @@
-cmake -S. -B./build -G "Visual Studio 15 2017 Win64"
+cmake -S. -B./build -G "Visual Studio 16 2019"
 PAUSE
