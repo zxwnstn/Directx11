@@ -2,6 +2,8 @@
 #define MaxPart 12
 #define PI 3.141592f
 
+#define NEW 1
+
 Texture2D Depth : register(t0);
 Texture2D Diffuse : register(t1);
 Texture2D Normal : register(t2);
@@ -328,12 +330,12 @@ float4 main(Input input) : SV_TARGET
 	}
 	if (SData1.w == 2) //Cook-torrance
 	{
-		float3 Fresnel = specular;
 		float3 F0 = 0.04f;
-		F0 = lerp(F0, Fresnel, metalic);
+		F0 = lerp(F0, specular, metalic);
 
+		float3 L0 = 0.0f;
+#if !NEW
 		//Specular
-		float3 Lo = 0.0f;
 		{
 			float NDF = NDFGGX(roughness, NdotH);
 			float G = GAFSmith(NdotV, NdotL, roughness);
@@ -347,8 +349,8 @@ float4 main(Input input) : SV_TARGET
 			float3 kD = 1.0f - F;
 			kD *= 1.0f - metalic;
 
-			Lo = float3((kD * diffuse / PI + specular_) * NdotL);
-			Lo *= LightPower * LightColor;
+			L0 = float3((kD * diffuse / PI + specular_) * NdotL);
+			L0 *= LightPower * LightColor;
 		}
 
 		//Ambient
@@ -366,6 +368,32 @@ float4 main(Input input) : SV_TARGET
 			Ambient_ = KD * diffuse * df + Specular_;
 			Ambient_ *= LightColor * LightPower;
 		}
+		L0 += Ambient_;
+#else
+		float3 Fresnel = FresnelSchlickRoughness(NdotV, F0, roughness);
+
+		float3 Ks = Fresnel;
+		float3 Kd = 1.0f - Ks;
+		Kd *= (1.0f - metalic);
+
+		// Diffuse Term
+		float3 Diffuse = ((Kd * diffuse) / PI) * LightColor * LightPower * NdotL; 
+
+		// Diffuse IBL Term
+		float3 DiffuseIBL = 1.0f;//IrradianceMap.Sample(SampleType, N).rgb;
+
+		// Specular Term
+		float NDF = NDFGGX(roughness, NdotH);
+		float G = GAFSmith(NdotV, NdotL, roughness);
+		float3 Specular = ((NDF * G * Fresnel) / max(4.0f * NdotV * NdotL, 0.001f)) * LightPower * LightColor * NdotL;
+		
+		// Specular IBL Term
+		float3 R = reflect(V, N);
+		float3 SpecularIBL = EnvironmentMap.Sample(SampleType, R, roughness * 11).xyz;
+		
+		// Final Radiance of this pixel
+		L0 = (Diffuse * DiffuseIBL) + (Specular + SpecularIBL * Ks);
+#endif
 
 		//Shadow
 		float ShadowAtt = 1.0f;
@@ -376,7 +404,7 @@ float4 main(Input input) : SV_TARGET
 			if (LType == 2) ShadowAtt = saturate(0.3 + CalcSpotShadow(WorldPositionSample));
 		}
 		
-		float3 color = (Ambient_ + Lo) * ShadowAtt;
+		float3 color = (L0) * ShadowAtt;
 		if (NormalSample.w != 1.0f)
 			color = pow(color, 0.4545f);
 
